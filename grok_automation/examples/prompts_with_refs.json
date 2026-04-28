@@ -1,0 +1,7 @@
+{
+  "prompts": [
+    { "text": "transform into a winged lion soaring through clouds", "ref": "lion.jpg" },
+    { "text": "lion in cyberpunk style with neon mane", "ref": "lion.jpg" },
+    "a plain prompt without ref to test mixed mode"
+  ]
+}

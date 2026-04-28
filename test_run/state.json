@@ -1,0 +1,159 @@
+{
+  "version": 1,
+  "updated_at": "2026-04-28T10:44:35",
+  "scenes": {
+    "SCENE-01": {
+      "image": {
+        "status": "generating",
+        "path": null,
+        "last_gen_at": null,
+        "fail_reason": null
+      },
+      "video": {
+        "status": "pending",
+        "path": null,
+        "source_type": null,
+        "last_gen_at": null,
+        "fail_reason": null
+      },
+      "voice": {
+        "status": "pending",
+        "path": null,
+        "duration_sec": null
+      },
+      "selected_visual": "video",
+      "warnings": [
+        {
+          "code": "grok_no_image",
+          "msg": "stopped",
+          "ts": "2026-04-28T09:50:06"
+        },
+        {
+          "code": "grok_no_image",
+          "msg": "gen_image fail: không có file download. errors=[{'prompt_id': 'single', 'step': 'fill_prompt', 'reason': 'fill_prompt: Page.type: Timeout 30000ms exceeded.\\nCall log:\\n  - waiting for locator(\"[contenteditable=\\\\\"true\\\\\"]\")\\n    - locator resolved to <div tabindex=\"0\" translate=\"no\" contenteditable=\"true\" class=\"tiptap ProseMirror w-full px-2 bg-transparent focus:outline-none text-primary align-bottom overflow-y-auto !max-w-none prose [&_ul>li>p]:my-0 [&_ol>li>p]:my-0 [&_li>ol]:my-0 [&_li>ul]:my-0 [&_p]:my-0 [&_ul]:my-0 [&_ol]:my-0 py-3.5 my-0 max-h-40 ProseMirror-focused\">…</div>\\n  - elementHandle.type(\"Simple flat 2D illustration of a quiet morning kitchen, a small white kettle on the stove with gentle steam curls rising, white ceramic mug nearby, large window with soft golden sunlight streaming in, small green herb plants on the windowsill, warm cream and amber palette, hand-drawn digital art style with clean line work. No text, no letters, no captions, no watermark. Aspect ratio 16:9 horizontal.\\n\\nStyle: Simple flat 2D illustration, hand-drawn digital art, soft warm color palette with cream amber and forest green, gentle line work, modern minimalist illustration style, clean composition with negative space\\n\\nNegative: No text, no letters, no captions, no typography, no watermark, no logo, no realistic photography\")\\n'}]",
+          "ts": "2026-04-28T10:32:29"
+        },
+        {
+          "code": "grok_no_image",
+          "msg": "gen_image fail: không có file download. errors=[{'prompt_id': 'single', 'step': 'verify_input_empty', 'reason': 'input not empty: Page.wait_for_selector: Timeout 5000ms exceeded.\\nCall log:\\n  - waiting for locator(\"p.is-empty.is-editor-empty\") to be visible\\n  - waiting for locator(\"p.is-empty.is-editor-empty\")\\n'}]",
+          "ts": "2026-04-28T10:33:32"
+        },
+        {
+          "code": "grok_no_image",
+          "msg": "gen_image fail: không có file download. errors=[{'prompt_id': 'single', 'step': 'click_image', 'reason': 'no ready listitem (canvas overlay still present)'}]",
+          "ts": "2026-04-28T10:36:15"
+        }
+      ]
+    },
+    "SCENE-02": {
+      "image": {
+        "status": "pending",
+        "path": null,
+        "last_gen_at": null,
+        "fail_reason": null
+      },
+      "video": {
+        "status": "pending",
+        "path": null,
+        "source_type": null,
+        "last_gen_at": null,
+        "fail_reason": null
+      },
+      "voice": {
+        "status": "pending",
+        "path": null,
+        "duration_sec": null
+      },
+      "selected_visual": "video",
+      "warnings": []
+    },
+    "SCENE-03": {
+      "image": {
+        "status": "pending",
+        "path": null,
+        "last_gen_at": null,
+        "fail_reason": null
+      },
+      "video": {
+        "status": "pending",
+        "path": null,
+        "source_type": null,
+        "last_gen_at": null,
+        "fail_reason": null
+      },
+      "voice": {
+        "status": "pending",
+        "path": null,
+        "duration_sec": null
+      },
+      "selected_visual": "video",
+      "warnings": []
+    },
+    "SCENE-04": {
+      "image": {
+        "status": "pending",
+        "path": null,
+        "last_gen_at": null,
+        "fail_reason": null
+      },
+      "video": {
+        "status": "pending",
+        "path": null,
+        "source_type": null,
+        "last_gen_at": null,
+        "fail_reason": null
+      },
+      "voice": {
+        "status": "pending",
+        "path": null,
+        "duration_sec": null
+      },
+      "selected_visual": "video",
+      "warnings": []
+    },
+    "SCENE-05": {
+      "image": {
+        "status": "pending",
+        "path": null,
+        "last_gen_at": null,
+        "fail_reason": null
+      },
+      "video": {
+        "status": "pending",
+        "path": null,
+        "source_type": null,
+        "last_gen_at": null,
+        "fail_reason": null
+      },
+      "voice": {
+        "status": "pending",
+        "path": null,
+        "duration_sec": null
+      },
+      "selected_visual": "video",
+      "warnings": []
+    },
+    "SCENE-06": {
+      "image": {
+        "status": "pending",
+        "path": null,
+        "last_gen_at": null,
+        "fail_reason": null
+      },
+      "video": {
+        "status": "pending",
+        "path": null,
+        "source_type": null,
+        "last_gen_at": null,
+        "fail_reason": null
+      },
+      "voice": {
+        "status": "pending",
+        "path": null,
+        "duration_sec": null
+      },
+      "selected_visual": "video",
+      "warnings": []
+    }
+  }
+}

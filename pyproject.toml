@@ -1,0 +1,41 @@
+[project]
+name = "story-video-maker"
+version = "0.1.0"
+description = "PyQt6 desktop app to automate story video generation pipeline (Grok image/video + Fish Audio TTS + Slideshow + Ken Burns + ffmpeg)."
+requires-python = ">=3.11"
+readme = "README.md"
+
+dependencies = [
+    "pyqt6>=6.6",
+    "qasync>=0.27",
+    "patchright>=1.40",
+    "pydantic>=2.5",
+    "loguru>=0.7",
+    "fish-audio-sdk>=2024.6",
+    "pillow>=10",
+    "opencv-python>=4.9",
+    "numpy>=1.26",
+    "plyer>=2.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.4",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["core", "engines", "voice", "render", "bgm", "ui", "workers", "runtime"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = ["E501"]

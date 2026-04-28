@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python *)",
+      "Bash(uv --version)",
+      "Bash(pip install *)",
+      "Bash(uv venv *)",
+      "Bash(.venv/Scripts/python.exe -m pip install pydantic loguru)",
+      "Bash(.venv/Scripts/python.exe *)",
+      "Bash(ffmpeg -version)",
+      "Bash(D:/Projects/story_video_making/.venv/Scripts/python.exe *)",
+      "Bash(ls voice/venv/Scripts/python.exe)",
+      "Bash(ls venv/Scripts/python.exe)",
+      "Bash(voice/venv/Scripts/python.exe -c \"from core.schema import ScenesJson; print\\('OK schema'\\)\")",
+      "Bash(curl -s --max-time 3 http://localhost:9222/json/version)",
+      "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe main.py)",
+      "Bash(tasklist)",
+      "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -u _smoke_batch.py)"
+    ]
+  }
+}

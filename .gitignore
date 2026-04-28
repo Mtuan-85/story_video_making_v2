@@ -1,0 +1,28 @@
+﻿# Virtual Environment
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Project outputs
+test_run/
+test_output/
+voice_output/
+output/
+build/
+dist/
+
+# IDE
+.vscode/
+.idea/
+
+# Logs & temp
+*.log
+BUILD_LOG.md
+*.tmp
+temp/

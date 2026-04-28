@@ -1,0 +1,2597 @@
+{
+  "version": "3.0-longform",
+  "meta": {
+    "idea_id": "LF-007",
+    "idea_title": "5 Sentences I Stopped Saying to My Son",
+    "format": "long_form",
+    "families": [
+      "Walsh"
+    ],
+       "target_length_seconds": 542,
+    "target_length_min": 8.5,
+    "target_length_max": 9.1,
+    "aspect_ratio": "16:9",
+    "video_number": "LF-007",
+    "structure": "single_narrator_modern_self_correction_with_flashbacks",
+    "trigger_situation": "modern_mother_unlearning_inherited_phrases",
+    "primary_audience": "US parents, ages 28-45, school-age kids",
+    "language_priority": "en_first",
+    "trademark_phrase": "Because good enough is enough",
+    "forgiveness_mechanism": "dual_admission_anti_bias_with_method_limit",
+    "pacing_strategy": "confessional_warm_with_quotable_peaks",
+    "midroll_ad_slots": [
+      201,
+      406
+    ],
+
+  "settings": {
+    "baseCam": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, emotionally tender contemporary children's picture book aesthetic. Dual palette: warm amber honey for interior scenes (soft lamp light, pale wood, oat textiles), and Pacific Northwest cool tones for exteriors (slate blue-grey, dusty teal evergreens, mossy greens, pale damp wood, fog). Shallow depth of field. Full bleed composition extending to all edges of the frame, cinematic edge-to-edge framing. Aspect ratio 16:9 horizontal landscape.",
+    "baseStyle": "Characters drawn with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions, modern minimalist clothing. Soft painterly brush strokes with watercolor textured finish. Soft warm rim lighting on characters in interior scenes, soft cool diffused light in exterior scenes.",
+    "baseNegative": "No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+    "voice_palette": {
+      "narrator": "en-GB-SoniaNeural",
+      "chapter": "en-GB-SoniaNeural",
+      "inner_voice": "en-GB-SoniaNeural"
+    },
+    "voice_rate": {
+      "narrator": "+0%",
+      "chapter": "+5%",
+      "inner_voice": "-10%"
+    },
+    "voice_volume": {
+      "narrator": "+0%",
+      "chapter": "+5%",
+      "inner_voice": "-10%"
+    },
+    "subFont": "Montserrat-ExtraBold",
+    "subPosition": 0.88,
+    "subMaxLines": 2,
+    "subStyle": "static",
+    "subBalanceWrap": true,
+    "subChunkMode": "chunks",
+    "colorActive": null,
+    "kenBurnsDefault": "subtle_zoom_in",
+    "kenBurnsRate": 0.04,
+    "musicMode": "external_post_mix",
+    "image_workflow": "manual_select",
+    "image_variants_count": 4
+  },
+  "characters": {
+    "Sarah": {
+      "family": "Walsh",
+      "role": "primary_narrator",
+      "age_at_video": 36,
+      "personality_brief": "modern American working mom, UX designer, thoughtful and reflective, actively unlearning auto-pilot phrases inherited from her own upbringing",
+      "description_verbatim": "Sarah, white American woman mid-30s, 5'5\", slim modern build with confident upright posture, straight chestnut-brown hair falling just below shoulders tucked behind one ear, dark warm brown eyes with thoughtful focus, fair-medium skin with a hint of natural blush, modern minimalist style, wearing a soft chambray blue button-up shirt with sleeves rolled to forearms over loose slate-grey linen trousers, small gold stud earrings, simple silver wedding band, bare feet on warm wooden floor"
+    },
+    "Jaden": {
+      "family": "Walsh",
+      "role": "child",
+      "age_at_video": 10,
+      "personality_brief": "sensitive thoughtful bookish kid, cautious by nature, sharp emotional intelligence",
+      "description_verbatim_casual": "Jaden, white American boy age 10 in fourth grade, taller-than-average build for his age, light brown hair worn slightly long over the ears with a soft fringe, large warm hazel-green eyes with serious thoughtful expression, fair skin with a few light freckles across the nose, wearing a soft dark forest-green hoodie over slim charcoal joggers with white socks, a small woven friendship bracelet on his left wrist"
+    }
+  },
+  "title_candidates": [
+    {
+      "text": "5 Sentences I Stopped Saying to My Son",
+      "char_count": 39,
+      "primary": true
+    },
+    {
+      "text": "5 Sentences I Used to Say (And What I Say Now)",
+      "char_count": 47,
+      "primary": false
+    },
+    {
+      "text": "What I Said to My Son That I Wish I Hadn't",
+      "char_count": 43,
+      "primary": false
+    },
+    {
+      "text": "5 Phrases I Stopped Saying That Changed My Son",
+      "char_count": 47,
+      "primary": false
+    },
+    {
+      "text": "The 5 Sentences My Son Made Me Unlearn",
+      "char_count": 39,
+      "primary": false
+    }
+  ],
+  "scenes": [
+    {
+      "id": "HOOK-01",
+      "act": "0_hook",
+      "label": "Sarah at home with journal — opening reveal",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Sarah"
+      ],
+      "setting": "walsh_living_room",
+      "emotion": "inviting honest open",
+      "story_en": "There were five sentences I used to say to my son.",
+      "story_chunks_en": [
+        "There were five sentences",
+        "I used to say",
+        "to my son."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm modern Pacific Northwest home living room at evening, Sarah, white American woman mid-30s, 5'5\", slim modern build with confident upright posture, straight chestnut-brown hair falling just below shoulders tucked behind one ear, dark warm brown eyes with thoughtful focus, fair-medium skin with a hint of natural blush, modern minimalist style, wearing a soft chambray blue button-up shirt with sleeves rolled to forearms over loose slate-grey linen trousers, small gold stud earrings, simple silver wedding band, bare feet on warm wooden floor seated on a soft oat-coloured linen sofa with both hands resting on a small well-worn brown leather-bound journal in her lap. She faces slightly toward the camera with a thoughtful warm gaze, the look of someone beginning a difficult honest conversation. Soft amber floor lamp behind her casts honey light on her face. Slate blue-grey wall in soft focus behind, a window beyond shows blurred evergreen pines in dusk fog. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 4,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "hook",
+      "chapter_number": 0,
+      "music_cue": "ambient_open_warm",
+      "sfx": [
+        "soft_evening_quiet",
+        "considered_breath"
+      ],
+      "props_used": [
+        "brown leather-bound journal",
+        "oat linen sofa"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "Opening — Sarah reveal + lower-third. Journal is signature object intro.",
+      "lower_third": {
+        "name": "Sarah Walsh",
+        "subtitle": "mother of one, UX designer",
+        "duration": 3,
+        "appear_at_seconds": 1
+      }
+    },
+    {
+      "id": "HOOK-02",
+      "act": "0_hook",
+      "label": "Journal close-up — handwritten list visible",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [],
+      "setting": "walsh_living_room",
+      "emotion": "intimate object reveal",
+      "story_en": "I wrote them down. Because I had to see them to stop saying them.",
+      "story_chunks_en": [
+        "I wrote them down.",
+        "Because I had to see them",
+        "to stop saying them."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting an extreme close-up of a small open brown leather-bound journal page in soft amber lamp light, showing five short handwritten lines of dark navy ink in elegant looping cursive script that is gently blurred and unreadable, the page slightly creased and worn at the corners. A small dark wood pencil rests in the spine. Macro tenderness, watercolor softness on edges, intimate amber interior lamp glow. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 4,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "hook",
+      "chapter_number": 0,
+      "music_cue": "intimate_amber",
+      "sfx": [
+        "paper_soft_breath",
+        "lamp_warm_hum"
+      ],
+      "props_used": [
+        "brown leather journal",
+        "dark wood pencil"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "Macro of journal. Text intentionally blurred/illegible to avoid OCR."
+    },
+    {
+      "id": "HOOK-03",
+      "act": "0_hook",
+      "label": "Hand on shoulder — signature gesture",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Sarah",
+        "Jaden"
+      ],
+      "setting": "walsh_living_room",
+      "emotion": "tender connection",
+      "story_en": "These are sentences my son taught me to stop saying.",
+      "story_chunks_en": [
+        "These are sentences",
+        "my son",
+        "taught me",
+        "to stop saying."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm tender medium shot from behind, Jaden, white American boy age 10 in fourth grade, taller-than-average build for his age, light brown hair worn slightly long over the ears with a soft fringe, large warm hazel-green eyes with serious thoughtful expression, fair skin with a few light freckles across the nose, wearing a soft dark forest-green hoodie over slim charcoal joggers with white socks, a small woven friendship bracelet on his left wrist seated on the floor reading a book with the back of his head visible, Sarah, white American woman mid-30s, 5'5\", slim modern build with confident upright posture, straight chestnut-brown hair falling just below shoulders tucked behind one ear, dark warm brown eyes with thoughtful focus, fair-medium skin with a hint of natural blush, modern minimalist style, wearing a soft chambray blue button-up shirt with sleeves rolled to forearms over loose slate-grey linen trousers, small gold stud earrings, simple silver wedding band, bare feet on warm wooden floor's hand resting gently on his shoulder from a slightly above angle, only her hand and a glimpse of her wrist visible in frame. The hand rests lightly with a small silver wedding band catching warm amber lamp light. Behind them a wooden bookshelf softly blurred with stacks of children's books. Pale wooden floor with a soft oat rug. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 5,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "hook",
+      "chapter_number": 0,
+      "music_cue": "tender_warm",
+      "sfx": [
+        "soft_page_turn",
+        "gentle_breath"
+      ],
+      "props_used": [
+        "children's book",
+        "oat rug"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "Signature gesture #2 first occurrence. Back of head — face never shown for hand-on-shoulder shots, recurring posture."
+    },
+    {
+      "id": "HOOK-04",
+      "act": "0_hook",
+      "label": "Sarah at journal — thesis stated",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Sarah"
+      ],
+      "setting": "walsh_living_room",
+      "emotion": "warm anchor — the promise",
+      "story_en": "Five sentences. And five I am still learning to say instead.",
+      "story_chunks_en": [
+        "Five sentences.",
+        "And five",
+        "I am still learning",
+        "to say instead."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm medium close-up of Sarah on the linen sofa, the brown leather journal now open in her lap, her gaze lifted softly toward the camera with an inviting honest expression. Sarah, white American woman mid-30s, 5'5\", slim modern build with confident upright posture, straight chestnut-brown hair falling just below shoulders tucked behind one ear, dark warm brown eyes with thoughtful focus, fair-medium skin with a hint of natural blush, modern minimalist style, wearing a soft chambray blue button-up shirt with sleeves rolled to forearms over loose slate-grey linen trousers, small gold stud earrings, simple silver wedding band, bare feet on warm wooden floor. Soft amber floor lamp behind, slate blue-grey wall accent, the kind of warm low light that signals a trusted evening conversation. The window beyond shows fog softening the evergreens. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 5,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "hook",
+      "chapter_number": 0,
+      "music_cue": "tender_swell",
+      "sfx": [
+        "soft_inhale",
+        "ambient_room_warmth"
+      ],
+      "props_used": [
+        "brown leather journal"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "Thesis statement. End of hook block. Total hook = 18s."
+    },
+    {
+      "id": "CHAPTER-01",
+      "act": "1_intro",
+      "label": "Chapter 1 — Where These Sentences Came From",
+      "scene_type": "chapter_card",
+      "source": "new_image",
+      "characters": [],
+      "setting": "chapter_card",
+      "emotion": "warm anchor",
+      "story_en": "Where these sentences came from.",
+      "story_chunks_en": [
+        "Where these sentences",
+        "came from."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm hand-drawn still life of a small closed brown leather-bound journal resting on a pale oak side table beside a cream-shaded amber floor lamp casting honey light onto the journal cover and the wood grain. A folded pair of reading glasses rests beside the journal. Slate blue-grey wall in soft focus behind. Empty negative space at top right for chapter title overlay. Symbolic motif: the unread inheritance. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "chapter",
+      "duration": 4,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "rest",
+      "chapter_number": 1,
+      "music_cue": "chapter_anchor",
+      "sfx": [],
+      "props_used": [
+        "brown leather journal",
+        "amber floor lamp",
+        "reading glasses"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "4s chapter card. Journal motif = inheritance to unlearn.",
+      "chapter_text_overlay": {
+        "label": "CHAPTER ONE",
+        "title": "WHERE THESE SENTENCES CAME FROM"
+      }
+    },
+    {
+      "id": "CLIP-01",
+      "act": "1_intro",
+      "label": "It took me a long time — recurring #2 first",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Sarah"
+      ],
+      "setting": "walsh_kitchen",
+      "emotion": "honest reflection",
+      "story_en": "It took me a long time to hear what I was saying. The sentences fell out of my mouth like reflexes. I had used them for years before I noticed.",
+      "story_chunks_en": [
+        "It took me a long time",
+        "to hear what I was saying.",
+        "The sentences",
+        "fell out of my mouth",
+        "like reflexes.",
+        "I had used them for years",
+        "before I noticed."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm medium shot of Sarah in her modern kitchen at evening with a small ceramic mug of tea in both hands, leaning gently against a pale oak counter, looking softly toward the camera with reflective candor. Sarah, white American woman mid-30s, 5'5\", slim modern build with confident upright posture, straight chestnut-brown hair falling just below shoulders tucked behind one ear, dark warm brown eyes with thoughtful focus, fair-medium skin with a hint of natural blush, modern minimalist style, wearing a soft chambray blue button-up shirt with sleeves rolled to forearms over loose slate-grey linen trousers, small gold stud earrings, simple silver wedding band, bare feet on warm wooden floor. Soft amber under-cabinet lighting casts honey glow on her face. Pale slate blue-grey lower cabinets in soft focus, a window above the sink shows blurred dusk evergreens and fog beyond. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 10,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "build",
+      "chapter_number": 1,
+      "music_cue": "reflection_warm",
+      "sfx": [
+        "ceramic_mug_held",
+        "evening_kitchen_quiet"
+      ],
+      "props_used": [
+        "ceramic mug"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "RECURRING #2 first occurrence. Opens with honesty."
+    },
+    {
+      "id": "CLIP-02",
+      "act": "1_intro",
+      "label": "Memory — own mother's voice from another room",
+      "scene_type": "flashback",
+      "source": "new_image",
+      "characters": [],
+      "setting": "young_sarah_kitchen",
+      "emotion": "childhood memory",
+      "story_en": "I learned them from my own mother. Not because she was unkind. Because she had learned them too. From hers.",
+      "story_chunks_en": [
+        "I learned them from",
+        "my own mother.",
+        "Not because she was unkind.",
+        "Because she had learned them too.",
+        "From hers."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm hand-drawn storybook flashback wide shot of a 1990s kitchen interior at early evening, soft amber overhead light, a small white American girl age 9 with chestnut-brown hair in two simple braids, fair skin with light freckles, wearing a faded mauve cotton t-shirt and dark blue stretch leggings with worn white sneakers (young Sarah) seated at a small wooden kitchen table doing homework, her mother visible in soft-focus background through an open doorway in another room, only the silhouette and warm shoulder outline of an adult woman seen from behind. The childhood kitchen is slightly dated: floral wallpaper, oak cabinets, a curling-edge calendar on the wall. Watercolor warmth, gentle nostalgia. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 10,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "build",
+      "chapter_number": 1,
+      "music_cue": "memory_childhood",
+      "sfx": [
+        "distant_kitchen_radio",
+        "pencil_on_paper"
+      ],
+      "props_used": [
+        "wooden kitchen table",
+        "homework papers"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "FLASHBACK first. Establishes generational pattern. Mother's face never shown.",
+      "flashback": true
+    },
+    {
+      "id": "CLIP-03",
+      "act": "1_intro",
+      "label": "Sarah at home office — journal open",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Sarah"
+      ],
+      "setting": "walsh_home_office",
+      "emotion": "the noticing begins",
+      "story_en": "One night last spring, I sat down. I wrote down five sentences I had said to Jaden that week. And then I sat with them.",
+      "story_chunks_en": [
+        "One night last spring,",
+        "I sat down.",
+        "I wrote down",
+        "five sentences",
+        "I had said to Jaden",
+        "that week.",
+        "And then",
+        "I sat with them."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm medium shot of Sarah seated at a small modern home office desk at late evening, the brown leather journal open in front of her, a dark wood pencil in her right hand mid-pause hovering above the page. Sarah, white American woman mid-30s, 5'5\", slim modern build with confident upright posture, straight chestnut-brown hair falling just below shoulders tucked behind one ear, dark warm brown eyes with thoughtful focus, fair-medium skin with a hint of natural blush, modern minimalist style, wearing a soft chambray blue button-up shirt with sleeves rolled to forearms over loose slate-grey linen trousers, small gold stud earrings, simple silver wedding band, bare feet on warm wooden floor. A soft amber desk lamp casts a warm circle of honey light on the desk and the journal. Behind her a slate blue-grey accent wall, a small framed botanical print, a bookshelf with stacks of design books in soft focus. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": "Sarah's pencil tip hovers above the journal page for a moment. She lowers it slowly and writes a single short line. She pauses. She lifts her gaze toward the dark window beyond, reflective. The amber desk lamp glow steady. Keep characters IDENTICAL. Maintain warm amber interior palette.",
+      "voice_role": "narrator",
+      "duration": 8,
+      "motion_budget": "extended",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "peak",
+      "chapter_number": 1,
+      "music_cue": "quiet_realization",
+      "sfx": [
+        "pencil_on_paper_soft",
+        "desk_lamp_hum"
+      ],
+      "props_used": [
+        "brown leather journal",
+        "dark wood pencil",
+        "amber desk lamp"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "The moment Sarah began the practice. Foundational scene. Only video in Ch1."
+    },
+    {
+      "id": "CLIP-04",
+      "act": "1_intro",
+      "label": "I said them because I was raised on them — RECURRING #1 setup",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Sarah"
+      ],
+      "setting": "walsh_kitchen",
+      "emotion": "humble accountability",
+      "story_en": "I said them because I was raised on them. They were not chosen. They were inherited. And Jaden was the one who began to teach me to do better.",
+      "story_chunks_en": [
+        "I said them",
+        "because I was raised on them.",
+        "They were not chosen.",
+        "They were inherited.",
+        "And Jaden was the one",
+        "who began to teach me",
+        "to do better."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm medium close-up of Sarah at her kitchen counter with the journal closed between her hands, her face lifted in candid gentle reflection toward the camera. Sarah, white American woman mid-30s, 5'5\", slim modern build with confident upright posture, straight chestnut-brown hair falling just below shoulders tucked behind one ear, dark warm brown eyes with thoughtful focus, fair-medium skin with a hint of natural blush, modern minimalist style, wearing a soft chambray blue button-up shirt with sleeves rolled to forearms over loose slate-grey linen trousers, small gold stud earrings, simple silver wedding band, bare feet on warm wooden floor. Soft amber under-cabinet light from below catches her hands and the journal cover, warm honey glow on her chin and lower face. The kitchen behind her in soft focus. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 10,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "peak",
+      "chapter_number": 1,
+      "music_cue": "quiet_realization",
+      "sfx": [
+        "soft_breath",
+        "kitchen_quiet"
+      ],
+      "props_used": [
+        "brown leather journal"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "RECURRING #1 setup. Sets up trademark sentence used 3x in video."
+    },
+    {
+      "id": "CLIP-05",
+      "act": "1_intro",
+      "label": "Five symbolic objects teaser",
+      "scene_type": "broll",
+      "source": "new_image",
+      "characters": [],
+      "setting": "walsh_kitchen",
+      "emotion": "anticipation — five things",
+      "story_en": "Five sentences. A warning. A dismissal. A flattery. A wall. And a denial. Each one I have stopped saying.",
+      "story_chunks_en": [
+        "Five sentences.",
+        "A warning.",
+        "A dismissal.",
+        "A flattery.",
+        "A wall.",
+        "And a denial.",
+        "Each one",
+        "I have stopped saying."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm overhead-angle still life on a pale oak kitchen table, five small objects arranged in a gentle horizontal row like memory tokens: a small yellow caution triangle road sign miniature, a folded white linen handkerchief, a small gold star sticker on a slip of paper, a small wooden door with the door slightly ajar (toy or model), a small clear glass thermometer on a folded square of paper. Soft amber window light raking from the upper left. Each object spaced with breathing room, watercolor softness. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 10,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_pan_right",
+      "retention_role": "build",
+      "chapter_number": 1,
+      "music_cue": "anticipation_warm",
+      "sfx": [
+        "soft_table_air"
+      ],
+      "props_used": [
+        "caution triangle",
+        "linen handkerchief",
+        "gold star sticker",
+        "small wooden door",
+        "glass thermometer"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "Visual teaser of 5 chapters. Each object reappears in its respective chapter card."
+    },
+    {
+      "id": "CHAPTER-02",
+      "act": "2_careful",
+      "label": "Chapter 2 — Be Careful",
+      "scene_type": "chapter_card",
+      "source": "new_image",
+      "characters": [],
+      "setting": "chapter_card",
+      "emotion": "warm anchor",
+      "story_en": "Be careful.",
+      "story_chunks_en": [
+        "Be careful."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm hand-drawn still life of a small yellow caution triangle road sign miniature standing alone on a pale oak surface, soft amber window light raking from the right, slate blue-grey wall in soft focus behind, the symbolic warning shape isolated in the frame with intentional quiet. Empty negative space at top right for chapter title overlay. Symbolic motif: anxiety transferred. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "chapter",
+      "duration": 4,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "rest",
+      "chapter_number": 2,
+      "music_cue": "chapter_anchor",
+      "sfx": [],
+      "props_used": [
+        "caution triangle"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "4s chapter card. Caution triangle = old sentence.",
+      "chapter_text_overlay": {
+        "label": "CHAPTER TWO",
+        "title": "BE CAREFUL"
+      }
+    },
+    {
+      "id": "CLIP-06",
+      "act": "2_careful",
+      "label": "Setup — Jaden climbs onto kitchen counter",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Jaden"
+      ],
+      "setting": "walsh_kitchen",
+      "emotion": "small everyday moment",
+      "story_en": "Last Thursday Jaden climbed onto the kitchen counter to reach the cookie jar on the high shelf. I came in from the office.",
+      "story_chunks_en": [
+        "Last Thursday",
+        "Jaden climbed",
+        "onto the kitchen counter",
+        "to reach the cookie jar",
+        "on the high shelf.",
+        "I came in",
+        "from the office."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm medium-wide shot of the modern Walsh kitchen at late afternoon, Jaden, white American boy age 10 in fourth grade, taller-than-average build for his age, light brown hair worn slightly long over the ears with a soft fringe, large warm hazel-green eyes with serious thoughtful expression, fair skin with a few light freckles across the nose, wearing a soft dark forest-green hoodie over slim charcoal joggers with white socks, a small woven friendship bracelet on his left wrist mid-climb on the pale oak counter with one knee on the counter and one hand reaching up toward a high shelf where a glass cookie jar sits, his expression focused with mild concentration. Soft amber under-cabinet light, slate blue-grey lower cabinets, a window with afternoon evergreens beyond in soft focus. Empty doorway visible to the left where Sarah will enter. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 10,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "build",
+      "chapter_number": 2,
+      "music_cue": "domestic_quiet",
+      "sfx": [
+        "counter_creak",
+        "child_focused_breath"
+      ],
+      "props_used": [
+        "glass cookie jar",
+        "pale oak counter"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "Modern setup. Daily moment of risk-taking child."
+    },
+    {
+      "id": "CLIP-07",
+      "act": "2_careful",
+      "label": "Sarah's old instinct — Be careful!",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Sarah",
+        "Jaden"
+      ],
+      "setting": "walsh_kitchen",
+      "emotion": "the auto-pilot reflex",
+      "story_en": "The sentence almost flew out of me. Be careful! It is the first thing I would have said. Two years ago.",
+      "story_chunks_en": [
+        "The sentence",
+        "almost flew out of me.",
+        "Be careful!",
+        "It is the first thing",
+        "I would have said.",
+        "Two years ago."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm medium shot of Sarah in the kitchen doorway frozen mid-step, lips slightly parted as if a sentence was about to leave her mouth but was caught. Sarah, white American woman mid-30s, 5'5\", slim modern build with confident upright posture, straight chestnut-brown hair falling just below shoulders tucked behind one ear, dark warm brown eyes with thoughtful focus, fair-medium skin with a hint of natural blush, modern minimalist style, wearing a soft chambray blue button-up shirt with sleeves rolled to forearms over loose slate-grey linen trousers, small gold stud earrings, simple silver wedding band, bare feet on warm wooden floor. Jaden visible in the mid-background still on the counter mid-climb, softly out of focus. Soft amber kitchen light. The micro-pause of a parent catching her own reflex. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 8,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "build",
+      "chapter_number": 2,
+      "music_cue": "tension_subtle",
+      "sfx": [
+        "held_breath_short",
+        "doorway_floor_creak"
+      ],
+      "props_used": [
+        "pale oak counter"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "The almost-said. Modern parent catches her old reflex."
+    },
+    {
+      "id": "CLIP-08",
+      "act": "2_careful",
+      "label": "Flashback — young Jaden hesitates on playground",
+      "scene_type": "flashback",
+      "source": "new_image",
+      "characters": [],
+      "setting": "pacific_nw_playground",
+      "emotion": "the cost of be careful",
+      "story_en": "But I remembered the playground when he was six. Every time he climbed, I called: be careful. I called it three times in five minutes. He froze on the third rung.",
+      "story_chunks_en": [
+        "But I remembered",
+        "the playground",
+        "when he was six.",
+        "Every time he climbed,",
+        "I called:",
+        "be careful.",
+        "I called it three times",
+        "in five minutes.",
+        "He froze on the third rung."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm hand-drawn storybook flashback wide shot of a Pacific Northwest neighborhood playground in soft fog at autumn morning four years earlier, a small white American boy age 6 with light brown hair worn slightly tousled, fair skin with a few freckles across the nose, wearing a small navy zip-up fleece over a yellow t-shirt and grey jersey shorts with scuffed sneakers (young Jaden) frozen mid-climb on a wooden playground ladder, both small hands gripping the rung, his face turned toward an off-frame point, expression carrying small held-back hesitation. In the soft-focus mid-background a younger version of Sarah stands just below the ladder with her hand half-raised in a calling gesture. Slate blue-grey sky, dusty teal evergreens framing the playground. Cool exterior palette. Pacific Northwest exterior palette: muted slate blue-grey skies, soft fog, dusty teal evergreen pines, mossy greens, pale damp wooden tones, warm amber accents from porch lights or windows. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": "Young Jaden's hands grip the wooden rung as his small body holds frozen, his shoulder muscles tense. He looks down toward Sarah below with quiet hesitation. Sarah's hand begins to rise in another calling gesture but stops. Soft fog drifts behind them. Keep characters IDENTICAL. Maintain Pacific Northwest cool exterior palette.",
+      "voice_role": "narrator",
+      "duration": 12,
+      "motion_budget": "extended",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "peak",
+      "chapter_number": 2,
+      "music_cue": "memory_anxious",
+      "sfx": [
+        "wooden_rung_creak",
+        "soft_fog_air",
+        "child_held_breath"
+      ],
+      "props_used": [
+        "wooden playground ladder"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "FLASHBACK Ch2. The cost: anxiety transfer through repeated 'be careful'.",
+      "flashback": true
+    },
+    {
+      "id": "CLIP-09",
+      "act": "2_careful",
+      "label": "The realization — anxiety transfer",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [],
+      "setting": "walsh_kitchen",
+      "emotion": "naming the cost",
+      "story_en": "I realized he hesitated more around me than around his dad. Because I was making him careful for me. Not for himself.",
+      "story_chunks_en": [
+        "I realized",
+        "he hesitated more",
+        "around me",
+        "than around his dad.",
+        "Because I was making him",
+        "careful for me.",
+        "Not for himself."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm overhead-angle close-up of the open brown leather journal on the home office desk, the page showing a single short handwritten line of dark navy ink (intentionally blurred unreadable). The word 'careful' is barely legible at the top, faintly crossed through with a single horizontal pencil line, with what appears to be a new short line written below it. Soft amber desk lamp glow on the page, dust motes drift in the warm light. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 10,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "build",
+      "chapter_number": 2,
+      "music_cue": "naming_quiet",
+      "sfx": [
+        "paper_close_up",
+        "lamp_warm_hum"
+      ],
+      "props_used": [
+        "brown leather journal",
+        "amber desk lamp"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "The journal moment. The crossing-out of the old sentence."
+    },
+    {
+      "id": "CLIP-10",
+      "act": "2_careful",
+      "label": "The new sentence — what's your plan?",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Sarah"
+      ],
+      "setting": "walsh_home_office",
+      "emotion": "the swap",
+      "story_en": "So I wrote the replacement. Four words. What's your plan for this. It gives him agency. Not anxiety.",
+      "story_chunks_en": [
+        "So I wrote the replacement.",
+        "Four words.",
+        "What's your plan",
+        "for this.",
+        "It gives him agency.",
+        "Not anxiety."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm intimate close-up of Sarah's hand at the home office desk holding the dark wood pencil, mid-stroke writing a new short line in the brown leather journal, the previous crossed-through line visible just above. Soft amber desk lamp light on the page, the texture of cream paper and the slight indent of the pencil tip visible. Macro tenderness. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": "Sarah's hand finishes writing the new short line of cursive ink in the journal. The pencil tip lifts and pauses. Her thumb steadies the page. Soft amber lamp light. Keep hands IDENTICAL. Maintain warm amber interior palette.",
+      "voice_role": "narrator",
+      "duration": 12,
+      "motion_budget": "extended",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "peak",
+      "chapter_number": 2,
+      "music_cue": "quiet_swap",
+      "sfx": [
+        "pencil_writing_close",
+        "paper_creak"
+      ],
+      "props_used": [
+        "brown leather journal",
+        "dark wood pencil"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "The journal swap moment. New sentence written."
+    },
+    {
+      "id": "CLIP-11",
+      "act": "2_careful",
+      "label": "Present return — Jaden steadies",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Sarah",
+        "Jaden"
+      ],
+      "setting": "walsh_kitchen",
+      "emotion": "quiet success of agency",
+      "story_en": "So last Thursday I caught the old sentence in my throat. I said the new one instead. What's your plan for this. He stopped. He thought about it. Then he climbed down and got the step stool.",
+      "story_chunks_en": [
+        "So last Thursday",
+        "I caught the old sentence",
+        "in my throat.",
+        "I said the new one instead.",
+        "What's your plan",
+        "for this.",
+        "He stopped.",
+        "He thought about it.",
+        "Then he climbed down",
+        "and got the step stool."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm medium-wide shot of the present-day Walsh kitchen, Jaden now standing on the floor beside the counter holding a small wooden step stool he has retrieved, his face thoughtful and proud of his own solution. Jaden, white American boy age 10 in fourth grade, taller-than-average build for his age, light brown hair worn slightly long over the ears with a soft fringe, large warm hazel-green eyes with serious thoughtful expression, fair skin with a few light freckles across the nose, wearing a soft dark forest-green hoodie over slim charcoal joggers with white socks, a small woven friendship bracelet on his left wrist. Sarah in the soft-focus background of the doorway watching with restrained warm pride. Soft amber under-cabinet light, slate blue-grey lower cabinets. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": "Jaden walks slowly back into the kitchen carrying the wooden step stool with both hands, sets it down beside the counter with a small soft thud, looks up at the cookie jar with renewed agency. Sarah's expression in the background softens. Warm amber light. Keep characters IDENTICAL. Maintain warm amber interior palette.",
+      "voice_role": "narrator",
+      "duration": 10,
+      "motion_budget": "extended",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "peak",
+      "chapter_number": 2,
+      "music_cue": "resolution_agency",
+      "sfx": [
+        "step_stool_set",
+        "child_satisfied_breath"
+      ],
+      "props_used": [
+        "wooden step stool",
+        "glass cookie jar"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "QUOTE LINE Ch2. The replacement working in real life."
+    },
+    {
+      "id": "CHAPTER-03",
+      "act": "3_dontcry",
+      "label": "Chapter 3 — Don't Cry",
+      "scene_type": "chapter_card",
+      "source": "new_image",
+      "characters": [],
+      "setting": "chapter_card",
+      "emotion": "warm anchor",
+      "story_en": "Don't cry.",
+      "story_chunks_en": [
+        "Don't cry."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm hand-drawn still life of a small folded white linen handkerchief resting on a pale oak surface, soft amber window light raking from the right, the folded fabric carrying a quiet sense of withheld feeling. A faint small water stain on one corner. Slate blue-grey wall accent in soft focus behind. Empty negative space at top right for chapter title overlay. Symbolic motif: feelings tucked away. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "chapter",
+      "duration": 4,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "rest",
+      "chapter_number": 3,
+      "music_cue": "chapter_anchor",
+      "sfx": [],
+      "props_used": [
+        "folded white linen handkerchief"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "4s chapter card. Handkerchief = withheld tears.",
+      "chapter_text_overlay": {
+        "label": "CHAPTER THREE",
+        "title": "DON'T CRY"
+      }
+    },
+    {
+      "id": "CLIP-12",
+      "act": "3_dontcry",
+      "label": "Setup — Jaden cries about lost favourite",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Jaden"
+      ],
+      "setting": "jaden_bedroom",
+      "emotion": "child's grief over loss",
+      "story_en": "A few months ago, Jaden lost a small wooden bird. His grandfather had carved it. He came into his room and burst into tears.",
+      "story_chunks_en": [
+        "A few months ago,",
+        "Jaden lost",
+        "a small wooden bird.",
+        "His grandfather had carved it.",
+        "He came into his room",
+        "and burst into tears."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm medium shot of Jaden, white American boy age 10 in fourth grade, taller-than-average build for his age, light brown hair worn slightly long over the ears with a soft fringe, large warm hazel-green eyes with serious thoughtful expression, fair skin with a few light freckles across the nose, wearing a soft dark forest-green hoodie over slim charcoal joggers with white socks, a small woven friendship bracelet on his left wrist sitting on the edge of his bed at evening, his shoulders slumped forward, both small hands cupped together holding empty air where the bird should be, tears beginning to gather on his lashes. His bedroom is modern minimalist with pale wood furniture, a slate blue-grey accent wall, a single warm amber bedside lamp, soft oat bedding. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 10,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "build",
+      "chapter_number": 3,
+      "music_cue": "grief_child",
+      "sfx": [
+        "soft_bedroom_quiet",
+        "child_held_breath"
+      ],
+      "props_used": [
+        "edge of bed",
+        "amber bedside lamp"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "Modern setup. Real loss with real meaning."
+    },
+    {
+      "id": "CLIP-13",
+      "act": "3_dontcry",
+      "label": "Sarah's old instinct — don't cry",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Sarah"
+      ],
+      "setting": "jaden_bedroom",
+      "emotion": "the dismissal reflex",
+      "story_en": "The old sentence rose in my chest. Don't cry. It's just a toy. We can find another one. I almost said it. The way my mother almost always did.",
+      "story_chunks_en": [
+        "The old sentence",
+        "rose in my chest.",
+        "Don't cry.",
+        "It's just a toy.",
+        "We can find another one.",
+        "I almost said it.",
+        "The way my mother",
+        "almost always did."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm medium close-up of Sarah standing in the doorway of Jaden's bedroom, lips slightly parted in the reflex of an unspoken sentence, her hand half-raised in restraint at chest height. Sarah, white American woman mid-30s, 5'5\", slim modern build with confident upright posture, straight chestnut-brown hair falling just below shoulders tucked behind one ear, dark warm brown eyes with thoughtful focus, fair-medium skin with a hint of natural blush, modern minimalist style, wearing a soft chambray blue button-up shirt with sleeves rolled to forearms over loose slate-grey linen trousers, small gold stud earrings, simple silver wedding band, bare feet on warm wooden floor. Soft amber bedroom lamp light from inside the room glows gently on her face. Slate blue-grey hallway wall behind her in shadow. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 8,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "build",
+      "chapter_number": 3,
+      "music_cue": "tension_subtle",
+      "sfx": [
+        "doorway_hold",
+        "considered_breath"
+      ],
+      "props_used": [],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "The almost-said dismissal. Sarah catches the inherited reflex."
+    },
+    {
+      "id": "CLIP-14",
+      "act": "3_dontcry",
+      "label": "Flashback — young Sarah biting her lip",
+      "scene_type": "flashback",
+      "source": "new_image",
+      "characters": [],
+      "setting": "young_sarah_kitchen",
+      "emotion": "her own taught silence",
+      "story_en": "But I remembered being nine. Standing in my mother's kitchen with my eyes burning. Biting my lip until I could swallow it. Because the rule was simple. Don't cry.",
+      "story_chunks_en": [
+        "But I remembered",
+        "being nine.",
+        "Standing in my mother's kitchen",
+        "with my eyes burning.",
+        "Biting my lip",
+        "until I could swallow it.",
+        "Because the rule was simple.",
+        "Don't cry."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm hand-drawn storybook flashback medium shot of a 1990s kitchen interior at evening, a small white American girl age 9 with chestnut-brown hair in two simple braids, fair skin with light freckles, wearing a faded mauve cotton t-shirt and dark blue stretch leggings with worn white sneakers (young Sarah) standing alone in the middle of the kitchen with her small chin held high but slightly trembling, her teeth gently biting her lower lip with visible effort, her eyes glassy and red-rimmed but no tears falling. Soft amber overhead light, floral wallpaper, oak cabinets, dated kitchen tile floor. The mother's silhouette is barely visible in soft-focus background still in another room. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": "Young Sarah's small chest rises with a held breath. Her teeth press more firmly into her lower lip. Her chin lifts higher in held-back composure. A single tear is pushed back. Soft amber kitchen light. Keep character IDENTICAL. Maintain warm amber interior palette.",
+      "voice_role": "narrator",
+      "duration": 12,
+      "motion_budget": "extended",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "peak",
+      "chapter_number": 3,
+      "music_cue": "memory_swallowed",
+      "sfx": [
+        "small_held_breath",
+        "tile_floor_quiet"
+      ],
+      "props_used": [
+        "dated kitchen interior"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "FLASHBACK Ch3. Sarah's own taught silence. The cost named.",
+      "flashback": true
+    },
+    {
+      "id": "CLIP-15",
+      "act": "3_dontcry",
+      "label": "The journal — new sentence written",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [],
+      "setting": "walsh_home_office",
+      "emotion": "naming the new",
+      "story_en": "So that night I sat at my desk. I crossed out: don't cry. I wrote underneath: it's okay to feel that.",
+      "story_chunks_en": [
+        "So that night",
+        "I sat at my desk.",
+        "I crossed out:",
+        "don't cry.",
+        "I wrote underneath:",
+        "it's okay to feel that."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm overhead-angle close-up of the open brown leather journal on the home office desk, the page showing two short handwritten lines of dark navy ink (intentionally blurred unreadable), the upper line crossed through with a single horizontal pencil stroke, a new short line written beneath it in fresh ink. Soft amber desk lamp glow, dust motes in the warm light. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 10,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "build",
+      "chapter_number": 3,
+      "music_cue": "quiet_swap",
+      "sfx": [
+        "pencil_close_up",
+        "lamp_warm_hum"
+      ],
+      "props_used": [
+        "brown leather journal",
+        "amber desk lamp"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "Journal swap. The replacement: 'It's okay to feel that.'"
+    },
+    {
+      "id": "CLIP-16",
+      "act": "3_dontcry",
+      "label": "Present — Sarah uses the new sentence",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Sarah",
+        "Jaden"
+      ],
+      "setting": "jaden_bedroom",
+      "emotion": "the new permission",
+      "story_en": "So in his doorway that night I knelt down. I said the new sentence. It's okay to feel that. He looked up. And then he cried fully for the first time.",
+      "story_chunks_en": [
+        "So in his doorway",
+        "that night",
+        "I knelt down.",
+        "I said the new sentence.",
+        "It's okay to feel that.",
+        "He looked up.",
+        "And then he cried fully",
+        "for the first time."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm medium shot of Sarah kneeling on the wooden floor in the doorway of Jaden's bedroom at his eye level. Sarah, white American woman mid-30s, 5'5\", slim modern build with confident upright posture, straight chestnut-brown hair falling just below shoulders tucked behind one ear, dark warm brown eyes with thoughtful focus, fair-medium skin with a hint of natural blush, modern minimalist style, wearing a soft chambray blue button-up shirt with sleeves rolled to forearms over loose slate-grey linen trousers, small gold stud earrings, simple silver wedding band, bare feet on warm wooden floor. Jaden, white American boy age 10 in fourth grade, taller-than-average build for his age, light brown hair worn slightly long over the ears with a soft fringe, large warm hazel-green eyes with serious thoughtful expression, fair skin with a few light freckles across the nose, wearing a soft dark forest-green hoodie over slim charcoal joggers with white socks, a small woven friendship bracelet on his left wrist seated on the edge of his bed in the mid-background facing her, his small face just beginning to release with held tears falling freely now, both small hands open on his lap. Soft amber bedroom lamp light. Tender intimate angle. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": "Sarah lowers slowly to her knees in the doorway. She speaks softly, only six short words. Jaden's small face crumples with relief, tears falling freely now, his shoulders releasing. Soft amber lamp light. Keep characters IDENTICAL. Maintain warm amber interior palette.",
+      "voice_role": "narrator",
+      "duration": 10,
+      "motion_budget": "extended",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "peak",
+      "chapter_number": 3,
+      "music_cue": "permission_warm",
+      "sfx": [
+        "soft_knees_floor",
+        "child_released_breath"
+      ],
+      "props_used": [
+        "amber bedside lamp"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "Present application. The permission given."
+    },
+    {
+      "id": "CLIP-17",
+      "act": "3_dontcry",
+      "label": "Quote — tears are information",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Sarah",
+        "Jaden"
+      ],
+      "setting": "jaden_bedroom",
+      "emotion": "the quotable peak",
+      "story_en": "Tears are not a problem. They are information. He told me what the bird had meant. We talked for an hour.",
+      "story_chunks_en": [
+        "Tears are not a problem.",
+        "They are information.",
+        "He told me",
+        "what the bird had meant.",
+        "We talked",
+        "for an hour."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm tender medium shot from a slightly raised angle, Sarah seated on the wooden floor beside Jaden's bed now with one arm around his shoulder, Jaden leaned into her with calmer breathing, his small hands open on his lap. Sarah, white American woman mid-30s, 5'5\", slim modern build with confident upright posture, straight chestnut-brown hair falling just below shoulders tucked behind one ear, dark warm brown eyes with thoughtful focus, fair-medium skin with a hint of natural blush, modern minimalist style, wearing a soft chambray blue button-up shirt with sleeves rolled to forearms over loose slate-grey linen trousers, small gold stud earrings, simple silver wedding band, bare feet on warm wooden floor. Jaden, white American boy age 10 in fourth grade, taller-than-average build for his age, light brown hair worn slightly long over the ears with a soft fringe, large warm hazel-green eyes with serious thoughtful expression, fair skin with a few light freckles across the nose, wearing a soft dark forest-green hoodie over slim charcoal joggers with white socks, a small woven friendship bracelet on his left wrist. Soft amber bedroom lamp glow, the slate blue-grey wall accent behind them, a folded oat blanket beside them on the bed. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": "Jaden's small head leans slightly into Sarah's shoulder. Her arm rests gently around him. His breathing has slowed. He begins to speak quietly. The amber lamp light holds steady. Keep characters IDENTICAL. Maintain warm amber interior palette.",
+      "voice_role": "narrator",
+      "duration": 11,
+      "motion_budget": "extended",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "peak",
+      "chapter_number": 3,
+      "music_cue": "resolution_warm",
+      "sfx": [
+        "soft_held_quiet",
+        "lamp_warm_hum"
+      ],
+      "props_used": [
+        "folded oat blanket"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "QUOTE LINE Ch3. Closes Ch3 = mid-roll #1 (201s = 3:21)."
+    },
+    {
+      "id": "CHAPTER-04",
+      "act": "4_smart",
+      "label": "Chapter 4 — You're So Smart",
+      "scene_type": "chapter_card",
+      "source": "new_image",
+      "characters": [],
+      "setting": "chapter_card",
+      "emotion": "warm anchor",
+      "story_en": "You're so smart.",
+      "story_chunks_en": [
+        "You're so smart."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm hand-drawn still life of a small gold star sticker partly peeled off a slip of cream paper, resting on a pale oak surface, soft amber window light raking from the right. The peel suggests fading celebration. Slate blue-grey wall in soft focus behind. Empty negative space at top right for chapter title overlay. Symbolic motif: empty flattery that lifts off. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "chapter",
+      "duration": 4,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "rest",
+      "chapter_number": 4,
+      "music_cue": "chapter_anchor",
+      "sfx": [],
+      "props_used": [
+        "gold star sticker"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "4s chapter card. Gold star = misapplied praise.",
+      "chapter_text_overlay": {
+        "label": "CHAPTER FOUR",
+        "title": "YOU'RE SO SMART"
+      }
+    },
+    {
+      "id": "CLIP-18",
+      "act": "4_smart",
+      "label": "Setup — Jaden brings home a high test score",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Jaden"
+      ],
+      "setting": "walsh_kitchen",
+      "emotion": "child's pride",
+      "story_en": "A year ago, Jaden brought home a math test. Ninety-eight percent. He held it up at the kitchen counter with the proudest smile.",
+      "story_chunks_en": [
+        "A year ago,",
+        "Jaden brought home",
+        "a math test.",
+        "Ninety-eight percent.",
+        "He held it up",
+        "at the kitchen counter",
+        "with the proudest smile."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm medium shot of Jaden, white American boy age 10 in fourth grade, taller-than-average build for his age, light brown hair worn slightly long over the ears with a soft fringe, large warm hazel-green eyes with serious thoughtful expression, fair skin with a few light freckles across the nose, wearing a soft dark forest-green hoodie over slim charcoal joggers with white socks, a small woven friendship bracelet on his left wrist standing at the pale oak kitchen counter holding up a folded math test paper with a large red ninety-eight written at the top, his face lit with proud anticipation as he looks toward an off-frame point. Soft amber under-cabinet light, slate blue-grey lower cabinets in soft focus. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 10,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "build",
+      "chapter_number": 4,
+      "music_cue": "warm_eager",
+      "sfx": [
+        "paper_held_up",
+        "child_proud_breath"
+      ],
+      "props_used": [
+        "math test paper",
+        "pale oak counter"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "Modern setup. The praise temptation."
+    },
+    {
+      "id": "CLIP-19",
+      "act": "4_smart",
+      "label": "Sarah's old instinct — you're so smart",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Sarah",
+        "Jaden"
+      ],
+      "setting": "walsh_kitchen",
+      "emotion": "the flattery reflex",
+      "story_en": "The old sentence wanted to leap out of me. You're so smart! Three words. So easy. So warm. So harmful.",
+      "story_chunks_en": [
+        "The old sentence",
+        "wanted to leap",
+        "out of me.",
+        "You're so smart!",
+        "Three words.",
+        "So easy.",
+        "So warm.",
+        "So harmful."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm medium close-up of Sarah turning from the kitchen counter to look at Jaden with the math test, her smile beginning to form but held back, her lips slightly parted in restraint. Sarah, white American woman mid-30s, 5'5\", slim modern build with confident upright posture, straight chestnut-brown hair falling just below shoulders tucked behind one ear, dark warm brown eyes with thoughtful focus, fair-medium skin with a hint of natural blush, modern minimalist style, wearing a soft chambray blue button-up shirt with sleeves rolled to forearms over loose slate-grey linen trousers, small gold stud earrings, simple silver wedding band, bare feet on warm wooden floor. Jaden's small hand and the test paper visible at the bottom edge of frame. Soft amber kitchen light. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 8,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "build",
+      "chapter_number": 4,
+      "music_cue": "tension_subtle",
+      "sfx": [
+        "held_breath_short",
+        "paper_slight_rustle"
+      ],
+      "props_used": [
+        "math test paper"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "The almost-said. The tempting compliment."
+    },
+    {
+      "id": "CLIP-20",
+      "act": "4_smart",
+      "label": "Flashback — Sarah at laptop reading research",
+      "scene_type": "flashback",
+      "source": "new_image",
+      "characters": [],
+      "setting": "walsh_home_office",
+      "emotion": "the unlearning",
+      "story_en": "But I had read the research a few months earlier. About fixed mindset and growth mindset. About what praise teaches a child to fear.",
+      "story_chunks_en": [
+        "But I had read",
+        "the research",
+        "a few months earlier.",
+        "About fixed mindset",
+        "and growth mindset.",
+        "About what praise teaches",
+        "a child to fear."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm hand-drawn flashback medium shot of Sarah seated at her home office desk in late evening, her face illuminated by the soft cool blue glow of an open laptop screen, the brown leather journal open beside the laptop with handwritten notes in dark navy ink visible (intentionally blurred unreadable). Sarah, white American woman mid-30s, 5'5\", slim modern build with confident upright posture, straight chestnut-brown hair falling just below shoulders tucked behind one ear, dark warm brown eyes with thoughtful focus, fair-medium skin with a hint of natural blush, modern minimalist style, wearing a soft chambray blue button-up shirt with sleeves rolled to forearms over loose slate-grey linen trousers, small gold stud earrings, simple silver wedding band, bare feet on warm wooden floor. A small ceramic mug of tea steams beside the laptop. Slate blue-grey accent wall behind her, soft amber desk lamp from the side balancing the cool laptop glow. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": "Sarah's eyes track slowly across the laptop screen reading. Her right hand lifts the dark wood pencil and writes a quick note in the journal. She pauses, lifts her gaze toward the dark window beyond, considering. Cool laptop glow and warm desk lamp mix on her face. Keep character IDENTICAL. Maintain warm amber interior palette.",
+      "voice_role": "narrator",
+      "duration": 10,
+      "motion_budget": "extended",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "peak",
+      "chapter_number": 4,
+      "music_cue": "learning_quiet",
+      "sfx": [
+        "laptop_keyboard_soft",
+        "pencil_on_paper",
+        "tea_steam"
+      ],
+      "props_used": [
+        "laptop",
+        "brown leather journal",
+        "ceramic mug"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "The unlearning moment. Sarah encounters Carol Dweck research.",
+      "flashback": true
+    },
+    {
+      "id": "CLIP-21",
+      "act": "4_smart",
+      "label": "The realization — fixed mindset trap",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Sarah"
+      ],
+      "setting": "walsh_home_office",
+      "emotion": "naming the cost",
+      "story_en": "When you call a child smart, they become afraid of looking not-smart. They stop trying hard things. Smart becomes a wall they cannot risk losing.",
+      "story_chunks_en": [
+        "When you call a child smart,",
+        "they become afraid",
+        "of looking not-smart.",
+        "They stop trying",
+        "hard things.",
+        "Smart becomes a wall",
+        "they cannot risk losing."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm medium close-up of Sarah at her desk, her face thoughtful with the weight of a new understanding settling in. Sarah, white American woman mid-30s, 5'5\", slim modern build with confident upright posture, straight chestnut-brown hair falling just below shoulders tucked behind one ear, dark warm brown eyes with thoughtful focus, fair-medium skin with a hint of natural blush, modern minimalist style, wearing a soft chambray blue button-up shirt with sleeves rolled to forearms over loose slate-grey linen trousers, small gold stud earrings, simple silver wedding band, bare feet on warm wooden floor. The laptop screen now dimmed, her hand resting gently on the open journal page. Soft amber desk lamp light, the slate blue-grey wall accent behind her in evening shadow. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 10,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "build",
+      "chapter_number": 4,
+      "music_cue": "naming_quiet",
+      "sfx": [
+        "soft_inhale_realization",
+        "lamp_warm_hum"
+      ],
+      "props_used": [
+        "brown leather journal",
+        "amber desk lamp"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "The cost named: fixed mindset trap."
+    },
+    {
+      "id": "CLIP-22",
+      "act": "4_smart",
+      "label": "Counter-scene — Jaden gives up on hard puzzle",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Jaden"
+      ],
+      "setting": "walsh_living_room",
+      "emotion": "the cost in real life",
+      "story_en": "And I had seen it in him. A month earlier with a puzzle. He looked at it. He said: I'm not smart at this. And he walked away.",
+      "story_chunks_en": [
+        "And I had seen it in him.",
+        "A month earlier",
+        "with a puzzle.",
+        "He looked at it.",
+        "He said:",
+        "I'm not smart at this.",
+        "And he walked away."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm medium shot of Jaden, white American boy age 10 in fourth grade, taller-than-average build for his age, light brown hair worn slightly long over the ears with a soft fringe, large warm hazel-green eyes with serious thoughtful expression, fair skin with a few light freckles across the nose, wearing a soft dark forest-green hoodie over slim charcoal joggers with white socks, a small woven friendship bracelet on his left wrist standing beside the wooden coffee table in the Walsh living room, looking down at a partially-completed wooden brain teaser puzzle with frustrated resignation. He has already half-turned away, his shoulder dropping in a small gesture of giving up. Soft amber lamp light, oat linen sofa in soft focus, slate blue-grey wall. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 8,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "build",
+      "chapter_number": 4,
+      "music_cue": "quiet_disappointment",
+      "sfx": [
+        "soft_step_away",
+        "puzzle_pieces_settle"
+      ],
+      "props_used": [
+        "wooden brain teaser puzzle",
+        "wooden coffee table"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "The cost in the real moment. Sarah witnesses the trap."
+    },
+    {
+      "id": "CLIP-23",
+      "act": "4_smart",
+      "label": "RECURRING #1 first + new sentence",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Sarah",
+        "Jaden"
+      ],
+      "setting": "walsh_kitchen",
+      "emotion": "the inheritance lived",
+      "story_en": "I said it because I was raised on it. Jaden taught me to do better. So at the kitchen counter I said the new sentence. I see how hard you worked.",
+      "story_chunks_en": [
+        "I said it",
+        "because I was raised on it.",
+        "Jaden taught me",
+        "to do better.",
+        "So at the kitchen counter",
+        "I said the new sentence.",
+        "I see how hard you worked."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm medium shot of Sarah crouched at the kitchen counter at Jaden, white American boy age 10 in fourth grade, taller-than-average build for his age, light brown hair worn slightly long over the ears with a soft fringe, large warm hazel-green eyes with serious thoughtful expression, fair skin with a few light freckles across the nose, wearing a soft dark forest-green hoodie over slim charcoal joggers with white socks, a small woven friendship bracelet on his left wrist's eye level, her face soft with genuine attention as she looks at the math test in his hands. Sarah, white American woman mid-30s, 5'5\", slim modern build with confident upright posture, straight chestnut-brown hair falling just below shoulders tucked behind one ear, dark warm brown eyes with thoughtful focus, fair-medium skin with a hint of natural blush, modern minimalist style, wearing a soft chambray blue button-up shirt with sleeves rolled to forearms over loose slate-grey linen trousers, small gold stud earrings, simple silver wedding band, bare feet on warm wooden floor. Jaden's expression shifts from anticipation to a deeper feeling — being noticed for effort rather than essence. Soft amber kitchen light, intimate angle. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": "Sarah lowers slowly to a crouch at the counter, her eyes meeting Jaden's. She speaks softly, the new short sentence. Jaden's small face changes — first uncertain, then settling into a more grounded warm pride. Keep characters IDENTICAL. Maintain warm amber interior palette.",
+      "voice_role": "narrator",
+      "duration": 12,
+      "motion_budget": "extended",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "peak",
+      "chapter_number": 4,
+      "music_cue": "recognition_warm",
+      "sfx": [
+        "soft_crouch",
+        "considered_breath",
+        "child_settled"
+      ],
+      "props_used": [
+        "math test paper"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "RECURRING #1 first occurrence + new sentence delivered."
+    },
+    {
+      "id": "CLIP-24",
+      "act": "4_smart",
+      "label": "Quote — smart is a wall, effort is a door",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Jaden"
+      ],
+      "setting": "walsh_living_room",
+      "emotion": "the quotable peak",
+      "story_en": "Smart is a wall. Effort is a door. Last week he sat with that puzzle for forty minutes. He did not solve it. But he came back to it the next morning.",
+      "story_chunks_en": [
+        "Smart is a wall.",
+        "Effort is a door.",
+        "Last week",
+        "he sat with that puzzle",
+        "for forty minutes.",
+        "He did not solve it.",
+        "But he came back to it",
+        "the next morning."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm medium-wide shot of Jaden the next morning seated cross-legged on the wooden living room floor, the same wooden brain teaser puzzle in front of him, his face concentrated and patient, two pieces of the puzzle held in his small hands as he considers them. Jaden, white American boy age 10 in fourth grade, taller-than-average build for his age, light brown hair worn slightly long over the ears with a soft fringe, large warm hazel-green eyes with serious thoughtful expression, fair skin with a few light freckles across the nose, wearing a soft dark forest-green hoodie over slim charcoal joggers with white socks, a small woven friendship bracelet on his left wrist. Soft morning amber light from a window beyond, oat rug, slate blue-grey wall. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": "Jaden rotates one wooden puzzle piece slowly in his fingers, studies it, then tries to fit it. It does not quite click. He pauses. He picks up another piece instead, calmly. The morning amber light steady. Keep character IDENTICAL. Maintain warm amber interior palette.",
+      "voice_role": "narrator",
+      "duration": 11,
+      "motion_budget": "extended",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "peak",
+      "chapter_number": 4,
+      "music_cue": "resolution_effort",
+      "sfx": [
+        "wooden_puzzle_pieces",
+        "child_concentrated_breath"
+      ],
+      "props_used": [
+        "wooden brain teaser puzzle",
+        "oat rug"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "QUOTE LINE Ch4. Closes Ch4 arc."
+    },
+    {
+      "id": "CHAPTER-05",
+      "act": "5_authority",
+      "label": "Chapter 5 — Because I Said So",
+      "scene_type": "chapter_card",
+      "source": "new_image",
+      "characters": [],
+      "setting": "chapter_card",
+      "emotion": "warm anchor",
+      "story_en": "Because I said so.",
+      "story_chunks_en": [
+        "Because I said so."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm hand-drawn still life of a small wooden door (toy or model) standing alone on a pale oak surface, the door slightly ajar but blocked from opening by a small smooth river stone resting against its base. Soft amber window light raking from the right, slate blue-grey wall in soft focus behind. Empty negative space at top right for chapter title overlay. Symbolic motif: closed to questioning. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "chapter",
+      "duration": 4,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "rest",
+      "chapter_number": 5,
+      "music_cue": "chapter_anchor",
+      "sfx": [],
+      "props_used": [
+        "small wooden door",
+        "river stone"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "4s chapter card. Door blocked = wall against questioning.",
+      "chapter_text_overlay": {
+        "label": "CHAPTER FIVE",
+        "title": "BECAUSE I SAID SO"
+      }
+    },
+    {
+      "id": "CLIP-25",
+      "act": "5_authority",
+      "label": "Setup — exhausted Tuesday evening",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Sarah",
+        "Jaden"
+      ],
+      "setting": "walsh_kitchen",
+      "emotion": "the tired moment",
+      "story_en": "It was a Tuesday evening. I was exhausted. Jaden asked: why do we have to clean up before bed. I said: because. He asked: why because. I said: because we just do.",
+      "story_chunks_en": [
+        "It was a Tuesday evening.",
+        "I was exhausted.",
+        "Jaden asked:",
+        "why do we have to clean up",
+        "before bed.",
+        "I said:",
+        "because.",
+        "He asked:",
+        "why because.",
+        "I said:",
+        "because we just do."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm medium shot of the Walsh kitchen at late evening, Sarah at the counter sorting through dinner dishes with tired posture, Jaden standing nearby holding a small ball, his face open with genuine curious questioning. Sarah, white American woman mid-30s, 5'5\", slim modern build with confident upright posture, straight chestnut-brown hair falling just below shoulders tucked behind one ear, dark warm brown eyes with thoughtful focus, fair-medium skin with a hint of natural blush, modern minimalist style, wearing a soft chambray blue button-up shirt with sleeves rolled to forearms over loose slate-grey linen trousers, small gold stud earrings, simple silver wedding band, bare feet on warm wooden floor. Jaden, white American boy age 10 in fourth grade, taller-than-average build for his age, light brown hair worn slightly long over the ears with a soft fringe, large warm hazel-green eyes with serious thoughtful expression, fair skin with a few light freckles across the nose, wearing a soft dark forest-green hoodie over slim charcoal joggers with white socks, a small woven friendship bracelet on his left wrist. Soft amber under-cabinet light, soft kitchen end-of-day fatigue in the air. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 10,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "build",
+      "chapter_number": 5,
+      "music_cue": "tired_domestic",
+      "sfx": [
+        "dish_settle",
+        "soft_sigh"
+      ],
+      "props_used": [
+        "dinner dishes",
+        "small ball"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "The tired Tuesday. Real adult exhaustion."
+    },
+    {
+      "id": "CLIP-26",
+      "act": "5_authority",
+      "label": "Sarah's old instinct — because I said so",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Sarah"
+      ],
+      "setting": "walsh_kitchen",
+      "emotion": "the wall reflex",
+      "story_en": "And then it came out. Three words my mother had said to me a thousand times. Because I said so. The conversation closed.",
+      "story_chunks_en": [
+        "And then it came out.",
+        "Three words",
+        "my mother had said to me",
+        "a thousand times.",
+        "Because I said so.",
+        "The conversation closed."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm medium close-up of Sarah at the kitchen counter, her face turned half away from Jaden in the off-frame background, her expression carrying the weight of a sentence she just said and immediately regretted. Sarah, white American woman mid-30s, 5'5\", slim modern build with confident upright posture, straight chestnut-brown hair falling just below shoulders tucked behind one ear, dark warm brown eyes with thoughtful focus, fair-medium skin with a hint of natural blush, modern minimalist style, wearing a soft chambray blue button-up shirt with sleeves rolled to forearms over loose slate-grey linen trousers, small gold stud earrings, simple silver wedding band, bare feet on warm wooden floor. Soft amber kitchen light. The micro-pause after the wall is built. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 8,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "build",
+      "chapter_number": 5,
+      "music_cue": "wall_built",
+      "sfx": [
+        "dish_set_down_firm",
+        "regretful_breath"
+      ],
+      "props_used": [
+        "dinner dishes"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "The wall sentence. Auto-pilot inheritance fired."
+    },
+    {
+      "id": "CLIP-27",
+      "act": "5_authority",
+      "label": "Flashback — Sarah's mother saying it to her",
+      "scene_type": "flashback",
+      "source": "new_image",
+      "characters": [],
+      "setting": "young_sarah_kitchen",
+      "emotion": "the inherited wall",
+      "story_en": "I had heard those words at this exact age. From my own mother. And I remember exactly what they did. They taught me my questions did not deserve answers.",
+      "story_chunks_en": [
+        "I had heard those words",
+        "at this exact age.",
+        "From my own mother.",
+        "And I remember exactly",
+        "what they did.",
+        "They taught me my questions",
+        "did not deserve answers."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm hand-drawn flashback medium shot of a small white American girl age 9 with chestnut-brown hair in two simple braids, fair skin with light freckles, wearing a faded mauve cotton t-shirt and dark blue stretch leggings with worn white sneakers standing alone in a 1990s kitchen, her small mouth slightly open as if mid-question that has just been shut down, her shoulders dropping in small disappointment. The mother's silhouette is barely visible in soft-focus mid-background turning away with dish towel in hand, only the back of her shoulder seen. Soft amber overhead light, dated kitchen interior. Subdued mood. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": "Young Sarah's small mouth closes slowly. Her chin lowers. Her hand drops to her side. The mother's silhouette in the background continues turning away without looking back, the dish towel folding. Soft amber kitchen light. Keep character IDENTICAL. Maintain warm amber interior palette.",
+      "voice_role": "narrator",
+      "duration": 12,
+      "motion_budget": "extended",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "peak",
+      "chapter_number": 5,
+      "music_cue": "memory_silenced",
+      "sfx": [
+        "dish_towel_fold",
+        "child_held_question"
+      ],
+      "props_used": [
+        "dish towel",
+        "1990s kitchen"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "FLASHBACK Ch5. The taught silence. Generational pattern.",
+      "flashback": true
+    },
+    {
+      "id": "CLIP-28",
+      "act": "5_authority",
+      "label": "Realization — why is the gift",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [],
+      "setting": "walsh_home_office",
+      "emotion": "naming the gift",
+      "story_en": "So I sat down at the desk. I crossed it out. I wrote underneath: let me tell you why. Because why is not the problem. Why is the gift.",
+      "story_chunks_en": [
+        "So I sat down",
+        "at the desk.",
+        "I crossed it out.",
+        "I wrote underneath:",
+        "let me tell you why.",
+        "Because why is not the problem.",
+        "Why is the gift."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm overhead-angle close-up of the open brown leather journal on the home office desk, the page showing two short handwritten lines of dark navy ink (intentionally blurred), the upper line crossed through with a single pencil stroke, a new short line written underneath in fresh ink. The dark wood pencil rests beside the journal. Soft amber desk lamp glow. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": "Sarah's hand draws a single horizontal line across the upper sentence with the pencil. She lifts the pencil and pauses. She begins to write the new short line underneath. Soft amber desk lamp light. Keep hands IDENTICAL. Maintain warm amber interior palette.",
+      "voice_role": "narrator",
+      "duration": 10,
+      "motion_budget": "extended",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "peak",
+      "chapter_number": 5,
+      "music_cue": "naming_gift",
+      "sfx": [
+        "pencil_strikethrough",
+        "fresh_ink_writing"
+      ],
+      "props_used": [
+        "brown leather journal",
+        "dark wood pencil"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "Journal swap. The gift named: 'Why is the gift.'"
+    },
+    {
+      "id": "CLIP-29",
+      "act": "5_authority",
+      "label": "Present — Sarah uses the new sentence",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Sarah",
+        "Jaden"
+      ],
+      "setting": "walsh_kitchen",
+      "emotion": "the door opens",
+      "story_en": "So later that week when Jaden asked me why we don't have screens at dinner, I tried it. Let me tell you why. And I told him. We talked for ten minutes about it.",
+      "story_chunks_en": [
+        "So later that week",
+        "when Jaden asked me",
+        "why we don't have screens",
+        "at dinner,",
+        "I tried it.",
+        "Let me tell you why.",
+        "And I told him.",
+        "We talked for ten minutes",
+        "about it."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm medium shot of Sarah and Jaden seated across from each other at the Walsh kitchen wooden dinner table at evening, Sarah leaning forward slightly with both hands gesturing in mid-explanation, Jaden listening with his chin resting on one small hand, attentive engaged. Sarah, white American woman mid-30s, 5'5\", slim modern build with confident upright posture, straight chestnut-brown hair falling just below shoulders tucked behind one ear, dark warm brown eyes with thoughtful focus, fair-medium skin with a hint of natural blush, modern minimalist style, wearing a soft chambray blue button-up shirt with sleeves rolled to forearms over loose slate-grey linen trousers, small gold stud earrings, simple silver wedding band, bare feet on warm wooden floor. Jaden, white American boy age 10 in fourth grade, taller-than-average build for his age, light brown hair worn slightly long over the ears with a soft fringe, large warm hazel-green eyes with serious thoughtful expression, fair skin with a few light freckles across the nose, wearing a soft dark forest-green hoodie over slim charcoal joggers with white socks, a small woven friendship bracelet on his left wrist. Soft amber pendant light above the table, warm interior palette. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 10,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "build",
+      "chapter_number": 5,
+      "music_cue": "permission_warm",
+      "sfx": [
+        "chair_settle",
+        "warm_conversation_quiet"
+      ],
+      "props_used": [
+        "wooden dinner table",
+        "amber pendant light"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "The new sentence in real conversation. Door opens to dialogue."
+    },
+    {
+      "id": "CLIP-30",
+      "act": "5_authority",
+      "label": "Quote — authority is not built by silencing",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Sarah",
+        "Jaden"
+      ],
+      "setting": "walsh_kitchen",
+      "emotion": "the quotable peak",
+      "story_en": "Authority isn't built by silencing. It's built by explaining. He doesn't always agree with my reasons. But he knows the reasons exist.",
+      "story_chunks_en": [
+        "Authority isn't built",
+        "by silencing.",
+        "It's built by explaining.",
+        "He doesn't always agree",
+        "with my reasons.",
+        "But he knows",
+        "the reasons exist."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm medium-wide shot of the same kitchen dinner table later in the meal, Sarah and Jaden continuing to converse, both relaxed and warm with the comfortable rhythm of mutual respect. Sarah, white American woman mid-30s, 5'5\", slim modern build with confident upright posture, straight chestnut-brown hair falling just below shoulders tucked behind one ear, dark warm brown eyes with thoughtful focus, fair-medium skin with a hint of natural blush, modern minimalist style, wearing a soft chambray blue button-up shirt with sleeves rolled to forearms over loose slate-grey linen trousers, small gold stud earrings, simple silver wedding band, bare feet on warm wooden floor. Jaden, white American boy age 10 in fourth grade, taller-than-average build for his age, light brown hair worn slightly long over the ears with a soft fringe, large warm hazel-green eyes with serious thoughtful expression, fair skin with a few light freckles across the nose, wearing a soft dark forest-green hoodie over slim charcoal joggers with white socks, a small woven friendship bracelet on his left wrist. Sarah is smiling gently as Jaden makes a small thoughtful counterpoint with one hand raised. Soft amber pendant light, evening warmth. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 12,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "peak",
+      "chapter_number": 5,
+      "music_cue": "resolution_warm",
+      "sfx": [
+        "soft_laugh_warm",
+        "fork_gentle_set"
+      ],
+      "props_used": [
+        "wooden dinner table"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "QUOTE LINE Ch5. Closes Ch5 arc."
+    },
+    {
+      "id": "CHAPTER-06",
+      "act": "6_youfine",
+      "label": "Chapter 6 — You're Fine",
+      "scene_type": "chapter_card",
+      "source": "new_image",
+      "characters": [],
+      "setting": "chapter_card",
+      "emotion": "warm anchor",
+      "story_en": "You're fine.",
+      "story_chunks_en": [
+        "You're fine."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm hand-drawn still life of a small clear glass thermometer resting on a folded square of cream paper, on a pale oak surface, soft amber window light raking from the right. Beside it a small abandoned bowl of breakfast cereal with a spoon resting unused in it. Slate blue-grey wall in soft focus behind. Empty negative space at top right for chapter title overlay. Symbolic motif: dismissed signals. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "chapter",
+      "duration": 4,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "rest",
+      "chapter_number": 6,
+      "music_cue": "chapter_anchor",
+      "sfx": [],
+      "props_used": [
+        "glass thermometer",
+        "abandoned cereal bowl",
+        "spoon"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "4s chapter card. Thermometer + abandoned breakfast = dismissed body signals.",
+      "chapter_text_overlay": {
+        "label": "CHAPTER SIX",
+        "title": "YOU'RE FINE"
+      }
+    },
+    {
+      "id": "CLIP-31",
+      "act": "6_youfine",
+      "label": "Setup — Jaden's stomach hurts before school",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Jaden"
+      ],
+      "setting": "walsh_kitchen",
+      "emotion": "the small body signal",
+      "story_en": "A few weeks ago, Jaden came into the kitchen on a Monday morning. He hadn't touched his cereal. He said: my stomach hurts. I don't think I should go to school.",
+      "story_chunks_en": [
+        "A few weeks ago,",
+        "Jaden came into the kitchen",
+        "on a Monday morning.",
+        "He hadn't touched his cereal.",
+        "He said:",
+        "my stomach hurts.",
+        "I don't think I should go",
+        "to school."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm medium shot of Jaden, white American boy age 10 in fourth grade, taller-than-average build for his age, light brown hair worn slightly long over the ears with a soft fringe, large warm hazel-green eyes with serious thoughtful expression, fair skin with a few light freckles across the nose, wearing a soft dark forest-green hoodie over slim charcoal joggers with white socks, a small woven friendship bracelet on his left wrist standing at the pale oak kitchen counter in his school clothes, his small hand resting gently on his stomach, an untouched bowl of cereal with a spoon beside it on the counter, his face soft with quiet discomfort. Soft amber early morning light through the window, slate blue-grey lower cabinets in soft focus. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 10,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "build",
+      "chapter_number": 6,
+      "music_cue": "morning_concern",
+      "sfx": [
+        "small_morning_breath",
+        "kitchen_quiet_morning"
+      ],
+      "props_used": [
+        "bowl of cereal",
+        "spoon"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "Modern setup. Real signal from a child's body."
+    },
+    {
+      "id": "CLIP-32",
+      "act": "6_youfine",
+      "label": "Sarah's old instinct — you're fine",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Sarah"
+      ],
+      "setting": "walsh_kitchen",
+      "emotion": "the dismissal reflex",
+      "story_en": "The old sentence rose immediately. You're fine. Get your shoes on. We're going to be late. It would have been so easy to say. So fast.",
+      "story_chunks_en": [
+        "The old sentence",
+        "rose immediately.",
+        "You're fine.",
+        "Get your shoes on.",
+        "We're going to be late.",
+        "It would have been so easy",
+        "to say.",
+        "So fast."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm medium close-up of Sarah at the kitchen counter mid-motion of grabbing her work bag, her face turning toward Jaden in the off-frame foreground, her lips slightly parted in the reflex of an unspoken sentence. Sarah, white American woman mid-30s, 5'5\", slim modern build with confident upright posture, straight chestnut-brown hair falling just below shoulders tucked behind one ear, dark warm brown eyes with thoughtful focus, fair-medium skin with a hint of natural blush, modern minimalist style, wearing a soft chambray blue button-up shirt with sleeves rolled to forearms over loose slate-grey linen trousers, small gold stud earrings, simple silver wedding band, bare feet on warm wooden floor. Soft amber morning light. The micro-pause of catching the inheritance about to fire. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 8,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "build",
+      "chapter_number": 6,
+      "music_cue": "tension_subtle",
+      "sfx": [
+        "bag_strap_held",
+        "considered_breath"
+      ],
+      "props_used": [
+        "work bag"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "The almost-said. The morning rush dismissal."
+    },
+    {
+      "id": "CLIP-33",
+      "act": "6_youfine",
+      "label": "Flashback — young Sarah told 'you're fine'",
+      "scene_type": "flashback",
+      "source": "new_image",
+      "characters": [],
+      "setting": "young_sarah_bedroom",
+      "emotion": "the inherited dismissal",
+      "story_en": "But I remembered being nine. Curled up under my blankets on a Tuesday morning. Telling my mother my stomach hurt. And hearing back: you're fine. Don't be dramatic.",
+      "story_chunks_en": [
+        "But I remembered being nine.",
+        "Curled up under my blankets",
+        "on a Tuesday morning.",
+        "Telling my mother",
+        "my stomach hurt.",
+        "And hearing back:",
+        "you're fine.",
+        "Don't be dramatic."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm hand-drawn flashback medium shot of a small white American girl age 9 with chestnut-brown hair in two simple braids, fair skin with light freckles, wearing a faded mauve cotton t-shirt and dark blue stretch leggings with worn white sneakers (young Sarah) curled on her side under a faded pink and yellow patchwork quilt in a 1990s child's bedroom at early morning, only her small face and one hand visible above the quilt, her cheeks slightly pale, eyes glassy with quiet held-back tears. The mother's figure barely visible in the soft-focus doorway with a hand on the doorframe, dismissive posture. Soft amber early morning lamp light, dated child's bedroom interior. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": "Young Sarah's small face turns slightly into the pillow. Her hand grips the edge of the quilt more firmly. The mother's figure in the doorway turns and walks away off-frame. The amber lamp light steady. Keep character IDENTICAL. Maintain warm amber interior palette.",
+      "voice_role": "narrator",
+      "duration": 12,
+      "motion_budget": "extended",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "peak",
+      "chapter_number": 6,
+      "music_cue": "memory_dismissed",
+      "sfx": [
+        "quilt_held",
+        "doorway_step_away"
+      ],
+      "props_used": [
+        "patchwork quilt",
+        "child's bedroom"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "FLASHBACK Ch6. The cost of dismissal taught.",
+      "flashback": true
+    },
+    {
+      "id": "CLIP-34",
+      "act": "6_youfine",
+      "label": "Realization — what dismissal taught",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [],
+      "setting": "walsh_home_office",
+      "emotion": "naming what was lost",
+      "story_en": "Dismissal does not dismiss feelings. It dismisses the child. And it teaches them not to tell us next time.",
+      "story_chunks_en": [
+        "Dismissal does not dismiss",
+        "feelings.",
+        "It dismisses the child.",
+        "And it teaches them",
+        "not to tell us",
+        "next time."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm overhead-angle close-up of the open brown leather journal on the home office desk, the page showing two short handwritten lines of dark navy ink (intentionally blurred), the upper line crossed through with a single pencil stroke, a new short line written beneath. The dark wood pencil rests across the page. Soft amber desk lamp glow. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": "Sarah's pencil draws the strikethrough across the upper sentence slowly and deliberately. She pauses. She lifts the pencil and writes the new short line underneath. Soft amber desk lamp light. Keep hands IDENTICAL. Maintain warm amber interior palette.",
+      "voice_role": "narrator",
+      "duration": 10,
+      "motion_budget": "extended",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "peak",
+      "chapter_number": 6,
+      "music_cue": "naming_loss",
+      "sfx": [
+        "pencil_strikethrough",
+        "fresh_writing"
+      ],
+      "props_used": [
+        "brown leather journal",
+        "dark wood pencil"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "Journal swap. New sentence: 'Tell me what's going on.'"
+    },
+    {
+      "id": "CLIP-35",
+      "act": "6_youfine",
+      "label": "Present — Sarah kneels and asks",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Sarah",
+        "Jaden"
+      ],
+      "setting": "walsh_kitchen",
+      "emotion": "the new asking",
+      "story_en": "So I set the bag down. I knelt at the counter. I said the new sentence. Tell me what's going on.",
+      "story_chunks_en": [
+        "So I set the bag down.",
+        "I knelt at the counter.",
+        "I said the new sentence.",
+        "Tell me",
+        "what's going on."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm medium shot of Sarah crouched at the kitchen counter at Jaden, white American boy age 10 in fourth grade, taller-than-average build for his age, light brown hair worn slightly long over the ears with a soft fringe, large warm hazel-green eyes with serious thoughtful expression, fair skin with a few light freckles across the nose, wearing a soft dark forest-green hoodie over slim charcoal joggers with white socks, a small woven friendship bracelet on his left wrist's eye level with her work bag set down beside her on the floor, her face open and present with full attention. Sarah, white American woman mid-30s, 5'5\", slim modern build with confident upright posture, straight chestnut-brown hair falling just below shoulders tucked behind one ear, dark warm brown eyes with thoughtful focus, fair-medium skin with a hint of natural blush, modern minimalist style, wearing a soft chambray blue button-up shirt with sleeves rolled to forearms over loose slate-grey linen trousers, small gold stud earrings, simple silver wedding band, bare feet on warm wooden floor. Jaden visible in the mid-foreground with his hand still resting on his stomach, beginning to lower his guard. Soft amber morning light, intimate angle. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 10,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "build",
+      "chapter_number": 6,
+      "music_cue": "permission_warm",
+      "sfx": [
+        "bag_set_down",
+        "soft_crouch",
+        "child_settling"
+      ],
+      "props_used": [
+        "work bag",
+        "pale oak counter"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "The new sentence in the morning rush. The choice to slow down."
+    },
+    {
+      "id": "CLIP-36",
+      "act": "6_youfine",
+      "label": "Quote + trademark first occurrence",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Sarah",
+        "Jaden"
+      ],
+      "setting": "walsh_kitchen",
+      "emotion": "the quotable peak + trademark",
+      "story_en": "He told me he had a math test he was scared of. We talked about it. He went to school. He told me afterward it had not been as bad as he feared. Because good enough is enough.",
+      "story_chunks_en": [
+        "He told me",
+        "he had a math test",
+        "he was scared of.",
+        "We talked about it.",
+        "He went to school.",
+        "He told me afterward",
+        "it had not been as bad",
+        "as he feared.",
+        "Because good enough",
+        "is enough."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm medium-wide shot of Sarah and Jaden at the kitchen counter still, Jaden now leaning against the counter with relaxed shoulders, a small piece of toast in his hand mid-bite, his face calmer. Sarah seated on a kitchen stool beside him in attentive listening posture. Sarah, white American woman mid-30s, 5'5\", slim modern build with confident upright posture, straight chestnut-brown hair falling just below shoulders tucked behind one ear, dark warm brown eyes with thoughtful focus, fair-medium skin with a hint of natural blush, modern minimalist style, wearing a soft chambray blue button-up shirt with sleeves rolled to forearms over loose slate-grey linen trousers, small gold stud earrings, simple silver wedding band, bare feet on warm wooden floor. Jaden, white American boy age 10 in fourth grade, taller-than-average build for his age, light brown hair worn slightly long over the ears with a soft fringe, large warm hazel-green eyes with serious thoughtful expression, fair skin with a few light freckles across the nose, wearing a soft dark forest-green hoodie over slim charcoal joggers with white socks, a small woven friendship bracelet on his left wrist. Soft amber morning light, the work bag still on the floor. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 12,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "peak",
+      "chapter_number": 6,
+      "music_cue": "trademark_warm",
+      "sfx": [
+        "soft_toast_bite",
+        "warm_conversation"
+      ],
+      "props_used": [
+        "piece of toast",
+        "kitchen stool"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "QUOTE LINE Ch6 + TRADEMARK 'good enough is enough' first occurrence. Closes Ch6 = mid-roll #2 (406s = 6:46)."
+    },
+    {
+      "id": "CHAPTER-07",
+      "act": "7_wrong",
+      "label": "Chapter 7 — What I Still Get Wrong",
+      "scene_type": "chapter_card",
+      "source": "new_image",
+      "characters": [],
+      "setting": "chapter_card",
+      "emotion": "honest reckoning",
+      "story_en": "What I still get wrong.",
+      "story_chunks_en": [
+        "What I still get wrong."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm hand-drawn still life of an open brown leather journal page showing a handwritten line that has been crossed out with multiple dark navy ink strokes (intentionally blurred and unreadable), the dark wood pencil resting beside it with its tip slightly worn. Soft amber desk lamp light from the right, slate blue-grey wall in soft focus. Empty negative space at top right for chapter title overlay. Symbolic motif: still revising. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "chapter",
+      "duration": 4,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "rest",
+      "chapter_number": 7,
+      "music_cue": "chapter_reflective",
+      "sfx": [],
+      "props_used": [
+        "brown leather journal",
+        "dark wood pencil"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "4s chapter card. Crossed-out line = ongoing revision.",
+      "chapter_text_overlay": {
+        "label": "CHAPTER SEVEN",
+        "title": "WHAT I STILL GET WRONG"
+      }
+    },
+    {
+      "id": "CLIP-37",
+      "act": "7_wrong",
+      "label": "Open Ch7 — RECURRING #2 second occurrence",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Sarah"
+      ],
+      "setting": "walsh_living_room",
+      "emotion": "honest opening",
+      "story_en": "Before we end I want to be honest with you. It took me a long time to hear what I was saying. And the new sentences are not magic.",
+      "story_chunks_en": [
+        "Before we end",
+        "I want to be honest",
+        "with you.",
+        "It took me a long time",
+        "to hear what I was saying.",
+        "And the new sentences",
+        "are not magic."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm medium close-up of Sarah on the linen sofa at evening, leaning forward with both elbows on her knees, hands clasped together gently, looking softly toward the camera with an open vulnerable expression. Sarah, white American woman mid-30s, 5'5\", slim modern build with confident upright posture, straight chestnut-brown hair falling just below shoulders tucked behind one ear, dark warm brown eyes with thoughtful focus, fair-medium skin with a hint of natural blush, modern minimalist style, wearing a soft chambray blue button-up shirt with sleeves rolled to forearms over loose slate-grey linen trousers, small gold stud earrings, simple silver wedding band, bare feet on warm wooden floor. A warm amber lamp on the side table casts honey light across one side of her face. The wider room is in soft shadow, intimate evening atmosphere. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 10,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "peak",
+      "chapter_number": 7,
+      "music_cue": "confession_open",
+      "sfx": [
+        "soft_evening_quiet",
+        "considered_breath"
+      ],
+      "props_used": [
+        "oat linen sofa"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "RECURRING #2 second occurrence. Opens Ch7 confession."
+    },
+    {
+      "id": "CLIP-38",
+      "act": "7_wrong",
+      "label": "Confession #1 — sometimes the new sentence misfires",
+      "scene_type": "flashback",
+      "source": "new_image",
+      "characters": [],
+      "setting": "walsh_kitchen",
+      "emotion": "confession of misfire",
+      "story_en": "Two months ago Jaden won first place at the school science fair. He came home glowing. I knelt down. I said: I see how hard you worked. He looked at me. And the glow went out.",
+      "story_chunks_en": [
+        "Two months ago",
+        "Jaden won first place",
+        "at the school science fair.",
+        "He came home glowing.",
+        "I knelt down.",
+        "I said:",
+        "I see how hard you worked.",
+        "He looked at me.",
+        "And the glow went out."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm hand-drawn flashback medium shot of Jaden, white American boy age 10 in fourth grade, taller-than-average build for his age, light brown hair worn slightly long over the ears with a soft fringe, large warm hazel-green eyes with serious thoughtful expression, fair skin with a few light freckles across the nose, wearing a soft dark forest-green hoodie over slim charcoal joggers with white socks, a small woven friendship bracelet on his left wrist standing in the Walsh kitchen holding a bright blue first-place ribbon, his small face having shifted from proud excitement to a quiet visible deflation, the corners of his mouth dropping. Sarah crouched in front of him, her own face just registering that she has miscalibrated the moment. Sarah, white American woman mid-30s, 5'5\", slim modern build with confident upright posture, straight chestnut-brown hair falling just below shoulders tucked behind one ear, dark warm brown eyes with thoughtful focus, fair-medium skin with a hint of natural blush, modern minimalist style, wearing a soft chambray blue button-up shirt with sleeves rolled to forearms over loose slate-grey linen trousers, small gold stud earrings, simple silver wedding band, bare feet on warm wooden floor. Soft amber kitchen light. The painful micro-moment of a parent watching her good intentions land wrong. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 12,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "peak",
+      "chapter_number": 7,
+      "music_cue": "confession_painful",
+      "sfx": [
+        "soft_deflated_breath",
+        "kitchen_quiet"
+      ],
+      "props_used": [
+        "blue first-place ribbon"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "CONFESSION #1. The new sentence misfires when celebration was wanted.",
+      "flashback": true
+    },
+    {
+      "id": "CLIP-39",
+      "act": "7_wrong",
+      "label": "Naming the failure — present",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Sarah"
+      ],
+      "setting": "walsh_living_room",
+      "emotion": "naming her own mistake",
+      "story_en": "I had taken his win and made it about effort. He didn't want effort. He wanted celebration. I had used the new sentence as a rule. Not as a response.",
+      "story_chunks_en": [
+        "I had taken his win",
+        "and made it about effort.",
+        "He didn't want effort.",
+        "He wanted celebration.",
+        "I had used the new sentence",
+        "as a rule.",
+        "Not as a response."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm medium close-up of Sarah on the sofa, her face showing the quiet ache of remembering a small failure she could not undo, eyes gentle but unflinching. Sarah, white American woman mid-30s, 5'5\", slim modern build with confident upright posture, straight chestnut-brown hair falling just below shoulders tucked behind one ear, dark warm brown eyes with thoughtful focus, fair-medium skin with a hint of natural blush, modern minimalist style, wearing a soft chambray blue button-up shirt with sleeves rolled to forearms over loose slate-grey linen trousers, small gold stud earrings, simple silver wedding band, bare feet on warm wooden floor. Both hands clasped together in her lap. Warm amber lamp light from the side, soft evening shadows. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 10,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "peak",
+      "chapter_number": 7,
+      "music_cue": "confession_painful",
+      "sfx": [
+        "small_sigh",
+        "considered_breath"
+      ],
+      "props_used": [
+        "oat linen sofa"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "Sarah names her own misfire. Anti-rule confession."
+    },
+    {
+      "id": "CLIP-40",
+      "act": "7_wrong",
+      "label": "Confession #2 — sentence-swapping is not enough",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Sarah"
+      ],
+      "setting": "walsh_living_room",
+      "emotion": "the second admission",
+      "story_en": "And there is something else. Sentence-swapping does not fix everything. There are nights when Jaden does not want to talk. And no sentence I know will reach him.",
+      "story_chunks_en": [
+        "And there is",
+        "something else.",
+        "Sentence-swapping",
+        "does not fix everything.",
+        "There are nights",
+        "when Jaden does not want to talk.",
+        "And no sentence I know",
+        "will reach him."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm medium close-up of Sarah on the sofa, her posture shifting slightly to address a different angle of the truth. Sarah, white American woman mid-30s, 5'5\", slim modern build with confident upright posture, straight chestnut-brown hair falling just below shoulders tucked behind one ear, dark warm brown eyes with thoughtful focus, fair-medium skin with a hint of natural blush, modern minimalist style, wearing a soft chambray blue button-up shirt with sleeves rolled to forearms over loose slate-grey linen trousers, small gold stud earrings, simple silver wedding band, bare feet on warm wooden floor. Her expression is now tinged with old quiet humility. One hand has lifted from her lap as if about to gesture. Warm amber lamp light, evening shadows. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 10,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "peak",
+      "chapter_number": 7,
+      "music_cue": "pivot_honest",
+      "sfx": [
+        "soft_inhale_pivot"
+      ],
+      "props_used": [
+        "oat linen sofa"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "ANTI-BIAS PIVOT. Method's limit named honestly."
+    },
+    {
+      "id": "CLIP-41",
+      "act": "7_wrong",
+      "label": "Flashback — recent night Jaden won't talk",
+      "scene_type": "flashback",
+      "source": "new_image",
+      "characters": [],
+      "setting": "jaden_bedroom",
+      "emotion": "the silence beyond words",
+      "story_en": "Last Friday something happened at school. He came home and went straight to his room. I knocked. I asked. I tried every sentence. He just shook his head. So I sat outside his door. And I waited.",
+      "story_chunks_en": [
+        "Last Friday",
+        "something happened",
+        "at school.",
+        "He came home",
+        "and went straight to his room.",
+        "I knocked.",
+        "I asked.",
+        "I tried every sentence.",
+        "He just shook his head.",
+        "So I sat outside his door.",
+        "And I waited."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm hand-drawn medium shot of the hallway outside Jaden's bedroom at evening, Sarah seated on the wooden floor with her back against the wall beside the closed bedroom door, her knees drawn up, one hand resting on the floor beside her, looking quietly at nothing. Sarah, white American woman mid-30s, 5'5\", slim modern build with confident upright posture, straight chestnut-brown hair falling just below shoulders tucked behind one ear, dark warm brown eyes with thoughtful focus, fair-medium skin with a hint of natural blush, modern minimalist style, wearing a soft chambray blue button-up shirt with sleeves rolled to forearms over loose slate-grey linen trousers, small gold stud earrings, simple silver wedding band, bare feet on warm wooden floor. Soft amber hallway light, slate blue-grey wall, a single line of warm light visible from under the closed bedroom door. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": "Sarah's chest rises and falls slowly with patient breathing. Her gaze stays on the bottom edge of the closed bedroom door. The line of warm light from underneath holds steady. She does not move from her place. Keep character IDENTICAL. Maintain warm amber interior palette.",
+      "voice_role": "inner_voice",
+      "duration": 12,
+      "motion_budget": "extended",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "peak",
+      "chapter_number": 7,
+      "music_cue": "silent_waiting",
+      "sfx": [
+        "soft_floor_settle",
+        "muffled_door_quiet"
+      ],
+      "props_used": [
+        "closed bedroom door",
+        "wooden floor"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "FLASHBACK Ch7. INNER_VOICE. The silence as parenting.",
+      "flashback": true
+    },
+    {
+      "id": "CLIP-42",
+      "act": "7_wrong",
+      "label": "The waiting as parenting",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [],
+      "setting": "jaden_bedroom",
+      "emotion": "presence beyond language",
+      "story_en": "Sometimes the best sentence is no sentence. Sometimes the work is just sitting outside the door. So your child knows you are still there.",
+      "story_chunks_en": [
+        "Sometimes the best sentence",
+        "is no sentence.",
+        "Sometimes the work is just",
+        "sitting outside the door.",
+        "So your child knows",
+        "you are still there."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm continued medium shot of the hallway outside Jaden's bedroom door, the line of warm light from underneath the door, Sarah's foot just visible at the right edge of frame still seated on the floor, the wooden hallway floor warm and quiet. The bedroom door itself in soft focus, slate blue-grey wall. The composition emphasizing the threshold and the patience of waiting. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 10,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "peak",
+      "chapter_number": 7,
+      "music_cue": "silent_waiting",
+      "sfx": [
+        "distant_house_quiet",
+        "lamp_warm_hum"
+      ],
+      "props_used": [
+        "closed bedroom door"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "The teaching: presence beyond language."
+    },
+    {
+      "id": "CLIP-43",
+      "act": "7_wrong",
+      "label": "RESOLUTION + RECURRING #1 third + journal",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Sarah"
+      ],
+      "setting": "walsh_home_office",
+      "emotion": "integration",
+      "story_en": "I said it because I was raised on it. Jaden taught me to do better. So I keep the journal. I keep crossing out. I keep writing new sentences. Because he keeps growing. And that is the deal.",
+      "story_chunks_en": [
+        "I said it",
+        "because I was raised on it.",
+        "Jaden taught me",
+        "to do better.",
+        "So I keep the journal.",
+        "I keep crossing out.",
+        "I keep writing new sentences.",
+        "Because he keeps growing.",
+        "And that is the deal."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm intimate close-up of Sarah's hands at the home office desk holding the open brown leather journal, one hand smoothing the cream paper page, the other holding the dark wood pencil hovering above a fresh blank line. Sarah, white American woman mid-30s, 5'5\", slim modern build with confident upright posture, straight chestnut-brown hair falling just below shoulders tucked behind one ear, dark warm brown eyes with thoughtful focus, fair-medium skin with a hint of natural blush, modern minimalist style, wearing a soft chambray blue button-up shirt with sleeves rolled to forearms over loose slate-grey linen trousers, small gold stud earrings, simple silver wedding band, bare feet on warm wooden floor. Soft amber desk lamp light, the slate blue-grey accent wall behind, a small framed botanical print, the bookshelf with stacks of design books in soft focus. The journal carries the weight of ongoing practice. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": "Sarah's right hand smooths the journal page with a gentle pass. The pencil lowers and writes the first letter of a new line. The amber desk lamp light holds steady. The journal page carries the texture of many previous revisions. Keep characters IDENTICAL. Maintain warm amber interior palette.",
+      "voice_role": "narrator",
+      "duration": 10,
+      "motion_budget": "extended",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "peak",
+      "chapter_number": 7,
+      "music_cue": "resolution_integrated",
+      "sfx": [
+        "paper_smooth",
+        "pencil_first_stroke"
+      ],
+      "props_used": [
+        "brown leather journal",
+        "dark wood pencil",
+        "amber desk lamp"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "RECURRING #1 third occurrence + RESOLUTION. Closes Ch7."
+    },
+    {
+      "id": "CHAPTER-08",
+      "act": "8_takehome",
+      "label": "Chapter 8 — Take What Fits",
+      "scene_type": "chapter_card",
+      "source": "new_image",
+      "characters": [],
+      "setting": "chapter_card",
+      "emotion": "warm anchor",
+      "story_en": "Take what fits.",
+      "story_chunks_en": [
+        "Take what fits."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm hand-drawn still life of the open brown leather journal on the pale oak side table beside the amber floor lamp, the page now showing all five handwritten short lines visible (intentionally blurred unreadable), each upper line crossed through and replaced beneath, the journal a record of practice. Slate blue-grey wall in soft focus. Empty negative space at top right for chapter title overlay. Symbolic motif: the practice continues. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "chapter",
+      "duration": 4,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "rest",
+      "chapter_number": 8,
+      "music_cue": "chapter_resolution",
+      "sfx": [],
+      "props_used": [
+        "brown leather journal",
+        "amber floor lamp"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "4s chapter card. Journal full = practice integrated.",
+      "chapter_text_overlay": {
+        "label": "CHAPTER EIGHT",
+        "title": "TAKE WHAT FITS"
+      }
+    },
+    {
+      "id": "CLIP-44",
+      "act": "8_takehome",
+      "label": "Five sentences review — callback still life",
+      "scene_type": "broll",
+      "source": "new_image",
+      "characters": [],
+      "setting": "walsh_kitchen",
+      "emotion": "warm review",
+      "story_en": "Five sentences I stopped saying. Be careful. Don't cry. You're so smart. Because I said so. You're fine. Each one I have replaced. Each one I am still replacing.",
+      "story_chunks_en": [
+        "Five sentences",
+        "I stopped saying.",
+        "Be careful.",
+        "Don't cry.",
+        "You're so smart.",
+        "Because I said so.",
+        "You're fine.",
+        "Each one I have replaced.",
+        "Each one I am still replacing."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm overhead-angle still life on the pale oak kitchen table, the same five objects from CLIP-05 returning in the gentle horizontal row: small yellow caution triangle, folded white linen handkerchief, gold star sticker on cream paper, small wooden door, glass thermometer. Soft amber late afternoon light raking from the upper left. Visual rhyme with CLIP-05. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 10,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_pan_right",
+      "retention_role": "build",
+      "chapter_number": 8,
+      "music_cue": "review_warm",
+      "sfx": [
+        "soft_table_air"
+      ],
+      "props_used": [
+        "caution triangle",
+        "linen handkerchief",
+        "gold star sticker",
+        "small wooden door",
+        "glass thermometer"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "CALLBACK to CLIP-05. Five symbolic objects return."
+    },
+    {
+      "id": "CLIP-45",
+      "act": "8_takehome",
+      "label": "Take what fits — the offer",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Sarah"
+      ],
+      "setting": "walsh_kitchen",
+      "emotion": "warm invitation",
+      "story_en": "If one of these sentences caught you. If your shoulders softened when you heard it. That is the one. Start there.",
+      "story_chunks_en": [
+        "If one of these sentences",
+        "caught you.",
+        "If your shoulders softened",
+        "when you heard it.",
+        "That is the one.",
+        "Start there."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm medium close-up of Sarah at the wooden kitchen counter, gently holding up one of the five objects (the small yellow caution triangle) toward the camera with both hands, her expression open and inviting. Sarah, white American woman mid-30s, 5'5\", slim modern build with confident upright posture, straight chestnut-brown hair falling just below shoulders tucked behind one ear, dark warm brown eyes with thoughtful focus, fair-medium skin with a hint of natural blush, modern minimalist style, wearing a soft chambray blue button-up shirt with sleeves rolled to forearms over loose slate-grey linen trousers, small gold stud earrings, simple silver wedding band, bare feet on warm wooden floor. Soft golden afternoon light from the window, the other four objects visible on the counter behind her in soft focus. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 8,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "build",
+      "chapter_number": 8,
+      "music_cue": "invitation_warm",
+      "sfx": [
+        "object_held_warm"
+      ],
+      "props_used": [
+        "caution triangle"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "The warm offer. Soft prescription."
+    },
+    {
+      "id": "CLIP-46",
+      "act": "8_takehome",
+      "label": "Final humble reframe",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Sarah"
+      ],
+      "setting": "walsh_living_room",
+      "emotion": "humble closing frame",
+      "story_en": "These five sentences are not better than what you already say. They are an honesty I am still learning. The journal is not full of answers. It is full of revisions.",
+      "story_chunks_en": [
+        "These five sentences",
+        "are not better",
+        "than what you already say.",
+        "They are an honesty",
+        "I am still learning.",
+        "The journal",
+        "is not full of answers.",
+        "It is full of revisions."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm medium close-up of Sarah seated on the linen sofa with the brown leather journal closed in her lap, both hands resting gently on it, her face lifted in candid humble reflection toward the camera. Sarah, white American woman mid-30s, 5'5\", slim modern build with confident upright posture, straight chestnut-brown hair falling just below shoulders tucked behind one ear, dark warm brown eyes with thoughtful focus, fair-medium skin with a hint of natural blush, modern minimalist style, wearing a soft chambray blue button-up shirt with sleeves rolled to forearms over loose slate-grey linen trousers, small gold stud earrings, simple silver wedding band, bare feet on warm wooden floor. Soft amber floor lamp light, slate blue-grey wall accent, intimate evening warmth. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 8,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "peak",
+      "chapter_number": 8,
+      "music_cue": "humble_anchor",
+      "sfx": [
+        "soft_breath",
+        "evening_quiet"
+      ],
+      "props_used": [
+        "brown leather journal"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "Anti-bias closing. The journal is not the answer."
+    },
+    {
+      "id": "CLIP-47",
+      "act": "8_takehome",
+      "label": "Trademark — good enough is enough",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Sarah",
+        "Jaden"
+      ],
+      "setting": "walsh_living_room",
+      "emotion": "trademark anchor",
+      "story_en": "Your family is already doing beautiful work. Good enough is enough.",
+      "story_chunks_en": [
+        "Your family",
+        "is already doing",
+        "beautiful work.",
+        "Good enough",
+        "is enough."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm tender medium shot from a slightly raised angle of Sarah and Jaden together on the linen sofa at evening, Jaden curled into Sarah's side with his head leaning gently against her shoulder, Sarah's arm around him with her hand resting on his far shoulder, both relaxed and warm. Sarah, white American woman mid-30s, 5'5\", slim modern build with confident upright posture, straight chestnut-brown hair falling just below shoulders tucked behind one ear, dark warm brown eyes with thoughtful focus, fair-medium skin with a hint of natural blush, modern minimalist style, wearing a soft chambray blue button-up shirt with sleeves rolled to forearms over loose slate-grey linen trousers, small gold stud earrings, simple silver wedding band, bare feet on warm wooden floor. Jaden, white American boy age 10 in fourth grade, taller-than-average build for his age, light brown hair worn slightly long over the ears with a soft fringe, large warm hazel-green eyes with serious thoughtful expression, fair skin with a few light freckles across the nose, wearing a soft dark forest-green hoodie over slim charcoal joggers with white socks, a small woven friendship bracelet on his left wrist. The brown leather journal closed on the side table beside them. Soft amber floor lamp glow, slate blue-grey wall in soft focus. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 8,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "peak",
+      "chapter_number": 8,
+      "music_cue": "trademark_close",
+      "sfx": [
+        "warm_evening_breath",
+        "lamp_warm_hum"
+      ],
+      "props_used": [
+        "brown leather journal",
+        "oat linen sofa"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "TRADEMARK 'Good enough is enough' second occurrence."
+    },
+    {
+      "id": "END-CARD",
+      "act": "9_end",
+      "label": "End card — Strong CTA + signature objects",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [],
+      "setting": "walsh_living_room",
+      "emotion": "warm channel anchor",
+      "story_en": "Follow The Good Enough Parent. One small shift, every day. Stories, science, and the soft things that hold us up.",
+      "story_chunks_en": [
+        "Follow",
+        "The Good Enough Parent.",
+        "One small shift,",
+        "every day.",
+        "Stories,",
+        "science,",
+        "and the soft things",
+        "that hold us up."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm hand-drawn end-card composition combining the two signature objects of this video: in the foreground left the brown leather-bound journal closed on the pale oak side table beside the amber floor lamp casting honey light, in the soft-focus background right a tender silhouette of the mother's hand resting on the back of the son's shoulder seen from behind. Warm amber interior palette throughout, slate blue-grey wall accent, evening quiet. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": null,
+      "voice_role": "narrator",
+      "duration": 10,
+      "motion_budget": "standard",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "peak",
+      "chapter_number": 9,
+      "music_cue": "brand_close",
+      "sfx": [
+        "soft_evening_breath",
+        "lamp_warm_hum"
+      ],
+      "props_used": [
+        "brown leather journal",
+        "amber floor lamp"
+      ],
+      "cta_type": "subscribe",
+      "status": "pending",
+      "notes": "STRONG CTA. Channel branding anchor. Both signature objects together."
+    },
+    {
+      "id": "CLIP-48",
+      "act": "9_end",
+      "label": "Sarah warm closing — journal in lap",
+      "scene_type": "drama",
+      "source": "new_image",
+      "characters": [
+        "Sarah"
+      ],
+      "setting": "walsh_living_room",
+      "emotion": "warm closing — trademark final",
+      "story_en": "Thank you for letting me share my journal. I hope one of these sentences finds a home with you. Because good enough is enough.",
+      "story_chunks_en": [
+        "Thank you",
+        "for letting me share",
+        "my journal.",
+        "I hope one of these sentences",
+        "finds a home with you.",
+        "Because good enough",
+        "is enough."
+      ],
+      "imagePrompt": "A warm hand-drawn storybook illustration with watercolor and digital painting finish, depicting a warm medium shot of Sarah seated on the linen sofa at evening with the brown leather journal closed gently in her lap, both hands resting on the journal cover, looking toward the camera with an expression of grateful closing. Sarah, white American woman mid-30s, 5'5\", slim modern build with confident upright posture, straight chestnut-brown hair falling just below shoulders tucked behind one ear, dark warm brown eyes with thoughtful focus, fair-medium skin with a hint of natural blush, modern minimalist style, wearing a soft chambray blue button-up shirt with sleeves rolled to forearms over loose slate-grey linen trousers, small gold stud earrings, simple silver wedding band, bare feet on warm wooden floor. Soft amber floor lamp light, slate blue-grey wall, evening warmth. The window beyond shows fog softening the evergreens in the dusk. Warm amber interior palette: soft honey lamp light, warm pale wood tones, dusty blue-grey wall accents, cream and oat textiles. Characters with gentle expressive faces, large soulful eyes, slightly stylized children's-book proportions. Soft painterly brush strokes, watercolor bleed on edges, shallow depth of field. Aspect ratio 16:9 horizontal. No text, no letters, no words, no captions, no typography, no watermark anywhere in the image.",
+      "videoPrompt": "Sarah's expression deepens into a warm grateful smile. Her hands gently smooth the journal cover in her lap. She gives a small almost-imperceptible farewell nod. Soft amber lamp light catches her face. Keep character IDENTICAL. Maintain warm amber interior palette.",
+      "voice_role": "narrator",
+      "duration": 10,
+      "motion_budget": "extended",
+      "ken_burns": "subtle_zoom_in",
+      "retention_role": "peak",
+      "chapter_number": 9,
+      "music_cue": "trademark_final",
+      "sfx": [
+        "warm_grateful_breath",
+        "soft_evening_quiet"
+      ],
+      "props_used": [
+        "brown leather journal",
+        "oat linen sofa"
+      ],
+      "cta_type": null,
+      "status": "pending",
+      "notes": "TRADEMARK third and final occurrence. Channel signature close."
+    }
+  ]
+}

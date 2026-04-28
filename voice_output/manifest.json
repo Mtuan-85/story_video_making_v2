@@ -1,0 +1,61 @@
+{
+  "generated_at": "2026-04-27T23:42:04.665427",
+  "voice_config": {
+    "voice_id": "acc8237220d8470985ec9be6c4c480a9",
+    "emotion_syntax": "s2",
+    "speed": 1.0,
+    "volume": 0,
+    "temperature": 0.7,
+    "top_p": 0.7
+  },
+  "batches": [
+    {
+      "batch_id": 1,
+      "file": "batch_1.mp3",
+      "scenes": [
+        {
+          "scene_id": "SCENE-01",
+          "order_in_batch": 0,
+          "raw_story": "Morning. The kitchen is still asleep. Only the soft hiss of water boiling in the kettle.",
+          "emotion": "calm warm morning narrator, soft breathy tone",
+          "expected_duration_sec": 10
+        },
+        {
+          "scene_id": "SCENE-02",
+          "order_in_batch": 1,
+          "raw_story": "Coffee pours slowly. The aroma begins to spread.",
+          "emotion": "gentle savoring tone, slightly slower pace",
+          "expected_duration_sec": 8
+        },
+        {
+          "scene_id": "SCENE-03",
+          "order_in_batch": 2,
+          "raw_story": "Open the window. Sunlight pours in like a greeting.",
+          "emotion": "warm welcoming tone, slightly brighter",
+          "expected_duration_sec": 10
+        },
+        {
+          "scene_id": "SCENE-04",
+          "order_in_batch": 3,
+          "raw_story": "Sit down. Both hands wrapped around the warm cup. No rush to be anywhere.",
+          "emotion": "peaceful contemplative tone, unhurried",
+          "expected_duration_sec": 12
+        },
+        {
+          "scene_id": "SCENE-05",
+          "order_in_batch": 4,
+          "raw_story": "An old book. A page held open. A few handwritten notes in the margin.",
+          "emotion": "soft nostalgic tone, intimate",
+          "expected_duration_sec": 10
+        },
+        {
+          "scene_id": "SCENE-06",
+          "order_in_batch": 5,
+          "raw_story": "A morning slow enough to feel. Quiet enough to begin.",
+          "emotion": "grateful warm conclusion, slight smile in voice",
+          "expected_duration_sec": 10
+        }
+      ]
+    }
+  ]
+}

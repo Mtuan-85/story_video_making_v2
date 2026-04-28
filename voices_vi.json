@@ -1,0 +1,422 @@
+{
+  "exported_at": "2026-04-27T23:11:40.560814",
+  "filter": {
+    "self_only": false,
+    "title": null,
+    "language": "en"
+  },
+  "total": 512729,
+  "voices": [
+    {
+      "id": "90e65eaaf50e4470b8e6d43ee6afd7d5",
+      "title": "Super Smash Bros. 4/Ultimate Announcer",
+      "description": "A powerful and authoritative middle-aged male voice with a dramatic, cinematic quality. It features a deep, resonant tone perfectly suited for gaming announcers or high-energy sports commentary.",
+      "languages": [
+        "en"
+      ],
+      "tags": [
+        "male",
+        "middle-aged",
+        "character-voice",
+        "entertainment",
+        "deep",
+        "energetic",
+        "authoritative",
+        "dramatic",
+        "announcer",
+        "gaming",
+        "cinematic"
+      ],
+      "state": "trained"
+    },
+    {
+      "id": "d13f84b987ad4f22b56d2b47f4eb838e",
+      "title": "Mortal Kombat",
+      "description": "Pedro ",
+      "languages": [
+        "en"
+      ],
+      "tags": [
+        "male",
+        "middle-aged",
+        "character-voice",
+        "deep",
+        "low",
+        "dramatic",
+        "mysterious",
+        "cinematic"
+      ],
+      "state": "trained"
+    },
+    {
+      "id": "03397b4c4be74759b72533b663fbd001",
+      "title": "Elon Musk(Noise reduction)",
+      "description": "A calm and professional male voice with a clear, measured delivery and a middle-aged tone. The voice sounds authoritative yet approachable, making it well-suited for technical explanations and educational narration.",
+      "languages": [
+        "en"
+      ],
+      "tags": [
+        "male",
+        "middle-aged",
+        "educational",
+        "documentary",
+        "podcast",
+        "calm",
+        "professional",
+        "clear",
+        "measured",
+        "Tech-focused",
+        "Intelligent"
+      ],
+      "state": "trained"
+    },
+    {
+      "id": "acc8237220d8470985ec9be6c4c480a9",
+      "title": "Hatsune Miku (Text To Speech)",
+      "description": "A vibrant and cheerful young male voice with an energetic, melodic tone. Its high energy and friendly delivery make it well-suited for upbeat characters or digital personalities.",
+      "languages": [
+        "es",
+        "en"
+      ],
+      "tags": [
+        "male",
+        "young",
+        "character-voice",
+        "energetic",
+        "cheerful",
+        "bright",
+        "friendly",
+        "anime",
+        "Virtual Idol"
+      ],
+      "state": "trained"
+    },
+    {
+      "id": "88872b3d83694d8490b55d75480205a0",
+      "title": "Mortal Kombat Announcer ",
+      "description": "SCORPION WINS!",
+      "languages": [
+        "en"
+      ],
+      "tags": [
+        "male",
+        "middle-aged",
+        "character-voice",
+        "deep",
+        "authoritative",
+        "dramatic",
+        "cinematic",
+        "announcer",
+        "Video Game"
+      ],
+      "state": "trained"
+    },
+    {
+      "id": "5196af35f6ff4a0dbf541793fc9f2157",
+      "title": "Donald J. Trump(Noise reduction)",
+      "description": "A confident and authoritative male voice with a distinctive New York accent, characterized by an emphatic and persuasive tone. This voice sounds like an older man with a slightly raspy quality and a high level of energy.",
+      "languages": [
+        "en"
+      ],
+      "tags": [
+        "male",
+        "old",
+        "character-voice",
+        "confident",
+        "authoritative",
+        "raspy",
+        "energetic",
+        "expressive",
+        "New York Accent"
+      ],
+      "state": "trained"
+    },
+    {
+      "id": "802e3bc2b27e49c2995d23ef70e6ac89",
+      "title": "Energetic Male",
+      "description": "A youthful and energetic male voice with a clear, professional American accent. The tone is dynamic and enthusiastic, well-suited for high-energy announcements and promotional content.",
+      "languages": [
+        "en"
+      ],
+      "tags": [
+        "male",
+        "young",
+        "social-media",
+        "advertisement",
+        "energetic",
+        "enthusiastic",
+        "clear",
+        "crisp",
+        "announcer"
+      ],
+      "state": "trained"
+    },
+    {
+      "id": "933563129e564b19a115bedd57b7406a",
+      "title": "Sarah",
+      "description": "An engaged speaker. ",
+      "languages": [
+        "en"
+      ],
+      "tags": [
+        "female",
+        "young",
+        "conversational",
+        "narration",
+        "soft",
+        "breathy",
+        "intimate",
+        "gentle",
+        "Sincere"
+      ],
+      "state": "trained"
+    },
+    {
+      "id": "59e9dc1cb20c452584788a2690c80970",
+      "title": "ALLE",
+      "description": "A young female voice with an energetic and friendly tone, ideal for social media content and product reviews. The voice is clear, expressive, and maintains a high-paced, conversational flow.",
+      "languages": [
+        "en"
+      ],
+      "tags": [
+        "female",
+        "young",
+        "social-media",
+        "advertisement",
+        "conversational",
+        "energetic",
+        "friendly",
+        "enthusiastic",
+        "bright",
+        "expressive"
+      ],
+      "state": "trained"
+    },
+    {
+      "id": "52e0660e03fe4f9a8d2336f67cab5440",
+      "title": "ALEX_CHIKNA",
+      "description": "A confident and energetic young male voice with a fast-paced, enthusiastic delivery. This voice is well-suited for social media content, sports commentary, and high-energy promotional announcements.",
+      "languages": [
+        "en"
+      ],
+      "tags": [
+        "male",
+        "young",
+        "social-media",
+        "entertainment",
+        "energetic",
+        "confident",
+        "enthusiastic",
+        "fast",
+        "Sports Commentary"
+      ],
+      "state": "trained"
+    },
+    {
+      "id": "d60c136243984ec78a3be125b2f38faf",
+      "title": "My producer tag",
+      "description": "A young female voice with a soft, breathy, and intimate quality. This voice features a rhythmic and polished delivery, making it ideal for music producer tags and creative social media content.",
+      "languages": [
+        "en"
+      ],
+      "tags": [
+        "female",
+        "young",
+        "social-media",
+        "entertainment",
+        "soft",
+        "breathy",
+        "smooth",
+        "professional",
+        "Producer Tags"
+      ],
+      "state": "trained"
+    },
+    {
+      "id": "15742afadec44b82bf52f7bb62b83f83",
+      "title": "Twinko",
+      "description": "A beautiful woman with a high ish impression ",
+      "languages": [
+        "en"
+      ],
+      "tags": [
+        "female",
+        "young",
+        "character-voice",
+        "medium",
+        "bright",
+        "high",
+        "entertainment",
+        "playful",
+        "animated",
+        "energetic"
+      ],
+      "state": "trained"
+    },
+    {
+      "id": "b545c585f631496c914815291da4e893",
+      "title": "Friendly Women",
+      "description": "A bright and energetic female voice with a youthful, professional tone. Her delivery is clear and enthusiastic, making it highly engaging for a variety of media.",
+      "languages": [
+        "en"
+      ],
+      "tags": [
+        "female",
+        "young",
+        "social-media",
+        "entertainment",
+        "bright",
+        "energetic",
+        "professional",
+        "enthusiastic"
+      ],
+      "state": "trained"
+    },
+    {
+      "id": "98655a12fa944e26b274c535e5e03842",
+      "title": "E-girl",
+      "description": "A cute e-girl to chat with you.",
+      "languages": [
+        "en"
+      ],
+      "tags": [
+        "egirl",
+        "female",
+        "young",
+        "conversational",
+        "character-voice",
+        "soft",
+        "breathy",
+        "calm",
+        "gentle",
+        "intimate"
+      ],
+      "state": "trained"
+    },
+    {
+      "id": "0e1a691306e44ff2bc26444fc7fe078d",
+      "title": "Steal a Brainrot Voice Part 1",
+      "description": "Voz do roube um Brainrot",
+      "languages": [
+        "en",
+        "es",
+        "it",
+        "id"
+      ],
+      "tags": [
+        "male",
+        "middle-aged",
+        "narration",
+        "character-voice",
+        "calm",
+        "crisp",
+        "expressive",
+        "storytelling",
+        "Spanish"
+      ],
+      "state": "trained"
+    },
+    {
+      "id": "86c3dd42c08f4082a2ad9ba59441c743",
+      "title": "metal sonic?",
+      "description": "This is a deep, robotic male voice with a cold, monotone delivery. It features heavy mechanical synthesis, making it ideal for sci-fi characters, AI entities, or futuristic villains.",
+      "languages": [
+        "en"
+      ],
+      "tags": [
+        "male",
+        "middle-aged",
+        "character-voice",
+        "entertainment",
+        "deep",
+        "low",
+        "monotone",
+        "authoritative",
+        "serious",
+        "Robotic",
+        "Sci-Fi",
+        "Mechanical"
+      ],
+      "state": "trained"
+    },
+    {
+      "id": "e58b0d7efca34eb38d5c4985e378abcb",
+      "title": "POTUS 47 - Trump",
+      "description": "POTUS 47 - Trump. He's back!",
+      "languages": [
+        "en"
+      ],
+      "tags": [
+        "male",
+        "old",
+        "social-media",
+        "entertainment",
+        "raspy",
+        "confident",
+        "authoritative",
+        "Trump"
+      ],
+      "state": "trained"
+    },
+    {
+      "id": "ef9c79b62ef34530bf452c0e50e3c260",
+      "title": "horror",
+      "description": "A deep and serious middle-aged male voice with a calm, mysterious tone. Well-suited for suspenseful narration, documentaries, or cinematic storytelling.",
+      "languages": [
+        "en"
+      ],
+      "tags": [
+        "male",
+        "middle-aged",
+        "narration",
+        "deep",
+        "low",
+        "serious",
+        "calm",
+        "mysterious",
+        "storytelling"
+      ],
+      "state": "trained"
+    },
+    {
+      "id": "8bed0e9b444046e2bf72da4b251d9a1d",
+      "title": "Marcus the worm",
+      "description": "A smooth and calm middle-aged male voice with a deep, professional tone. It features a friendly and engaging quality, making it well-suited for storytelling or narration.",
+      "languages": [
+        "en"
+      ],
+      "tags": [
+        "male",
+        "middle-aged",
+        "narration",
+        "storytelling",
+        "deep",
+        "smooth",
+        "calm",
+        "professional",
+        "friendly"
+      ],
+      "state": "trained"
+    },
+    {
+      "id": "a3b3f0a9c49340bd8fa722d83c81cb08",
+      "title": "teto",
+      "description": "A youthful and friendly female voice with a relaxed, informal tone perfect for social media or casual dialogue.",
+      "languages": [
+        "en"
+      ],
+      "tags": [
+        "female",
+        "young",
+        "conversational",
+        "social-media",
+        "high",
+        "bright",
+        "friendly",
+        "energetic",
+        "clear"
+      ],
+      "state": "trained"
+    }
+  ]
+}

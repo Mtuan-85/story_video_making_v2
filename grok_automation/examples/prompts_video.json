@@ -1,0 +1,16 @@
+{
+  "prompts": [
+    {
+      "text": "the lion roars loudly with shaking ground, slow motion",
+      "ref": "eiffel_pic1.jpg"
+    },
+    {
+      "text": "the lion turns head left and growls",
+      "ref": "eiffel_pic1.jpg"
+    },
+    {
+      "text": "the lion stretches and yawns wide",
+      "ref": "eiffel_pic1.jpg"
+    }
+  ]
+}

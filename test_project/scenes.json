@@ -1,0 +1,67 @@
+{
+  "version": "1.0",
+  "meta": {
+    "project_id": "voice-test-en-001",
+    "title": "Voice test EN - Morning Coffee",
+    "aspect_ratio": "16:9",
+    "language": "en"
+  },
+  "settings": {
+    "baseStyle": "Simple flat 2D illustration, hand-drawn digital art, soft warm color palette",
+    "baseNegative": "No text, no letters, no captions, no watermark",
+    "topic": "A peaceful morning coffee ritual",
+    "image_quality": "quality",
+    "video_resolution": "720p",
+    "video_duration": "10s"
+  },
+  "scenes": [
+    {
+      "id": "SCENE-01",
+      "visual_type": "image_grok",
+      "story_en": "Morning. The kitchen is still asleep. Only the soft hiss of water boiling in the kettle.",
+      "imagePrompt": "Simple flat 2D illustration of a quiet morning kitchen with a kettle and steam.",
+      "videoPrompt": null,
+      "duration": 10
+    },
+    {
+      "id": "SCENE-02",
+      "visual_type": "image_grok",
+      "story_en": "Coffee pours slowly. The aroma begins to spread.",
+      "imagePrompt": "Simple flat 2D illustration of coffee pouring into a mug.",
+      "videoPrompt": null,
+      "duration": 8
+    },
+    {
+      "id": "SCENE-03",
+      "visual_type": "image_grok",
+      "story_en": "Open the window. Sunlight pours in like a greeting.",
+      "imagePrompt": "Simple flat 2D illustration of opening a window with sunlight streaming in.",
+      "videoPrompt": null,
+      "duration": 10
+    },
+    {
+      "id": "SCENE-04",
+      "visual_type": "image_grok",
+      "story_en": "Sit down. Both hands wrapped around the warm cup. No rush to be anywhere.",
+      "imagePrompt": "Simple flat 2D illustration of person sitting at table holding a warm mug.",
+      "videoPrompt": null,
+      "duration": 12
+    },
+    {
+      "id": "SCENE-05",
+      "visual_type": "image_grok",
+      "story_en": "An old book. A page held open. A few handwritten notes in the margin.",
+      "imagePrompt": "Simple flat 2D illustration of an open old book beside a coffee mug.",
+      "videoPrompt": null,
+      "duration": 10
+    },
+    {
+      "id": "SCENE-06",
+      "visual_type": "image_grok",
+      "story_en": "A morning slow enough to feel. Quiet enough to begin.",
+      "imagePrompt": "Simple flat 2D illustration of person looking out window into sunlit garden.",
+      "videoPrompt": null,
+      "duration": 10
+    }
+  ]
+}

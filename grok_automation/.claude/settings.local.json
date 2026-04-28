@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv sync *)",
+      "Bash(uv run *)",
+      "Bash(kill %1)",
+      "Bash(taskkill //PID 430 //F)",
+      "Bash(.venv/Scripts/python.exe -c \"from ui.main_window import MainWindow; from grok.flows import FLOWS; from grok.prompt_loader import load_prompts; from workers.automation_worker import determine_flow, get_target_count, validate_before_start; print\\('imports OK; flows:', list\\(FLOWS.keys\\(\\)\\)\\)\")",
+      "Bash(.venv/Scripts/python.exe main.py)",
+      "Bash(.venv/Scripts/python.exe -c \"from grok import actions; from grok.flows import FLOWS; from grok.runner import FlowRunner; print\\('OK; save_candidates_log present:', hasattr\\(actions, 'save_candidates_log'\\)\\)\")",
+      "Bash(cat C:\\\\\\\\Users\\\\\\\\Admin\\\\\\\\AppData\\\\\\\\Local\\\\\\\\Temp\\\\\\\\claude\\\\\\\\D--Projects-grok-automation\\\\\\\\7bdbba3b-9838-42a2-8256-c6b4e9839ca6\\\\\\\\tasks\\\\\\\\bz3oergqe.output)"
+    ]
+  }
+}
