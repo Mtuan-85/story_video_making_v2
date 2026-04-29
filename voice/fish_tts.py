@@ -15,7 +15,7 @@ USAGE:
     python voice\\fish_tts.py --list-voices --voice-language vi
 
     # 4. Gen TTS tu scenes.json:
-    python voice\\fish_tts.py examples\\scenes_voice_test.json
+    python voice\\fish_tts.py test_run\\scenes.json
 
 
 FISH AUDIO MODEL CONCEPT:
@@ -65,8 +65,8 @@ def load_scenes(json_path: Path) -> dict:
     story_field = f"story_{lang}"
 
     for scene in data["scenes"]:
-        if "voice_batch_id" not in scene:
-            raise ValueError(f"Scene {scene.get('id', '?')} thieu voice_batch_id")
+        # voice_batch_id no longer in project schema — default to 1.
+        scene.setdefault("voice_batch_id", 1)
         # Try story_<lang> first, fallback to story_vi or story_en
         story = scene.get(story_field) or scene.get("story_vi") or scene.get("story_en")
         if not story or not story.strip():
@@ -429,9 +429,9 @@ EXAMPLES:
     python voice\\fish_tts.py --list-voices --voice-title "vietnamese"
 
     # Gen TTS:
-    python voice\\fish_tts.py examples\\scenes_voice_test.json
-    python voice\\fish_tts.py examples\\scenes_voice_test.json --voice-id ABC --speed 1.1
-    python voice\\fish_tts.py examples\\scenes_voice_test.json --force
+    python voice\\fish_tts.py test_run\\scenes.json
+    python voice\\fish_tts.py test_run\\scenes.json --voice-id ABC --speed 1.1
+    python voice\\fish_tts.py test_run\\scenes.json --force
         """
     )
 

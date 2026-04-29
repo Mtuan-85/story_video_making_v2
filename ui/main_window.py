@@ -32,8 +32,12 @@ from ui.connection_panel import ConnectionPanel
 from ui.dialogs.preview_image import PreviewImageDialog
 from ui.dialogs.preview_video import PreviewVideoDialog
 from ui.dialogs.prompt_editor import PromptEditorDialog
+from ui.dialogs.voice_align_review import VoiceAlignReviewDialog
+from ui.dialogs.voice_import import VoiceImportDialog
 from ui.scene_list import SceneList
 from workers._async_thread import AsyncQThread
+from workers.render_worker import RenderWorker
+from workers.voice_align_worker import VoiceAlignWorker
 from workers.batch_image import BatchImageWorker
 from workers.batch_video import BatchVideoWorker, is_eligible as is_video_eligible
 from workers.ken_burns_worker import KenBurnsWorker, is_ken_burns_eligible
@@ -56,6 +60,8 @@ class MainWindow(QMainWindow):
         self._batch_video_worker: BatchVideoWorker | None = None
         self._single_workers: dict[str, SingleImageWorker] = {}
         self._single_video_workers: dict[str, AsyncQThread] = {}
+        self._voice_align_worker: VoiceAlignWorker | None = None
+        self._render_worker: RenderWorker | None = None
 
         self._build_ui()
         self._wire_signals()
@@ -95,7 +101,7 @@ class MainWindow(QMainWindow):
         self.btn_batch_image.setEnabled(False)
         action_row.addWidget(self.btn_batch_image)
 
-        self.btn_batch_video = QPushButton("➕ Batch video (I2V)")
+        self.btn_batch_video = QPushButton("🎞 Batch animation")
         self.btn_batch_video.clicked.connect(self._start_batch_video)
         self.btn_batch_video.setEnabled(False)
         action_row.addWidget(self.btn_batch_video)
@@ -104,6 +110,17 @@ class MainWindow(QMainWindow):
         self.btn_stop.clicked.connect(self._stop_batch)
         self.btn_stop.setEnabled(False)
         action_row.addWidget(self.btn_stop)
+
+        action_row.addSpacing(12)
+        self.btn_import_voice = QPushButton("🎤 Import voice")
+        self.btn_import_voice.clicked.connect(self._open_voice_import)
+        self.btn_import_voice.setEnabled(False)
+        action_row.addWidget(self.btn_import_voice)
+
+        self.btn_render = QPushButton("🎬 Render final")
+        self.btn_render.clicked.connect(self._start_render)
+        self.btn_render.setEnabled(False)
+        action_row.addWidget(self.btn_render)
 
         action_row.addSpacing(12)
         self.selection_label = QLabel("Đã chọn: 0/0")
@@ -190,6 +207,8 @@ class MainWindow(QMainWindow):
             f"{len(self.project.scenes)} scenes — <span style='color:#666'>{self.project.paths.root}</span>"
         )
         self.scene_list.bind_project(self.project)  # emits batch_selection_changed
+        self.btn_import_voice.setEnabled(True)
+        self.btn_render.setEnabled(self.project.voice_mapping is not None)
         self._append_log(f"✓ Đã load dự án: {meta.title}")
 
     # ------------------------------------------------------------------
@@ -206,6 +225,20 @@ class MainWindow(QMainWindow):
         self.image_engine = None
         self.video_engine = None
         self._refresh_batch_buttons()
+
+    def _on_browser_disconnected(self) -> None:
+        """Worker phát hiện page Grok đã closed → reset engine refs.
+
+        User phải click 🔌 Kết nối lại trên ConnectionPanel để select tab mới.
+        """
+        if self.image_engine is None and self.video_engine is None:
+            return
+        self.image_engine = None
+        self.video_engine = None
+        self._refresh_batch_buttons()
+        self._append_log(
+            "ℹ Engine đã reset. Click 🔌 trên ConnectionPanel để chọn lại tab Grok."
+        )
 
     def _refresh_batch_buttons(self) -> None:
         self._on_batch_selection_changed(
@@ -250,6 +283,7 @@ class MainWindow(QMainWindow):
         self._batch_worker = BatchImageWorker(
             self.project, self.image_engine, estimator=self.estimator,
             scene_ids=list(selected_ids),
+            connection=self.connection_panel.connection,
         )
         self._batch_worker.scene_started.connect(self._on_scene_started)
         self._batch_worker.scene_finished.connect(self._on_scene_finished)
@@ -257,6 +291,10 @@ class MainWindow(QMainWindow):
         self._batch_worker.batch_progress.connect(self._on_progress)
         self._batch_worker.batch_done.connect(self._on_batch_done)
         self._batch_worker.log_message.connect(self._append_log)
+        self._batch_worker.browser_disconnected.connect(self._on_browser_disconnected)
+        self._batch_worker.scene_needs_user_decision.connect(
+            lambda sid, n: self._ask_user_decision(self._batch_worker, sid, n)
+        )
         self._batch_worker.finished.connect(self._batch_worker.deleteLater)
         self.btn_batch_image.setEnabled(False)
         self.btn_stop.setEnabled(True)
@@ -270,6 +308,9 @@ class MainWindow(QMainWindow):
         if self._batch_video_worker is not None:
             self._batch_video_worker.request_stop()
             self._append_log("⏸ Đang dừng batch video...")
+        if self._render_worker is not None and self._render_worker.isRunning():
+            self._render_worker.request_stop()
+            self._append_log("⏸ Đang dừng render...")
 
     def _on_scene_started(self, scene_id: str) -> None:
         self.scene_list.refresh_row(scene_id)
@@ -330,6 +371,7 @@ class MainWindow(QMainWindow):
         self._batch_video_worker = BatchVideoWorker(
             self.project, self.video_engine, estimator=self.estimator,
             scene_ids=list(selected_ids),
+            connection=self.connection_panel.connection,
         )
         self._batch_video_worker.scene_started.connect(self._on_scene_started)
         self._batch_video_worker.scene_finished.connect(self._on_scene_finished)
@@ -340,6 +382,10 @@ class MainWindow(QMainWindow):
         self._batch_video_worker.batch_progress.connect(self._on_progress)
         self._batch_video_worker.batch_done.connect(self._on_batch_video_done)
         self._batch_video_worker.log_message.connect(self._append_log)
+        self._batch_video_worker.browser_disconnected.connect(self._on_browser_disconnected)
+        self._batch_video_worker.scene_needs_user_decision.connect(
+            lambda sid, n: self._ask_user_decision(self._batch_video_worker, sid, n)
+        )
         self._batch_video_worker.finished.connect(self._batch_video_worker.deleteLater)
         self.btn_batch_image.setEnabled(False)
         self.btn_batch_video.setEnabled(False)
@@ -353,6 +399,29 @@ class MainWindow(QMainWindow):
         self._append_log(f"✓ Batch video xong: {success}/{total}")
 
     # ------------------------------------------------------------------
+    # User-decision popup after retry exhausts
+    # ------------------------------------------------------------------
+
+    def _ask_user_decision(self, worker, scene_id: str, attempts: int) -> None:
+        """Modal popup → set worker.set_user_decision('retry'|'skip'|'abort')."""
+        msg = QMessageBox(self)
+        msg.setIcon(QMessageBox.Icon.Warning)
+        msg.setWindowTitle(f"Scene {scene_id} fail")
+        msg.setText(f"Scene {scene_id} fail {attempts} lần liên tiếp.\nBạn muốn làm gì?")
+        btn_retry = msg.addButton("Retry", QMessageBox.ButtonRole.AcceptRole)
+        btn_skip = msg.addButton("Skip", QMessageBox.ButtonRole.RejectRole)
+        btn_abort = msg.addButton("Abort batch", QMessageBox.ButtonRole.DestructiveRole)
+        msg.exec()
+        clicked = msg.clickedButton()
+        if clicked == btn_retry:
+            decision = "retry"
+        elif clicked == btn_abort:
+            decision = "abort"
+        else:
+            decision = "skip"
+        worker.set_user_decision(decision)
+
+    # ------------------------------------------------------------------
     # Single re-gen
     # ------------------------------------------------------------------
 
@@ -362,7 +431,10 @@ class MainWindow(QMainWindow):
             return
         if scene_id in self._single_workers and self._single_workers[scene_id].isRunning():
             return
-        worker = SingleImageWorker(self.project, self.image_engine, scene_id)
+        worker = SingleImageWorker(
+            self.project, self.image_engine, scene_id,
+            connection=self.connection_panel.connection,
+        )
         worker.scene_started.connect(self._on_scene_started)
         worker.scene_finished.connect(self._on_scene_finished)
         worker.scene_failed.connect(self._on_scene_failed)
@@ -380,7 +452,7 @@ class MainWindow(QMainWindow):
         """Dispatch a one-scene video re-gen by visual_type.
 
         video_grok       → SingleVideoWorker (Grok I2V, needs browser)
-        slideshow_v4     → SlideshowWorker (offline, needs ready image)
+        slideshow     → SlideshowWorker (offline, needs ready image)
         ken_burns_self   → KenBurnsWorker (offline, needs ready image)
         ken_burns_cont   → KenBurnsWorker (offline, needs prev scene's video)
         image_grok       → not a video type — refuse politely
@@ -403,10 +475,11 @@ class MainWindow(QMainWindow):
                 QMessageBox.warning(self, f"Không đủ điều kiện — {scene_id}", reason)
                 return
             worker: AsyncQThread = SingleVideoWorker(
-                self.project, self.video_engine, scene_id, estimator=self.estimator
+                self.project, self.video_engine, scene_id, estimator=self.estimator,
+                connection=self.connection_panel.connection,
             )
 
-        elif vtype == "slideshow_v4":
+        elif vtype == "slideshow":
             ok, reason = is_slideshow_eligible(self.project, scene_id)
             if not ok:
                 QMessageBox.warning(self, f"Không đủ điều kiện — {scene_id}", reason)
@@ -517,6 +590,151 @@ class MainWindow(QMainWindow):
                 self._regen_one(scene_id)
             else:
                 self._regen_one_video(scene_id)
+
+    # ------------------------------------------------------------------
+    # Voice alignment (Sprint 2)
+    # ------------------------------------------------------------------
+
+    def _open_voice_import(self) -> None:
+        if self.project is None:
+            return
+        scene_ids = [s.id for s in self.project.scenes]
+        default_lang = self.project.scenes_json.meta.language
+        dlg = VoiceImportDialog(self.project.paths.root, scene_ids, default_lang, parent=self)
+        dlg.alignment_requested.connect(self._start_voice_align)
+        dlg.exec()
+
+    def _start_voice_align(
+        self,
+        voice_files: list,
+        assignments: dict,
+        silent_scenes: list,
+        whisper_model: str,
+        language: str,
+    ) -> None:
+        if self.project is None:
+            return
+        if self._voice_align_worker is not None and self._voice_align_worker.isRunning():
+            QMessageBox.information(self, "Đang chạy", "Alignment đang chạy, đợi xong rồi thử lại.")
+            return
+
+        scenes = [
+            {
+                "id": s.id,
+                "story_en": s.story_en,
+                "story_vi": s.story_vi,
+            }
+            for s in self.project.scenes
+        ]
+        self._append_log(
+            f"▶ Bắt đầu alignment: {len(voice_files)} file, model={whisper_model}, lang={language}"
+        )
+        worker = VoiceAlignWorker(
+            voice_files=voice_files,
+            scene_assignments=assignments,
+            scenes=scenes,
+            work_dir=self.project.paths.temp_dir,
+            project_root=self.project.paths.root,
+            silent_scenes=silent_scenes,
+            whisper_model=whisper_model,
+            language=language,
+        )
+        worker.log_message.connect(self._append_log)
+        worker.failed.connect(
+            lambda fn, msg: self._append_log(f"❌ {fn}: {msg}")
+        )
+        worker.all_done.connect(self._on_voice_align_done)
+        worker.finished.connect(self._cleanup_voice_align)
+        self._voice_align_worker = worker
+        self.btn_import_voice.setEnabled(False)
+        worker.start()
+
+    def _on_voice_align_done(self, mapping) -> None:
+        from core.voice_mapping import VoiceMapping  # local import to keep top tidy
+        if not isinstance(mapping, VoiceMapping):
+            self._append_log("⚠ alignment trả về dữ liệu không hợp lệ")
+            return
+        if self.project is None:
+            return
+        self.project.save_voice_mapping(mapping)
+        self._append_log(
+            f"✓ Alignment xong: {len(mapping.voice_files)} file, "
+            f"silent={len(mapping.silent_scenes)} scenes — đã lưu voice_mapping.json"
+        )
+        dlg = VoiceAlignReviewDialog(mapping, parent=self)
+        dlg.saved.connect(self._on_voice_mapping_saved)
+        dlg.exec()
+
+    def _on_voice_mapping_saved(self, mapping) -> None:
+        if self.project is None:
+            return
+        self.project.save_voice_mapping(mapping)
+        self._append_log("✓ Đã lưu chỉnh sửa timestamps")
+        self.btn_render.setEnabled(True)
+
+    def _cleanup_voice_align(self) -> None:
+        worker = self._voice_align_worker
+        if worker is not None:
+            worker.deleteLater()
+        self._voice_align_worker = None
+        self.btn_import_voice.setEnabled(self.project is not None)
+        if self.project is not None and self.project.voice_mapping is not None:
+            self.btn_render.setEnabled(True)
+
+    # ------------------------------------------------------------------
+    # Render final (Sprint 2 Phase 2B)
+    # ------------------------------------------------------------------
+
+    def _start_render(self) -> None:
+        if self.project is None:
+            return
+        if self.project.voice_mapping is None:
+            QMessageBox.warning(
+                self, "Chưa có voice_mapping",
+                "Import voice và alignment trước khi render final.",
+            )
+            return
+        if self._render_worker is not None and self._render_worker.isRunning():
+            return
+
+        bgm_dir = self.project.paths.bgm_dir
+        worker = RenderWorker(
+            project=self.project,
+            voice_mapping=self.project.voice_mapping,
+            bgm_dir=bgm_dir if bgm_dir.exists() else None,
+        )
+        worker.log_message.connect(self._append_log)
+        worker.scene_failed.connect(
+            lambda sid, r: self._append_log(f"❌ {sid}: {r}")
+        )
+        worker.progress.connect(
+            lambda i, n: self.progress_label.setText(f"{i}/{n}")
+        )
+        worker.finished_ok.connect(self._on_render_ok)
+        worker.finished_fail.connect(self._on_render_fail)
+        worker.finished.connect(self._cleanup_render)
+        self._render_worker = worker
+        self.btn_render.setEnabled(False)
+        self.btn_stop.setEnabled(True)
+        self._append_log("▶ Bắt đầu render final...")
+        worker.start()
+
+    def _on_render_ok(self, path: str) -> None:
+        self._append_log(f"✓ Render xong: {path}")
+        QMessageBox.information(self, "Done", f"Final video:\n{path}")
+
+    def _on_render_fail(self, reason: str) -> None:
+        self._append_log(f"❌ Render fail: {reason}")
+        QMessageBox.critical(self, "Render fail", reason)
+
+    def _cleanup_render(self) -> None:
+        if self._render_worker is not None:
+            self._render_worker.deleteLater()
+        self._render_worker = None
+        self.btn_render.setEnabled(
+            self.project is not None and self.project.voice_mapping is not None
+        )
+        self.btn_stop.setEnabled(False)
 
     def _show_warnings(self, scene_id: str) -> None:
         if self.project is None:

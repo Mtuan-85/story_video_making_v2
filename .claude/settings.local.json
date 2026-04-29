@@ -15,7 +15,22 @@
       "Bash(curl -s --max-time 3 http://localhost:9222/json/version)",
       "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe main.py)",
       "Bash(tasklist)",
-      "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -u _smoke_batch.py)"
+      "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -u _smoke_batch.py)",
+      "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -u _smoke_video.py)",
+      "Bash(uv pip *)",
+      "Bash(.venv/Scripts/whisper.exe --help)",
+      "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/whisper.exe --help)",
+      "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -c \"import whisper; print\\('whisper module', whisper.__version__ if hasattr\\(whisper, '__version__'\\) else 'OK'\\)\")",
+      "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -u _smoke_gen_456.py)",
+      "Bash(ffprobe *)",
+      "Bash(ffmpeg -i D:/Projects/story_video_making/_fade_test/s2.mp4 -vf \"select='eq\\(n\\\\,0\\)+eq\\(n\\\\,3\\)+eq\\(n\\\\,7\\)+eq\\(n\\\\,149\\)',scale=4:4,format=gray\" -fps_mode passthrough -f rawvideo -)",
+      "Bash(git -C D:/Projects/story_video_making ls-files)",
+      "Bash(grep -E \"\\(__pycache__|\\\\.pyc$|test_run/|grok_automation/|slideshow_v4/\\)\")",
+      "Bash(awk '{print $NF}')",
+      "Bash(grep -v \"^\\\\.$\")",
+      "Bash(grep -v \"^\\\\.\\\\.$\")",
+      "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe tests/run_tier1.py)",
+      "Bash(awk '{$1=$2=$3=$4=$5=\"\"; print}')"
     ]
   }
 }

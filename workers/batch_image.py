@@ -6,6 +6,7 @@ so SceneRow widgets can swap status icons in the main thread.
 
 from __future__ import annotations
 
+import asyncio
 import time
 from datetime import datetime
 from pathlib import Path
@@ -15,13 +16,29 @@ from PyQt6.QtCore import pyqtSignal
 
 from core.project import Project
 from core.schema import Scene
+from engines.grok.browser import GrokConnection
 from engines.grok.engine import GrokImageEngine
 from runtime.estimator import Estimator
 from workers._async_thread import AsyncQThread
+from workers._retry import run_with_retry
 
 
 def _now_iso() -> str:
     return datetime.now().isoformat(timespec="seconds")
+
+
+_PAGE_CLOSED_MARKERS = (
+    "target page, context or browser has been closed",
+    "target page has been closed",
+    "browser has been closed",
+    "context closed",
+    "frame was detached",
+)
+
+
+def _is_page_closed_err(msg: str) -> bool:
+    s = (msg or "").lower()
+    return any(m in s for m in _PAGE_CLOSED_MARKERS)
 
 
 def _build_image_settings(project: Project, scene: Scene, output_path: Path) -> dict[str, Any]:
@@ -55,6 +72,8 @@ class BatchImageWorker(AsyncQThread):
     scene_failed = pyqtSignal(str, str)
     batch_progress = pyqtSignal(int, int)
     batch_done = pyqtSignal(int, int)
+    browser_disconnected = pyqtSignal()
+    scene_needs_user_decision = pyqtSignal(str, int)  # scene_id, attempts
 
     def __init__(
         self,
@@ -64,6 +83,7 @@ class BatchImageWorker(AsyncQThread):
         pick_mode: str = "auto",
         estimator: Estimator | None = None,
         scene_ids: list[str] | None = None,
+        connection: GrokConnection | None = None,
     ) -> None:
         super().__init__()
         self.project = project
@@ -72,6 +92,24 @@ class BatchImageWorker(AsyncQThread):
         self.pick_mode = pick_mode
         self.estimator = estimator
         self.scene_ids = scene_ids
+        self.connection = connection
+        self._user_decision: str | None = None
+        self._decision_event: asyncio.Event | None = None
+        self._abort = False
+
+    def set_user_decision(self, decision: str) -> None:
+        """Called from MainWindow after the user closes the decision popup."""
+        self._user_decision = decision
+        if self._decision_event is not None:
+            self._decision_event.set()
+
+    async def _wait_for_user_decision(self) -> str:
+        if self._decision_event is None:
+            self._decision_event = asyncio.Event()
+        self._decision_event.clear()
+        self._user_decision = None
+        await self._decision_event.wait()
+        return self._user_decision or "skip"
 
     async def _async_run(self) -> None:
         if self.scene_ids is None:
@@ -83,7 +121,7 @@ class BatchImageWorker(AsyncQThread):
         success = 0
 
         for idx, scene in enumerate(scenes, start=1):
-            if self.stop_event.is_set():
+            if self.stop_event.is_set() or self._abort:
                 self.emit_log(f"Đã dừng batch image tại scene {scene.id}")
                 break
 
@@ -97,6 +135,9 @@ class BatchImageWorker(AsyncQThread):
             if ok:
                 success += 1
             self.batch_progress.emit(idx, total)
+            if self._abort:
+                self.emit_log("User đã abort batch")
+                break
 
         self.emit_log(f"Batch image xong: {success}/{total} scene OK")
         self.batch_done.emit(success, total)
@@ -114,19 +155,59 @@ class BatchImageWorker(AsyncQThread):
 
         settings = _build_image_settings(self.project, scene, output_path)
         settings["pick_mode"] = self.pick_mode
+        prompt = settings.pop("prompt")
 
-        gen_coro = self.engine.gen_image(
-            prompt=settings.pop("prompt"),
-            settings=settings,
-            ref_image=None,
-        )
+        def _refresh_page() -> None:
+            if self.connection is not None and self.connection.page is not None:
+                self.engine.page = self.connection.page
+
+        async def _factory():
+            return await self.engine.gen_image(
+                prompt=prompt, settings=dict(settings), ref_image=None,
+            )
+
         t0 = time.monotonic()
         try:
-            result_path = await self.run_with_stop(gen_coro)
-        except Exception as e:
-            return self._mark_failed(scene, str(e))
+            if self.connection is not None:
+                outcome = await run_with_retry(
+                    scene_id=scene.id, gen_factory=_factory,
+                    connection=self.connection,
+                    project_root=self.project.paths.root,
+                    refresh_page=_refresh_page, log_cb=self.emit_log,
+                    max_attempts=3,
+                )
+            else:
+                # No connection ref — fall back to single-shot.
+                outcome = {"ok": True, "result": await _factory(), "attempts": 1}
+        except asyncio.CancelledError:
+            return self._mark_failed(scene, "user_stopped")
         elapsed = time.monotonic() - t0
 
+        if not outcome.get("ok") and outcome.get("needs_user_decision"):
+            self.scene_needs_user_decision.emit(scene.id, outcome.get("attempts", 3))
+            decision = await self._wait_for_user_decision()
+            self.emit_log(f"User decision for {scene.id}: {decision}")
+            if decision == "abort":
+                self._abort = True
+                return self._mark_failed(scene, f"user_abort (last={outcome.get('last_error')})")
+            if decision == "skip":
+                return self._mark_failed(scene, f"user_skip (last={outcome.get('last_error')})")
+            # retry → one more full pass
+            try:
+                outcome = await run_with_retry(
+                    scene_id=scene.id, gen_factory=_factory,
+                    connection=self.connection,
+                    project_root=self.project.paths.root,
+                    refresh_page=_refresh_page, log_cb=self.emit_log,
+                    max_attempts=3,
+                )
+            except asyncio.CancelledError:
+                return self._mark_failed(scene, "user_stopped")
+
+        if not outcome.get("ok"):
+            return self._mark_failed(scene, str(outcome.get("last_error", "unknown")))
+
+        result_path = outcome["result"]
         if result_path is None:
             return self._mark_failed(scene, "stopped")
 

@@ -29,7 +29,7 @@ from core.schema import Scene
 VISUAL_TYPES = [
     "image_grok",
     "video_grok",
-    "slideshow_v4",
+    "slideshow",
     "ken_burns_self",
     "ken_burns_cont",
 ]
@@ -109,11 +109,6 @@ class PromptEditorDialog(QDialog):
             self.visual_type.addItem(v)
         form.addRow("Visual type:", self.visual_type)
 
-        # Voice batch
-        self.voice_batch = QSpinBox()
-        self.voice_batch.setRange(1, 999)
-        form.addRow("Voice batch:", self.voice_batch)
-
         # Duration
         self.duration = QSpinBox()
         self.duration.setRange(1, 60)
@@ -152,7 +147,6 @@ class PromptEditorDialog(QDialog):
         self.video_prompt.setEnabled(has_video)
         self.emotion.setText(scene.emotion or "")
         self.visual_type.setCurrentText(scene.visual_type)
-        self.voice_batch.setValue(scene.voice_batch_id)
         self.duration.setValue(scene.duration)
 
     def _on_video_toggled(self, checked: bool) -> None:
@@ -193,6 +187,5 @@ class PromptEditorDialog(QDialog):
             "videoPrompt": video_text if (self.video_enable.isChecked() and video_text) else None,
             "emotion": self.emotion.text().strip() or None,
             "visual_type": self.visual_type.currentText(),
-            "voice_batch_id": self.voice_batch.value(),
             "duration": self.duration.value(),
         }

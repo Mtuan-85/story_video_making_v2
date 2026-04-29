@@ -385,3 +385,125 @@ All 11 modules complete (Appendix A step 12 marker reached). Project status:
 - Removed dead `VoiceModelSyntax` enum + `voice_model_syntax` field from `core/schema.py` (not in scenes.json schema; `voice/fish_tts.py` is standalone and uses its own literal).
 - Created `main.py` entry point that delegates to `ui.main_window.run()`.
 - Verified: `from core.schema import ScenesJson` ✓, `import voice.fish_tts` ✓, PyQt window launches and exits cleanly ✓.
+
+## 2026-04-28 — Sprint 1 end-to-end smoke complete
+
+**Bug fixes during smoke:**
+- `workers/_async_thread.py`: rewrote `AsyncQThread` → `AsyncTaskWorker` running on the qasync main loop (Patchright Page is bound to that loop; QThread+new loop silently hung every Patchright op).
+- `engines/grok/actions.py`:
+  - `human_type` now `keyboard.type` (page.type re-resolves on every keystroke and times out on TipTap).
+  - Splits text on `\n` and uses Shift+Enter for soft breaks (plain Enter submits the form, was causing multiple truncated submits).
+  - Pre-clears input via Ctrl+A / Delete, so removed `verify_input_empty` step from flows.
+  - `click_image` falls back to `img.opacity-1` ancestor listitem when canvas overlay re-renders for high-res.
+  - `download_to` retries once on transient CDP timeout.
+- `workers/batch_image.py` + `batch_video.py`: accept `scene_ids` filter so batch only runs for scenes ticked in UI.
+- `ui/scene_row.py` + `scene_list.py` + `main_window.py`: added per-row "batch select" checkbox + live counter, batch buttons enable only when selection > 0.
+
+**Verified end-to-end (test_run/sources/):**
+- `pic1.jpg`, `pic2.jpg`, `pic3.jpg` — Grok text-to-image
+- `vid1.mp4` — Ken Burns self
+- `vid2.mp4` — Grok image-to-video
+- `vid3.mp4` — slideshow_v4 (chroma BG → 6 objects → Claude design → ffmpeg)
+- State restore from disk: PASS
+
+**Deferred (not blocking Sprint 2):**
+- Stop button mid-batch (manual test)
+- UI dialogs preview_image/preview_video/prompt_editor (manual test in Sprint 3)
+
+**Runtime deps added:** `rembg 2.0.69` (slideshow bg removal).
+
+## 2026-04-28 — Sprint 2 plan revised
+
+Spec changed mid-sprint: instead of fish_tts batch + silence split, use external
+voice file + Whisper + Claude alignment. Plan in `MIGRATION_PLAN_SPRINT2.md`.
+Phase 2A = alignment, Phase 2B = render. Stop after 2A for test.
+
+## 2026-04-28 — Sprint 2 Phase 2A complete
+
+Modules built (7):
+1. `core/voice_mapping.py` — VoiceMapping schema (voice_files + silent_scenes,
+   per-scene voice_in/out + subtitle_phrases). Pydantic `extra="forbid"`.
+2. `voice/whisper_runner.py` — wraps `whisper` CLI, returns parsed JSON with
+   word-level timestamps. Blocking; callers must wrap in `asyncio.to_thread`.
+3. `voice/voice_aligner.py` — sync orchestrator: Whisper → Claude CLI prompt
+   (clears `ANTHROPIC_API_KEY` to use Pro/Max quota) → strip code fences →
+   parse JSON → build `VoiceFile`.
+4. `voice/subtitle_builder.py` — fallback path: group Whisper words into
+   phrases by punctuation + max_words.
+5. `workers/voice_align_worker.py` — subclasses `AsyncTaskWorker` (qasync main
+   loop). Wraps blocking `align_voice_file` in `asyncio.to_thread`. Emits
+   `progress`, `file_done`, `all_done`, `failed`.
+6. `ui/dialogs/voice_import.py` — wizard: browse files → assign scenes
+   (mutually exclusive checkboxes) → choose Whisper model + language → Start.
+7. `ui/dialogs/voice_align_review.py` — table with editable start/end
+   spinboxes, live duration column, Save marks `method="user_override"`.
+
+Project enrichment:
+- `core/paths.py` adds `voice_mapping_json` + `renders_dir`.
+- `core/project.py` adds `voice_mapping` attribute, auto-loads
+  `voice_mapping.json` on `Project.load`, `save_voice_mapping(mapping)` does
+  atomic write.
+
+UI wiring:
+- `ui/main_window.py`: new "🎤 Import voice" button (enabled when project
+  loaded); opens `VoiceImportDialog` → on `alignment_requested` spawns
+  `VoiceAlignWorker` → on `all_done` saves mapping + opens
+  `VoiceAlignReviewDialog` → on `saved` re-saves the mapping.
+
+Plan deviations from MIGRATION_PLAN_SPRINT2.md (each fixed):
+- Worker now subclasses `AsyncTaskWorker` (consistent with Sprint 1) instead
+  of bare `QObject`.
+- Blocking subprocesses (`whisper`, `claude`) wrapped in `asyncio.to_thread`
+  to keep qasync loop responsive.
+- `Project.dir` (doesn't exist) replaced with `project.paths.root`.
+- Plan's bug `state.get(scene.visual_type.split("_")[0])` for slideshow/
+  ken_burns will be fixed in Phase 2B render_worker (not yet built).
+
+Pre-flight:
+- `openai-whisper` 20250625 installed in `.venv`.
+- `claude` CLI available.
+- `rembg` 2.0.69 already installed (from Sprint 1).
+
+**Pause for test**: user creates `test_run/voice/voice_01.mp3` (1 file
+covering all 6 scenes), runs `python main.py`, "🎤 Import voice" → assign
+all to that file → Start. Verify `voice_mapping.json` produced and review
+dialog shows reasonable per-scene start/end. Phase 2B starts after green
+light.
+
+## 2026-04-28 — Sprint 2 Phase 2B complete
+
+Modules built (6):
+8.  `render/subtitle_filter.py` — `build_subtitle_drawtext_chain` returns one
+    drawtext per phrase with `enable=between(t, start, end+0.30)`. Yellow
+    text + 4px black border, font fallback to default if path missing.
+    Robust escaping for `\ ' : , [ ]`.
+9.  `render/bgm_mixer.py` — `pick_bgm_files` (sorted mp3/wav) + `build_bgm_filter`
+    (`aloop=-1 → atrim → volume -15dB → afade in/out`).
+10. `render/composite.py` — `composite_scene(...)` async ffmpeg one-shot.
+    Visual filter dispatch: image_grok uses `-loop 1 -framerate 30`; pre-
+    rendered mp4 (slideshow / ken_burns) goes straight in; video_grok adapts
+    to target (close-enough → as-is, shorter → tpad freeze tail, longer →
+    setpts speedup capped at 1.20x then trim, with warning). Subtitles
+    shifted from absolute to scene-relative timestamps before drawtext.
+11. `render/assemble.py` — concat via `filter_complex concat=v=1:a=1` (re-
+    encodes; safer than `-f concat`). Optional BGM mix in second pass via
+    `amix=inputs=2:duration=first`. Cleans up `.tmp_assemble/concat.mp4`.
+12. `workers/render_worker.py` — `RenderWorker(AsyncTaskWorker)` iterates
+    `project.scenes`, looks up voice assignment, resolves visual via
+    `_visual_state_key()` (image_grok→image, others→video — fixes the bug
+    in MIGRATION_PLAN_SPRINT2.md), writes per-scene mp4 to `renders/`,
+    then assembles `final.mp4`. Stop event respected between scenes.
+13. UI: "🎬 Render final" button next to "🎤 Import voice", enabled when
+    project has `voice_mapping`. `_start_render` → `RenderWorker` →
+    `progress` updates the progress label. "■ Dừng" button now also
+    cancels render.
+
+Smoke verify (no real run yet — pending user test):
+- All Phase 2B imports load.
+- `_visual_state_key()` maps all 5 visual_types correctly.
+- App launches, `btn_render` exists and is gated on
+  `project + voice_mapping`.
+
+Sprint 2 complete on the build side. End-to-end test next:
+`Import voice` → `Render final` → verify `final.mp4` plays in VLC with
+voice + subtitle + BGM in sync.

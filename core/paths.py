@@ -60,6 +60,14 @@ class ProjectPaths:
     def voice_manifest(self) -> Path:
         return self.voice_dir / "manifest.json"
 
+    @property
+    def voice_mapping_json(self) -> Path:
+        return self.root / "voice_mapping.json"
+
+    @property
+    def renders_dir(self) -> Path:
+        return self.root / "renders"
+
     def subtitle_dir(self, scene_id: str) -> Path:
         return self.temp_dir / f"subtitle_{scene_id}"
 

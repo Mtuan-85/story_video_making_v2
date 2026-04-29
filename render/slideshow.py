@@ -1,14 +1,14 @@
-"""Async wrapper around the existing slideshow_v4 pipeline.
+"""Async wrapper around the existing slideshow pipeline.
 
-slideshow_v4 is the proven prototype (chroma key + rembg + horizontal dilate +
+slideshow is the proven prototype (chroma key + rembg + horizontal dilate +
 Claude Code animation director + ffmpeg filter_complex). This wrapper:
 
-  1. Copies the input image into a temp work folder (slideshow_v4 expects a
+  1. Copies the input image into a temp work folder (slideshow expects a
      folder layout — scene.png + .cache/ + movie/).
   2. Calls the sync pipeline (preprocess → claude → render) in a thread.
   3. Moves the resulting movie/final.mp4 to the caller-specified output_path.
 
-Per SPEC §3, slideshow_v4 lives at the project root (already in place) and
+Per SPEC §3, slideshow lives at the project root (already in place) and
 must NOT be modified — we adapt around it via sys.path injection.
 """
 
@@ -23,9 +23,9 @@ from typing import Callable
 
 from loguru import logger as log
 
-SLIDESHOW_DIR = Path(__file__).resolve().parent.parent / "slideshow_v4"
+SLIDESHOW_DIR = Path(__file__).resolve().parent.parent / "slideshow"
 
-# Aspect → slideshow_v4 preset name (PRESETS in slideshow_v4/renderer.py).
+# Aspect → slideshow preset name (PRESETS in slideshow/renderer.py).
 PRESET_BY_ASPECT = {
     "16:9": "youtube",
     "9:16": "tiktok",
@@ -33,14 +33,14 @@ PRESET_BY_ASPECT = {
 
 
 def _import_slideshow_modules():
-    """Lazy-import slideshow_v4 with its directory on sys.path.
+    """Lazy-import slideshow with its directory on sys.path.
 
-    slideshow_v4 uses bare imports (`from preprocess import ...`); we patch
+    slideshow uses bare imports (`from preprocess import ...`); we patch
     sys.path inside this function so the rest of the app keeps a clean
     namespace.
     """
     if not SLIDESHOW_DIR.exists():
-        raise RuntimeError(f"slideshow_v4 không tồn tại: {SLIDESHOW_DIR}")
+        raise RuntimeError(f"slideshow không tồn tại: {SLIDESHOW_DIR}")
     s = str(SLIDESHOW_DIR)
     if s not in sys.path:
         sys.path.insert(0, s)
@@ -73,12 +73,12 @@ def _run_pipeline_sync(
         raise FileNotFoundError(f"Ảnh scene không tồn tại: {image_path}")
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Build a private workspace per call: slideshow_v4 expects folder layout.
+    # Build a private workspace per call: slideshow expects folder layout.
     # Use a named temp dir so the .cache survives if the caller wants to inspect.
-    work_dir = Path(tempfile.mkdtemp(prefix="slideshow_v4_"))
+    work_dir = Path(tempfile.mkdtemp(prefix="slideshow_"))
     log_fn(f"workspace: {work_dir}")
 
-    # Copy the source image into work_dir so slideshow_v4.find_scene_image picks it up.
+    # Copy the source image into work_dir so slideshow.find_scene_image picks it up.
     scene_path = work_dir / image_path.name
     shutil.copy2(image_path, scene_path)
 
@@ -146,7 +146,7 @@ async def render_slideshow(
     bg_method: str = "auto",
     log_cb: Callable[[str], None] | None = None,
 ) -> Path:
-    """Async wrapper: run slideshow_v4 in a worker thread, return output Path.
+    """Async wrapper: run slideshow in a worker thread, return output Path.
 
     Args:
         image_path: scene image (e.g. projects/{name}/sources/picN.jpg).
@@ -154,7 +154,7 @@ async def render_slideshow(
         duration_sec: total clip length.
         aspect_ratio: "16:9" → youtube preset, "9:16" → tiktok preset.
         hint: optional natural-language nudge passed to Claude.
-        bg_method: "auto" | "chroma" | "rembg" (per slideshow_v4 docs).
+        bg_method: "auto" | "chroma" | "rembg" (per slideshow docs).
         log_cb: per-step status callback. Default routes through loguru.
     """
     cb = log_cb or (lambda m: log.info(m))

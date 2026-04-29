@@ -25,7 +25,7 @@ STATUS_ICON = {
 VISUAL_TYPE_LABEL = {
     "image_grok": "image_grok",
     "video_grok": "video_grok",
-    "slideshow_v4": "slideshow",
+    "slideshow": "slideshow",
     "ken_burns_self": "kb_self",
     "ken_burns_cont": "kb_cont",
 }

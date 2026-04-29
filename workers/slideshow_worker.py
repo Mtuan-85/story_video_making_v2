@@ -1,11 +1,11 @@
-"""Single-scene slideshow_v4 render worker.
+"""Single-scene slideshow render worker.
 
 Wraps `render/slideshow.py` so the heavy synchronous pipeline (rembg → Claude
 animation director → ffmpeg filter_complex) runs off the UI thread on its own
 asyncio loop.
 
 Pre-conditions:
-  - Scene must have a ready image (slideshow_v4 needs a source bitmap).
+  - Scene must have a ready image (slideshow needs a source bitmap).
 
 Output written to `project.paths.video_path(scene_idx)`. State is updated
 with `source_type="slideshow"`.
@@ -41,7 +41,7 @@ def _resolve_image_path(project: Project, scene_id: str) -> Path | None:
 
 
 def is_slideshow_eligible(project: Project, scene_id: str) -> tuple[bool, str]:
-    """slideshow_v4 needs a ready source image to derive objects from."""
+    """slideshow needs a ready source image to derive objects from."""
     img = project.get_scene_state(scene_id).get("image", {})
     if img.get("status") != "ready" or not img.get("path"):
         return False, "chưa có ảnh ready để render slideshow"
@@ -49,7 +49,7 @@ def is_slideshow_eligible(project: Project, scene_id: str) -> tuple[bool, str]:
 
 
 class SlideshowWorker(AsyncQThread):
-    """Render one scene as a slideshow_v4 video.
+    """Render one scene as a slideshow video.
 
     Signals:
         scene_started(scene_id)

@@ -1,9 +1,0 @@
-{
-  "version": "1.0",
-  "voice_files": [
-    {
-      "file": "voice/voice_full.mp3",
-      "scenes": ["SCENE-01", "SCENE-02", "SCENE-03", "SCENE-04", "SCENE-05", "SCENE-06"]
-    }
-  ]
-}

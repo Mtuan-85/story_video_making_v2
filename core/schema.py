@@ -13,7 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 VisualType = Literal[
     "image_grok",
     "video_grok",
-    "slideshow_v4",
+    "slideshow",
     "ken_burns_self",
     "ken_burns_cont",
 ]
@@ -52,7 +52,6 @@ class Scene(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     id: str = Field(min_length=1)
-    voice_batch_id: int = Field(ge=1)
     visual_type: VisualType
     story_vi: str | None = None
     story_en: str | None = None
@@ -98,9 +97,3 @@ class ScenesJson(BaseModel):
                 return scene
         return None
 
-    def scenes_by_batch(self) -> dict[int, list[Scene]]:
-        """Group scenes by voice_batch_id, preserving order."""
-        groups: dict[int, list[Scene]] = {}
-        for scene in self.scenes:
-            groups.setdefault(scene.voice_batch_id, []).append(scene)
-        return groups

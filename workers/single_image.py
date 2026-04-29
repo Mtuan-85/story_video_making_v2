@@ -6,14 +6,17 @@ narrower scope, separate signal namespace so the UI knows it's a single op.
 
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime
 from pathlib import Path
 
 from PyQt6.QtCore import pyqtSignal
 
 from core.project import Project
+from engines.grok.browser import GrokConnection
 from engines.grok.engine import GrokImageEngine
 from workers._async_thread import AsyncQThread
+from workers._retry import run_with_retry
 from workers.batch_image import _build_image_settings, _now_iso
 
 
@@ -36,12 +39,14 @@ class SingleImageWorker(AsyncQThread):
         engine: GrokImageEngine,
         scene_id: str,
         pick_mode: str = "auto",
+        connection: GrokConnection | None = None,
     ) -> None:
         super().__init__()
         self.project = project
         self.engine = engine
         self.scene_id = scene_id
         self.pick_mode = pick_mode
+        self.connection = connection
 
     async def _async_run(self) -> None:
         scene = self.project.scene(self.scene_id)
@@ -57,17 +62,36 @@ class SingleImageWorker(AsyncQThread):
 
         settings = _build_image_settings(self.project, scene, output_path)
         settings["pick_mode"] = self.pick_mode
+        prompt = settings.pop("prompt")
 
-        gen_coro = self.engine.gen_image(
-            prompt=settings.pop("prompt"),
-            settings=settings,
-            ref_image=None,
-        )
+        def _refresh_page() -> None:
+            if self.connection is not None and self.connection.page is not None:
+                self.engine.page = self.connection.page
+
+        async def _factory():
+            return await self.engine.gen_image(
+                prompt=prompt, settings=dict(settings), ref_image=None,
+            )
+
         try:
-            result_path = await self.run_with_stop(gen_coro)
-        except Exception as e:
-            self._mark_failed(str(e))
+            if self.connection is not None:
+                outcome = await run_with_retry(
+                    scene_id=self.scene_id, gen_factory=_factory,
+                    connection=self.connection,
+                    project_root=self.project.paths.root,
+                    refresh_page=_refresh_page, log_cb=self.emit_log,
+                    max_attempts=3,
+                )
+            else:
+                outcome = {"ok": True, "result": await _factory(), "attempts": 1}
+        except asyncio.CancelledError:
+            self._mark_failed("user_stopped")
             return
+
+        if not outcome.get("ok"):
+            self._mark_failed(str(outcome.get("last_error", "unknown")))
+            return
+        result_path = outcome["result"]
 
         if result_path is None:
             self._mark_failed("stopped")

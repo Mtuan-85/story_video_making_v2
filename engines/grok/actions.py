@@ -46,7 +46,15 @@ async def human_type(page: Page, selector: str, text: str, speed: str = "fast") 
     await page.keyboard.press("Control+A")
     await page.keyboard.press("Delete")
     await asyncio.sleep(0.1)
-    await page.keyboard.type(text, delay=random.randint(lo, hi))
+    delay = random.randint(lo, hi)
+    # Plain Enter submits the Grok form; split on \n and use Shift+Enter
+    # for soft line breaks within the prompt.
+    lines = text.split("\n")
+    for i, line in enumerate(lines):
+        if line:
+            await page.keyboard.type(line, delay=delay)
+        if i < len(lines) - 1:
+            await page.keyboard.press("Shift+Enter")
     if random.random() < 0.05:
         await asyncio.sleep(random.uniform(0.2, 0.6))
 
@@ -580,36 +588,43 @@ async def wait_video_ready(
 
 
 async def download_to(page: Page, output_path: Path, timeout_ms: int = 60000) -> dict[str, Any]:
-    """Click Download, save to exact `output_path`. Extension is preserved
-    from server's suggested filename (e.g. .jpg or .mp4)."""
+    """Click Download, save to exact `output_path`. Retries once on transient
+    timeout (Brave CDP can drop the download event sporadically)."""
     log.info(f">>> Đang download → {output_path}")
-    try:
-        btn = page.locator(SEL.DOWNLOAD)
-        if await btn.count() == 0:
-            return {"ok": False, "reason": f"download button not found at {page.url}"}
+    last_err: str | None = None
+    for attempt in (1, 2):
+        try:
+            btn = page.locator(SEL.DOWNLOAD)
+            if await btn.count() == 0:
+                return {"ok": False, "reason": f"download button not found at {page.url}"}
 
-        async with page.expect_download(timeout=timeout_ms) as dl_info:
-            await btn.first.click()
-        dl = await dl_info.value
-        suggested = dl.suggested_filename or "out.bin"
-        log.debug(f"Server suggested filename: {suggested}")
+            async with page.expect_download(timeout=timeout_ms) as dl_info:
+                await btn.first.click()
+            dl = await dl_info.value
+            suggested = dl.suggested_filename or "out.bin"
+            log.debug(f"Server suggested filename: {suggested}")
 
-        # Honor caller's chosen extension if it has one; else borrow from suggested.
-        target = Path(output_path)
-        if not target.suffix and "." in suggested:
-            target = target.with_suffix("." + suggested.rsplit(".", 1)[-1])
+            target = Path(output_path)
+            if not target.suffix and "." in suggested:
+                target = target.with_suffix("." + suggested.rsplit(".", 1)[-1])
 
-        target.parent.mkdir(parents=True, exist_ok=True)
-        await dl.save_as(str(target))
+            target.parent.mkdir(parents=True, exist_ok=True)
+            await dl.save_as(str(target))
 
-        if not target.exists():
-            return {"ok": False, "reason": "file_not_saved"}
+            if not target.exists():
+                return {"ok": False, "reason": "file_not_saved"}
 
-        size_kb = target.stat().st_size / 1024
-        log.info(f"<<< Đã lưu: {target} ({size_kb:.1f} KB)")
-        return {"ok": True, "path": str(target)}
-    except Exception as e:
-        return {"ok": False, "reason": f"download: {e}"}
+            size_kb = target.stat().st_size / 1024
+            log.info(f"<<< Đã lưu: {target} ({size_kb:.1f} KB)")
+            return {"ok": True, "path": str(target)}
+        except Exception as e:
+            last_err = str(e)
+            if attempt == 1:
+                log.warning(f"download attempt 1 fail: {e} — retry...")
+                await asyncio.sleep(2)
+                continue
+            return {"ok": False, "reason": f"download: {e}"}
+    return {"ok": False, "reason": f"download: {last_err}"}
 
 
 # --- Error detection ---------------------------------------------------------

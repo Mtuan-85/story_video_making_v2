@@ -6,6 +6,9 @@ keeps the browser open and logged in — we never spawn).
 
 from __future__ import annotations
 
+import asyncio
+import subprocess
+from pathlib import Path
 from typing import Any
 
 from loguru import logger as log
@@ -16,6 +19,8 @@ from patchright.async_api import (
     Playwright,
     async_playwright,
 )
+
+from core.config import load_config, wait_brave_ready
 
 GROK_HOST = "grok.com"
 
@@ -38,6 +43,8 @@ class GrokConnection:
         self._browser: Browser | None = None
         self._context: BrowserContext | None = None
         self._page: Page | None = None
+        self._cdp_url: str | None = None
+        self._tab_index: int | None = None
 
     @property
     def page(self) -> Page | None:
@@ -60,6 +67,7 @@ class GrokConnection:
             await self._cleanup()
             raise RuntimeError("Browser không có context nào")
         self._context = contexts[0]
+        self._cdp_url = cdp_url
         log.info(f"Đã kết nối CDP: {cdp_url}")
 
     async def disconnect(self) -> None:
@@ -93,6 +101,7 @@ class GrokConnection:
         if index < 0 or index >= len(pages):
             raise IndexError(f"Tab index {index} không hợp lệ (có {len(pages)} tab)")
         self._page = pages[index]
+        self._tab_index = index
         try:
             await self._page.bring_to_front()
             title = await self._page.title()
@@ -100,6 +109,74 @@ class GrokConnection:
             title = "(untitled)"
         log.info(f"Đã chọn tab #{index}: {title}")
         return {"index": index, "title": title, "url": self._page.url}
+
+    async def reconnect_cdp(self) -> None:
+        """Re-attach CDP and re-select last tab.
+
+        Used after kill+relaunch Brave: tab index is reset (only one tab —
+        the one launch_brave.bat opened to grok.com/imagine).
+        """
+        url = self._cdp_url
+        if not url:
+            raise RuntimeError("reconnect_cdp: chưa từng connect")
+        log.warning(f"Reconnect CDP {url}...")
+        await self._cleanup()
+        await self.connect(url)
+        # After kill+relaunch the only Brave tab is whatever launch_brave.bat
+        # opened (grok.com/imagine). Pick the first grok tab fresh.
+        tabs = await self.list_tabs(grok_only=True)
+        if not tabs:
+            raise RuntimeError("reconnect_cdp: không có grok tab sau khi reconnect")
+        await self.select_tab(int(tabs[0]["index"]))
+
+    async def kill_and_relaunch_brave(self, project_root: Path | None = None) -> None:
+        """Kill brave.exe + relaunch via launch_brave.bat + wait CDP + reconnect.
+
+        Single recovery primitive for any disconnect / fail in workers.
+        `project_root` is accepted for API stability but ignored — config is
+        loaded from APP_ROOT (where launch_brave.bat actually ships).
+        """
+        from core.config import APP_ROOT
+        cfg = load_config().get("brave", {})
+        process_name = cfg.get("process_name", "brave.exe")
+        debug_port = int(cfg.get("debug_port", 9222))
+        bat_path = Path(cfg.get("launch_bat", "launch_brave.bat"))
+        if not bat_path.is_absolute():
+            bat_path = APP_ROOT / bat_path
+        if not bat_path.exists():
+            raise RuntimeError(f"launch_brave.bat không tồn tại: {bat_path}")
+
+        log.warning(f"[BRAVE] Killing {process_name}...")
+        try:
+            subprocess.run(
+                ["taskkill", "/F", "/IM", process_name],
+                capture_output=True, timeout=10,
+            )
+        except Exception as e:
+            log.warning(f"[BRAVE] taskkill ignored: {e}")
+        # Drop the dead Patchright handles before launching the new Brave —
+        # otherwise reconnect_cdp's _cleanup tries to talk to a dead websocket.
+        try:
+            await self._cleanup()
+        except Exception:
+            pass
+        await asyncio.sleep(2)
+
+        log.info(f"[BRAVE] Running {bat_path}")
+        subprocess.Popen(
+            [str(bat_path)], shell=True,
+            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
+        )
+
+        log.info(f"[BRAVE] Waiting for CDP port {debug_port}...")
+        ready = await wait_brave_ready(port=debug_port, timeout=30)
+        if not ready:
+            raise RuntimeError(f"Brave CDP port {debug_port} not ready after 30s")
+
+        log.info("[BRAVE] CDP ready, reconnecting...")
+        await self.reconnect_cdp()
+        await asyncio.sleep(2)
+        log.info("[BRAVE] OK")
 
     # ---------------------------------------------------------------------------
 

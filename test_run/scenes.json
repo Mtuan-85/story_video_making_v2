@@ -2,14 +2,17 @@
   "version": "1.0",
   "meta": {
     "project_id": "morning-coffee-001",
-    "title": "Buổi sáng cà phê",
+    "title": "Morning Coffee",
     "aspect_ratio": "16:9",
-    "language": "vi"
+    "language": "en"
   },
   "settings": {
-    "baseStyle": "Simple flat 2D illustration, hand-drawn digital art, soft warm color palette with cream amber and forest green, gentle line work, modern minimalist illustration style, clean composition with negative space",
-    "baseNegative": "No text, no letters, no captions, no typography, no watermark, no logo, no realistic photography",
-    "topic": "Một buổi sáng yên bình bên ly cà phê",
+    "baseStyle": "Simple flat 2D illustration, hand-drawn digital art style, soft warm color palette of cream, amber and forest green, gentle clean line work, modern minimalist illustration, clean composition with negative space",
+    "baseNegative": "No text, no letters, no captions, no typography, no watermark, no logo, no signature, no realistic photography, no 3D render, no overly busy details",
+    "topic": "A peaceful morning coffee ritual",
+    "voice_model_id": null,
+    "voice_speed": 1.0,
+    "voice_volume": 0,
     "image_quality": "quality",
     "video_resolution": "720p",
     "video_duration": "10s"
@@ -17,57 +20,73 @@
   "scenes": [
     {
       "id": "SCENE-01",
-      "voice_batch_id": 1,
-      "visual_type": "image_grok",
-      "story_vi": "Buổi sáng. Căn bếp còn ngủ. Chỉ có tiếng nước sôi nhẹ trong ấm.",
-      "imagePrompt": "Simple flat 2D illustration of a quiet morning kitchen, a small white kettle on the stove with gentle steam curls rising, white ceramic mug nearby, large window with soft golden sunlight streaming in, small green herb plants on the windowsill, warm cream and amber palette, hand-drawn digital art style with clean line work. No text, no letters, no captions, no watermark. Aspect ratio 16:9 horizontal.",
-      "videoPrompt": "Steam curls rise gently from the kettle, soft morning light slowly intensifies through the window.",
-      "duration": 10
+      "visual_type": "video_grok",
+      "story_vi": null,
+      "story_en": "Morning. The kitchen is still asleep. Only the soft hiss of water boiling in the kettle.",
+      "imagePrompt": "A quiet morning kitchen scene. A small white kettle sits on the stove with gentle steam curls rising. A white ceramic mug nearby. A large window on the right with soft golden sunlight streaming in. Three small green herb plants in terracotta pots on the windowsill. Empty cream-colored counter and wall on the left side providing breathing space.",
+      "videoPrompt": "Steam curls rise gently from the kettle, soft morning light slowly intensifies through the window, subtle dust particles float in the sunbeam.",
+      "duration": 8,
+      "emotion": null
     },
     {
       "id": "SCENE-02",
-      "voice_batch_id": 1,
       "visual_type": "video_grok",
-      "story_vi": "Cà phê chảy chậm. Hương thơm bắt đầu tỏa ra.",
-      "imagePrompt": "Simple flat 2D illustration close-up of a hand pouring dark coffee from a glass dripper into a cream ceramic mug on a wooden table, gentle steam curls rising from the mug, warm amber sunlight from the side, hand-drawn digital art style with clean line work, soft palette of warm browns and creams. No text, no letters, no captions, no watermark. Aspect ratio 16:9 horizontal.",
-      "videoPrompt": "Coffee streams slowly from the dripper into the mug, steam curls rise gently, warm sunlight catches the liquid stream.",
-      "duration": 8
+      "story_vi": null,
+      "story_en": "Coffee pours slowly. The aroma begins to spread.",
+      "imagePrompt": "Close-up shot of a hand pouring dark coffee from a glass dripper into a cream ceramic mug on a wooden table. Gentle steam curls rise from the mug. Warm amber sunlight from the right side. A green cloth napkin partially visible at the bottom-left corner.",
+      "videoPrompt": "Coffee streams slowly from the dripper into the mug, steam curls rise gently, warm sunlight catches the falling liquid stream.",
+      "duration": 5,
+      "emotion": null
     },
     {
       "id": "SCENE-03",
-      "voice_batch_id": 1,
       "visual_type": "image_grok",
-      "story_vi": "Mở cửa sổ. Ánh nắng tràn vào như một lời chào.",
-      "imagePrompt": "Simple flat 2D illustration of a person silhouette opening a large kitchen window, bright golden morning sunlight streaming in as visible light beams, white linen curtains gently billowing inward, hand-drawn digital art style with clean line work, warm amber and cream palette with bright sunlit highlights. No text, no letters, no captions, no watermark. Aspect ratio 16:9 horizontal.",
-      "videoPrompt": null,
-      "duration": 10
+      "story_vi": null,
+      "story_en": "Open the window. Sunlight pours in like a greeting.",
+      "imagePrompt": "View of a hand gently pushing open a wooden-framed window from inside a warm room. Bright morning sunlight floods through the opening, casting warm rectangular light patches on a windowsill with potted plants. Outside the window: blurred soft greenery and pale orange sky.",
+      "videoPrompt": "The window slowly swings open, sunlight gradually fills the frame, gentle curtain sways in the breeze.",
+      "duration": 5,
+      "emotion": null
     },
     {
       "id": "SCENE-04",
-      "voice_batch_id": 2,
-      "visual_type": "image_grok",
-      "story_vi": "Ngồi xuống. Hai tay ôm lấy chiếc cốc ấm. Không vội đi đâu cả.",
-      "imagePrompt": "Simple flat 2D illustration of a person seated at a wooden kitchen table, both hands wrapped around a cream ceramic mug, wearing a soft oat-coloured cardigan, looking peacefully down at the mug, soft warm sunlight from a side window, blurred bookshelf and potted plant in background, hand-drawn digital art style with clean line work, warm amber and cream palette. No text, no letters, no captions, no watermark. Aspect ratio 16:9 horizontal.",
-      "videoPrompt": "The person slowly raises the mug, takes a small sip, then lowers the mug back to the table with a soft satisfied breath.",
-      "duration": 12
+      "visual_type": "slideshow",
+      "story_vi": null,
+      "story_en": "How to make a coffee. This is the process with six steps: coffee beans, grinder, kettle, dripper, ceramic mug, and one sugar cube.",
+      "imagePrompt": "Six distinct objects arranged in a single horizontal row on PURE WHITE BACKGROUND (#FFFFFF, completely solid white, no gradient, no texture, no shadow). Objects from left to right: 1) a small pile of dark coffee beans, 2) a vintage hand-crank coffee grinder in green and cream, 3) a cream-colored kettle with a curved handle, 4) a ceramic pour-over dripper, 5) a cream ceramic coffee mug, 6) a white sugar cube. Each object is clearly separated from neighbors with at least 60 pixels of pure white empty space between them. Objects centered vertically. No overlap. No shadows beneath objects. Equal sizing. Hand-drawn flat 2D illustration style with clean dark outlines, suitable for cutout and animation.",
+      "videoPrompt": null,
+      "duration": 12,
+      "emotion": null
     },
     {
       "id": "SCENE-05",
-      "voice_batch_id": 2,
       "visual_type": "image_grok",
-      "story_vi": "Một quyển sách cũ. Một trang đang mở. Vài dòng chữ viết tay trên lề.",
-      "imagePrompt": "Simple flat 2D illustration overhead view of an open leather-bound book on a wooden table beside a cream ceramic mug of coffee, a thin gold reading ribbon resting across the open pages, soft warm sunlight catching the page texture, hand-drawn digital art style with clean line work, warm amber and brown palette. No text legible on book pages, no captions, no typography in frame, no watermark. Aspect ratio 16:9 horizontal.",
-      "videoPrompt": null,
-      "duration": 10
+      "story_vi": null,
+      "story_en": "Sit down. Both hands wrapped around the warm cup. No rush to be anywhere.",
+      "imagePrompt": "A person seated at a wooden kitchen table, both hands gently wrapped around a cream ceramic mug. Wearing a soft oat-colored cardigan. Looking peacefully down at the mug with a faint smile. Soft warm sunlight from a side window casts a warm glow. Blurred wooden bookshelf and a small potted plant in the background.",
+      "videoPrompt": "The person slowly raises the mug to their lips, takes a small sip, then lowers the mug back to the table with a soft satisfied breath.",
+      "duration": 6,
+      "emotion": null
     },
     {
       "id": "SCENE-06",
-      "voice_batch_id": 2,
       "visual_type": "image_grok",
-      "story_vi": "Một buổi sáng đủ chậm để cảm nhận. Đủ yên để bắt đầu.",
-      "imagePrompt": "Simple flat 2D illustration medium shot from behind of a person sitting at a kitchen table looking out through a large window into a sunlit garden with soft greenery, only the silhouette of shoulders and back of head visible, a cream ceramic mug held loosely on the table, bright outdoor light forming a warm halo around the figure, hand-drawn digital art style with clean line work, warm amber and pale green palette. No text, no letters, no captions, no watermark. Aspect ratio 16:9 horizontal.",
+      "story_vi": null,
+      "story_en": "An old book. A page held open. A few handwritten notes in the margin.",
+      "imagePrompt": "Overhead top-down view of an open leather-bound book on a wooden table. A thin gold reading ribbon resting diagonally across the open pages. A cream ceramic mug of dark coffee placed to the right of the book with gentle steam rising. Soft warm sunlight catching the page texture from the upper-left corner. The pages are subtly aged with cream color but contain no readable letters.",
       "videoPrompt": null,
-      "duration": 10
+      "duration": 5,
+      "emotion": null
+    },
+    {
+      "id": "SCENE-07",
+      "visual_type": "image_grok",
+      "story_vi": null,
+      "story_en": "A morning slow enough to feel. Quiet enough to begin.",
+      "imagePrompt": "Medium shot from behind of a person sitting at a kitchen table, looking out through a large window into a sunlit garden with soft greenery and small bushes. Only the silhouette of shoulders and back of head visible. A cream ceramic mug held loosely on the table to the right. Bright outdoor morning light forms a warm halo around the figure. Pale green and amber palette outside, warm cream interior.",
+      "videoPrompt": null,
+      "duration": 4,
+      "emotion": null
     }
   ]
 }

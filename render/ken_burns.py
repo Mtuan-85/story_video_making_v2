@@ -25,7 +25,7 @@ CANVAS = {
     "9:16": (1080, 1920),
 }
 FPS = 30
-ZOOM_RATE_DEFAULT = 0.04  # 4% per second
+ZOOM_RANGE_DEFAULT = 0.2  # total zoom delta over the full clip (1.0 → 1.2)
 ZOOM_MAX = 1.5
 ZOOM_MIN_BOUND = 1.0001  # zoompan needs >1 to avoid div-by-zero pan math
 
@@ -41,31 +41,29 @@ def _resolve_canvas(aspect_ratio: str) -> tuple[int, int]:
 def _zoompan_expression(
     direction: Direction,
     duration_sec: float,
-    zoom_rate: float,
+    zoom_range: float,
     width: int,
     height: int,
 ) -> tuple[str, str, str]:
     """Build (z, x, y) expressions for zoompan.
 
-    `on` is current output frame index (0-based). Total frames = duration*FPS.
-    Per-frame zoom delta = zoom_rate / FPS.
+    `zoom_range` is the TOTAL zoom delta over the full clip (e.g. 0.2 = 1.0→1.2).
+    Per-frame increment = zoom_range / (duration * fps).
     """
     frames = max(1, int(round(duration_sec * FPS)))
-    per_frame = zoom_rate / FPS
+    per_frame = zoom_range / max(1, frames)
+    zoom_target = min(1.0 + zoom_range, ZOOM_MAX)
 
     if direction == "in":
-        # Zoom from 1.0 to 1 + zoom_rate*duration, capped at ZOOM_MAX.
-        z = f"min(zoom+{per_frame:.6f},{ZOOM_MAX})"
+        z = f"min(zoom+{per_frame:.6f},{zoom_target:.4f})"
         x = f"iw/2-(iw/zoom/2)"
         y = f"ih/2-(ih/zoom/2)"
     elif direction == "out":
-        zoom_start = min(1 + zoom_rate * duration_sec, ZOOM_MAX)
         # Decrease but never below 1.0001 (else pan math diverges).
-        z = f"if(eq(on,0),{zoom_start:.4f},max(zoom-{per_frame:.6f},{ZOOM_MIN_BOUND}))"
+        z = f"if(eq(on,0),{zoom_target:.4f},max(zoom-{per_frame:.6f},{ZOOM_MIN_BOUND}))"
         x = f"iw/2-(iw/zoom/2)"
         y = f"ih/2-(ih/zoom/2)"
     elif direction == "pan_left":
-        # Hold a slight zoom and pan from right edge → left edge.
         z = f"{1.15}"
         x = f"(iw-iw/zoom)*(1-on/{frames})"
         y = f"ih/2-(ih/zoom/2)"
@@ -83,9 +81,11 @@ def build_zoompan_filter(
     duration_sec: float,
     aspect_ratio: str,
     direction: Direction = "in",
-    zoom_rate: float = ZOOM_RATE_DEFAULT,
+    zoom_range: float = ZOOM_RANGE_DEFAULT,
 ) -> str:
     """Return the `-vf` filtergraph string for one ken-burns clip.
+
+    `zoom_range` is the total zoom delta over the entire clip (default 0.2 = 20%).
 
     Pipeline:
         scale to 2x canvas (oversample so zoom doesn't blur)
@@ -95,7 +95,7 @@ def build_zoompan_filter(
     w, h = _resolve_canvas(aspect_ratio)
     frames = max(1, int(round(duration_sec * FPS)))
     z_expr, x_expr, y_expr = _zoompan_expression(
-        direction, duration_sec, zoom_rate, w, h
+        direction, duration_sec, zoom_range, w, h
     )
 
     # Oversample to ~2x for headroom.
@@ -128,7 +128,7 @@ async def ken_burns_self(
     duration_sec: float,
     aspect_ratio: str,
     direction: Direction = "in",
-    zoom_rate: float = ZOOM_RATE_DEFAULT,
+    zoom_range: float = ZOOM_RANGE_DEFAULT,
 ) -> Path:
     """Render Ken Burns on a still image."""
     image_path = Path(image_path)
@@ -137,7 +137,7 @@ async def ken_burns_self(
         raise FileNotFoundError(f"Ảnh không tồn tại: {image_path}")
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    vf = build_zoompan_filter(duration_sec, aspect_ratio, direction, zoom_rate)
+    vf = build_zoompan_filter(duration_sec, aspect_ratio, direction, zoom_range)
     cmd = [
         "ffmpeg", "-y",
         "-loop", "1",
@@ -187,7 +187,7 @@ async def ken_burns_continuation(
     aspect_ratio: str,
     work_dir: Path | None = None,
     direction: Direction = "in",
-    zoom_rate: float = ZOOM_RATE_DEFAULT,
+    zoom_range: float = ZOOM_RANGE_DEFAULT,
 ) -> Path:
     """Extract last frame of prev video, then apply ken_burns_self on it."""
     prev_video_path = Path(prev_video_path)
@@ -198,5 +198,5 @@ async def ken_burns_continuation(
     frame = work_dir / f"{output_path.stem}_lastframe.png"
     await extract_last_frame(prev_video_path, frame)
     return await ken_burns_self(
-        frame, output_path, duration_sec, aspect_ratio, direction, zoom_rate
+        frame, output_path, duration_sec, aspect_ratio, direction, zoom_range
     )

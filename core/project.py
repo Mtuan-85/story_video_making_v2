@@ -18,6 +18,7 @@ from loguru import logger as log
 
 from core.paths import ProjectPaths
 from core.schema import Scene, ScenesJson
+from core.voice_mapping import VoiceMapping
 
 STATE_VERSION = 1
 BACKUP_KEEP = 5
@@ -70,6 +71,7 @@ class Project:
         self.paths = paths
         self.scenes_json = scenes_json
         self.state = state
+        self.voice_mapping: VoiceMapping | None = None
 
     # ------------------------------------------------------------------
     # Construction
@@ -95,6 +97,7 @@ class Project:
         paths.ensure_dirs()
         project = cls(paths, scenes_json, state)
         project._save_state_atomic()
+        project._load_voice_mapping_if_present()
         return project
 
     @staticmethod
@@ -259,6 +262,32 @@ class Project:
     def save(self) -> None:
         """Public flush — call after batched in-place mutations."""
         self._save_state_atomic()
+
+    def _load_voice_mapping_if_present(self) -> None:
+        path = self.paths.voice_mapping_json
+        if not path.exists():
+            return
+        try:
+            with path.open(encoding="utf-8") as f:
+                data = json.load(f)
+            self.voice_mapping = VoiceMapping.model_validate(data)
+            log.info(f"Loaded voice_mapping: {len(self.voice_mapping.voice_files)} files")
+        except Exception as e:
+            log.error(f"voice_mapping.json invalid: {e}")
+            self.voice_mapping = None
+
+    def save_voice_mapping(self, mapping: VoiceMapping) -> None:
+        """Atomically write voice_mapping.json + cache on the project."""
+        target = self.paths.voice_mapping_json
+        target.parent.mkdir(parents=True, exist_ok=True)
+        tmp = target.with_suffix(".json.tmp")
+        tmp.write_text(
+            json.dumps(mapping.model_dump(), ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        os.replace(tmp, target)
+        self.voice_mapping = mapping
+        log.info(f"Saved voice_mapping → {target}")
 
     def _save_state_atomic(self) -> None:
         self.state["version"] = STATE_VERSION

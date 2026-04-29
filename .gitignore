@@ -1,28 +1,93 @@
-﻿# Virtual Environment
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+.eggs/
+build/
+dist/
+*.whl
+
+# Virtual environments
 .venv/
 venv/
 env/
-
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-
-# Project outputs
-test_run/
-test_output/
-voice_output/
-output/
-build/
-dist/
+ENV/
 
 # IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
 
-# Logs & temp
+# Logs
 *.log
+logs/
+log/
 BUILD_LOG.md
-*.tmp
-temp/
+
+# OS
+desktop.ini
+$RECYCLE.BIN/
+
+# Per-install config (paths are user-specific)
+config.json
+.env
+.env.local
+*.secret
+
+# Test outputs (do not commit large generated content)
+test_run/sources/*.jpg
+test_run/sources/*.jpeg
+test_run/sources/*.png
+test_run/sources/*.mp4
+test_run/sources/*.mov
+test_run/voice/*.mp3
+test_run/voice/*.wav
+test_run/voice/*.m4a
+test_run/bgm/*.mp3
+test_run/renders/
+test_run/.tmp_assemble/
+test_run/.tmp/
+test_run/temp/
+test_run/thumbnails/
+test_run/state.json
+test_run/state.json.bak.*
+test_run/voice_mapping.json
+test_run/final.mp4
+test_run/preview.mp4
+
+# Standalone test scripts / artifacts
+test_kb*.mp4
+test_*.jpg
+debug_*.json
+debug_*.txt
+_smoke*.py
+_fade_test/
+voice_output/
+projects/
+structure.txt
+
+# Reference / external (not part of this repo)
+grok_automation/
+gen_video_grok/
+
+# Large/binary
+*.rar
+*.zip
+*.7z
+
+# Brave profile (never commit)
+brave-grok-profile/
+*-profile/
+
+# Whisper model cache
+.cache/
+
+# Runtime stats (per-install data)
+runtime/timing_history.jsonl

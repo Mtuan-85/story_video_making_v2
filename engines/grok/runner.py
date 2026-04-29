@@ -310,9 +310,7 @@ class FlowRunner:
     async def _run_steps(self, steps: list[dict[str, Any]]) -> None:
         for step in steps:
             self._check_stop()
-            self._log(f"  → step: {step['action']}")
             res = await self._exec_step(step)
-            self._log(f"    ← {step['action']}: ok={res.get('ok')}")
             if not res.get("ok") and not res.get("skipped"):
                 reason = res.get("reason") or res.get("type") or "unknown"
                 self._log(f"  ⚠ step '{step['action']}' fail: {reason}")

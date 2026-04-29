@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
+import asyncio
 import time
 from pathlib import Path
 
 from PyQt6.QtCore import pyqtSignal
 
 from core.project import Project
+from engines.grok.browser import GrokConnection
 from engines.grok.engine import GrokVideoEngine
 from runtime.estimator import Estimator
 from workers._async_thread import AsyncQThread
+from workers._retry import run_with_retry
 from workers.batch_video import (
     _build_video_settings,
     _now_iso,
@@ -41,12 +44,14 @@ class SingleVideoWorker(AsyncQThread):
         engine: GrokVideoEngine,
         scene_id: str,
         estimator: Estimator | None = None,
+        connection: GrokConnection | None = None,
     ) -> None:
         super().__init__()
         self.project = project
         self.engine = engine
         self.scene_id = scene_id
         self.estimator = estimator
+        self.connection = connection
 
     async def _async_run(self) -> None:
         scene = self.project.scene(self.scene_id)
@@ -70,17 +75,36 @@ class SingleVideoWorker(AsyncQThread):
         self.emit_log(f"{self.scene_id}: đang re-gen video (I2V)...")
 
         settings = _build_video_settings(self.project, output_path)
-        gen_coro = self.engine.gen_video(
-            prompt=scene.videoPrompt,
-            ref_image=ref_image,
-            settings=settings,
-        )
+
+        def _refresh_page() -> None:
+            if self.connection is not None and self.connection.page is not None:
+                self.engine.page = self.connection.page
+
+        async def _factory():
+            return await self.engine.gen_video(
+                prompt=scene.videoPrompt, ref_image=ref_image, settings=dict(settings),
+            )
+
         t0 = time.monotonic()
         try:
-            result_path = await self.run_with_stop(gen_coro)
-        except Exception as e:
-            self._mark_failed(str(e))
+            if self.connection is not None:
+                outcome = await run_with_retry(
+                    scene_id=self.scene_id, gen_factory=_factory,
+                    connection=self.connection,
+                    project_root=self.project.paths.root,
+                    refresh_page=_refresh_page, log_cb=self.emit_log,
+                    max_attempts=3,
+                )
+            else:
+                outcome = {"ok": True, "result": await _factory(), "attempts": 1}
+        except asyncio.CancelledError:
+            self._mark_failed("user_stopped")
             return
+
+        if not outcome.get("ok"):
+            self._mark_failed(str(outcome.get("last_error", "unknown")))
+            return
+        result_path = outcome["result"]
         elapsed = time.monotonic() - t0
 
         if result_path is None:
