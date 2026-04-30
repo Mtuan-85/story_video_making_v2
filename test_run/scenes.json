@@ -21,6 +21,7 @@
     {
       "id": "SCENE-01",
       "visual_type": "video_grok",
+      "effect": "no_effect",
       "story_vi": null,
       "story_en": "Morning. The kitchen is still asleep. Only the soft hiss of water boiling in the kettle.",
       "imagePrompt": "A quiet morning kitchen scene. A small white kettle sits on the stove with gentle steam curls rising. A white ceramic mug nearby. A large window on the right with soft golden sunlight streaming in. Three small green herb plants in terracotta pots on the windowsill. Empty cream-colored counter and wall on the left side providing breathing space.",
@@ -31,6 +32,7 @@
     {
       "id": "SCENE-02",
       "visual_type": "video_grok",
+      "effect": "no_effect",
       "story_vi": null,
       "story_en": "Coffee pours slowly. The aroma begins to spread.",
       "imagePrompt": "Close-up shot of a hand pouring dark coffee from a glass dripper into a cream ceramic mug on a wooden table. Gentle steam curls rise from the mug. Warm amber sunlight from the right side. A green cloth napkin partially visible at the bottom-left corner.",
@@ -41,6 +43,7 @@
     {
       "id": "SCENE-03",
       "visual_type": "image_grok",
+      "effect": "zoom_in",
       "story_vi": null,
       "story_en": "Open the window. Sunlight pours in like a greeting.",
       "imagePrompt": "View of a hand gently pushing open a wooden-framed window from inside a warm room. Bright morning sunlight floods through the opening, casting warm rectangular light patches on a windowsill with potted plants. Outside the window: blurred soft greenery and pale orange sky.",
@@ -51,6 +54,7 @@
     {
       "id": "SCENE-04",
       "visual_type": "slideshow",
+      "effect": "zoom_out",
       "story_vi": null,
       "story_en": "How to make a coffee. This is the process with six steps: coffee beans, grinder, kettle, dripper, ceramic mug, and one sugar cube.",
       "imagePrompt": "Six distinct objects arranged in a single horizontal row on PURE WHITE BACKGROUND (#FFFFFF, completely solid white, no gradient, no texture, no shadow). Objects from left to right: 1) a small pile of dark coffee beans, 2) a vintage hand-crank coffee grinder in green and cream, 3) a cream-colored kettle with a curved handle, 4) a ceramic pour-over dripper, 5) a cream ceramic coffee mug, 6) a white sugar cube. Each object is clearly separated from neighbors with at least 60 pixels of pure white empty space between them. Objects centered vertically. No overlap. No shadows beneath objects. Equal sizing. Hand-drawn flat 2D illustration style with clean dark outlines, suitable for cutout and animation.",
@@ -61,6 +65,7 @@
     {
       "id": "SCENE-05",
       "visual_type": "image_grok",
+      "effect": "zoom_in",
       "story_vi": null,
       "story_en": "Sit down. Both hands wrapped around the warm cup. No rush to be anywhere.",
       "imagePrompt": "A person seated at a wooden kitchen table, both hands gently wrapped around a cream ceramic mug. Wearing a soft oat-colored cardigan. Looking peacefully down at the mug with a faint smile. Soft warm sunlight from a side window casts a warm glow. Blurred wooden bookshelf and a small potted plant in the background.",
@@ -71,6 +76,7 @@
     {
       "id": "SCENE-06",
       "visual_type": "image_grok",
+      "effect": "zoom_out",
       "story_vi": null,
       "story_en": "An old book. A page held open. A few handwritten notes in the margin.",
       "imagePrompt": "Overhead top-down view of an open leather-bound book on a wooden table. A thin gold reading ribbon resting diagonally across the open pages. A cream ceramic mug of dark coffee placed to the right of the book with gentle steam rising. Soft warm sunlight catching the page texture from the upper-left corner. The pages are subtly aged with cream color but contain no readable letters.",
@@ -81,6 +87,7 @@
     {
       "id": "SCENE-07",
       "visual_type": "image_grok",
+      "effect": "zoom_in",
       "story_vi": null,
       "story_en": "A morning slow enough to feel. Quiet enough to begin.",
       "imagePrompt": "Medium shot from behind of a person sitting at a kitchen table, looking out through a large window into a sunlit garden with soft greenery and small bushes. Only the silhouette of shoulders and back of head visible. A cream ceramic mug held loosely on the table to the right. Bright outdoor morning light forms a warm halo around the figure. Pale green and amber palette outside, warm cream interior.",

@@ -30,7 +30,11 @@
       "Bash(grep -v \"^\\\\.$\")",
       "Bash(grep -v \"^\\\\.\\\\.$\")",
       "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe tests/run_tier1.py)",
-      "Bash(awk '{$1=$2=$3=$4=$5=\"\"; print}')"
+      "Bash(awk '{$1=$2=$3=$4=$5=\"\"; print}')",
+      "Bash(awk '{print $1}')",
+      "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe *)",
+      "Bash(QT_QPA_PLATFORM=offscreen PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe *)",
+      "Bash(git add *)"
     ]
   }
 }

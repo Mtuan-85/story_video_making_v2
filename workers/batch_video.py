@@ -2,14 +2,12 @@
 
 Per-scene routing:
   - video_grok    → Grok image-to-video (uses connection + retry+kill+relaunch)
-  - slideshow  → render/slideshow.render_slideshow (offline)
-  - ken_burns_self → render/ken_burns.ken_burns_self (offline)
-  - ken_burns_cont → render/ken_burns.ken_burns_continuation (offline)
-  - image_grok    → SKIP (still image IS the asset; no animation needed)
+  - slideshow     → render/slideshow.render_slideshow (offline)
+  - image_grok    → SKIP (still image IS the asset; zoom motion is added at
+                    final render via Scene.effect, no separate video file needed)
 
 Scenes whose pre-conditions aren't met (e.g. video_grok without ref image,
-slideshow without source image, ken_burns_cont without prev video) are
-skipped with a Vietnamese reason.
+slideshow without source image) are skipped with a Vietnamese reason.
 """
 
 from __future__ import annotations
@@ -24,14 +22,13 @@ from PyQt6.QtCore import pyqtSignal
 
 from core.project import Project
 from core.schema import Scene
+from core.thumbnail import regenerate_thumbnail
 from engines.grok.browser import GrokConnection
 from engines.grok.engine import GrokVideoEngine
-from render.ken_burns import ken_burns_continuation, ken_burns_self
 from render.slideshow import render_slideshow
 from runtime.estimator import Estimator
 from workers._async_thread import AsyncQThread
 from workers._retry import run_with_retry
-from workers.ken_burns_worker import previous_scene_id
 
 
 def _now_iso() -> str:
@@ -66,11 +63,9 @@ def _build_video_settings(project: Project, output_path: Path) -> dict[str, Any]
 def is_eligible(project: Project, scene: Scene) -> tuple[bool, str]:
     """Per-visual_type eligibility for batch animation render.
 
-    image_grok          → not animated (skip silently)
-    video_grok          → requires videoPrompt + ready ref image
-    slideshow        → requires ready source image
-    ken_burns_self      → requires ready source image
-    ken_burns_cont      → requires previous scene's video to be ready
+    image_grok    → not animated (skip silently)
+    video_grok    → requires videoPrompt + ready ref image
+    slideshow     → requires ready source image
     """
     vt = scene.visual_type
     if vt == "image_grok":
@@ -79,8 +74,6 @@ def is_eligible(project: Project, scene: Scene) -> tuple[bool, str]:
     img_ready = img.get("status") == "ready" and bool(img.get("path"))
 
     if vt == "video_grok":
-        if not scene.videoPrompt:
-            return False, "thiếu videoPrompt"
         if not img_ready:
             return False, "chưa có ảnh ready để làm I2V"
         return True, ""
@@ -88,20 +81,6 @@ def is_eligible(project: Project, scene: Scene) -> tuple[bool, str]:
     if vt == "slideshow":
         if not img_ready:
             return False, "chưa có ảnh ready để render slideshow"
-        return True, ""
-
-    if vt == "ken_burns_self":
-        if not img_ready:
-            return False, "chưa có ảnh ready để Ken Burns self"
-        return True, ""
-
-    if vt == "ken_burns_cont":
-        prev_id = previous_scene_id(project, scene.id)
-        if prev_id is None:
-            return False, "scene đầu tiên — không thể dùng ken_burns_cont"
-        prev_video = project.get_scene_state(prev_id).get("video", {})
-        if prev_video.get("status") != "ready" or not prev_video.get("path"):
-            return False, f"scene trước ({prev_id}) chưa có video ready"
         return True, ""
 
     return False, f"visual_type không hỗ trợ: {vt}"
@@ -234,10 +213,6 @@ class BatchVideoWorker(AsyncQThread):
             return await self._gen_one_grok(scene, total, idx, output_path)
         if vt == "slideshow":
             return await self._gen_one_slideshow(scene, total, idx, output_path, aspect)
-        if vt == "ken_burns_self":
-            return await self._gen_one_ken_burns(scene, total, idx, output_path, aspect, mode="self")
-        if vt == "ken_burns_cont":
-            return await self._gen_one_ken_burns(scene, total, idx, output_path, aspect, mode="cont")
         return self._mark_failed(scene, f"visual_type không hỗ trợ: {vt}", warn_code="grok_no_video")
 
     async def _gen_one_grok(self, scene: Scene, total: int, idx: int, output_path: Path) -> bool:
@@ -252,9 +227,13 @@ class BatchVideoWorker(AsyncQThread):
             if self.connection is not None and self.connection.page is not None:
                 self.engine.page = self.connection.page
 
+        prompt_text = scene.videoPrompt or ""
+        if not scene.videoPrompt:
+            self.emit_log(f"[{idx}/{total}] {scene.id}: ⚠ không có videoPrompt — Grok sẽ tự suy luận từ ref image")
+
         async def _factory():
             return await self.engine.gen_video(
-                prompt=scene.videoPrompt, ref_image=ref_image, settings=dict(settings),
+                prompt=prompt_text, ref_image=ref_image, settings=dict(settings),
             )
 
         t0 = time.monotonic()
@@ -331,53 +310,6 @@ class BatchVideoWorker(AsyncQThread):
                                  elapsed=elapsed, action="slideshow_render",
                                  clear_warn_code="slideshow_render_failed")
 
-    async def _gen_one_ken_burns(self, scene: Scene, total: int, idx: int,
-                                   output_path: Path, aspect: str, mode: str) -> bool:
-        self.emit_log(f"[{idx}/{total}] {scene.id}: đang render Ken Burns ({mode}, {scene.duration}s)...")
-        t0 = time.monotonic()
-        try:
-            if mode == "self":
-                image_path = _resolve_image_path(self.project, scene)
-                if image_path is None:
-                    return self._mark_failed(scene, "ảnh nguồn không tồn tại trên disk",
-                                             warn_code="ken_burns_render_failed")
-                result_path = await self.run_with_stop(
-                    ken_burns_self(image_path=image_path, output_path=output_path,
-                                   duration_sec=float(scene.duration), aspect_ratio=aspect)
-                )
-            else:  # cont
-                prev_id = previous_scene_id(self.project, scene.id)
-                if prev_id is None:
-                    return self._mark_failed(scene, "scene đầu tiên — không thể ken_burns_cont",
-                                             warn_code="ken_burns_render_failed")
-                prev_state = self.project.get_scene_state(prev_id).get("video", {})
-                prev_rel = prev_state.get("path")
-                if not prev_rel:
-                    return self._mark_failed(scene, f"scene trước ({prev_id}) chưa có video",
-                                             warn_code="ken_burns_render_failed")
-                prev_path = Path(prev_rel)
-                if not prev_path.is_absolute():
-                    prev_path = self.project.paths.root / prev_path
-                if not prev_path.exists():
-                    return self._mark_failed(scene, f"video scene trước không có trên disk",
-                                             warn_code="ken_burns_render_failed")
-                result_path = await self.run_with_stop(
-                    ken_burns_continuation(prev_video_path=prev_path, output_path=output_path,
-                                            duration_sec=float(scene.duration), aspect_ratio=aspect,
-                                            work_dir=self.project.paths.temp_dir)
-                )
-        except asyncio.CancelledError:
-            return self._mark_failed(scene, "user_stopped", warn_code="ken_burns_render_failed")
-        except Exception as e:
-            return self._mark_failed(scene, str(e), warn_code="ken_burns_render_failed")
-        elapsed = time.monotonic() - t0
-        if result_path is None:
-            return self._mark_failed(scene, "stopped", warn_code="ken_burns_render_failed")
-        source_type = f"ken_burns_{mode}"
-        return self._mark_ready(scene, total, idx, result_path, source_type=source_type,
-                                 elapsed=elapsed, action="ken_burns_render",
-                                 clear_warn_code="ken_burns_render_failed")
-
     def _mark_ready(self, scene: Scene, total: int, idx: int, result_path: Path,
                     source_type: str, elapsed: float, action: str,
                     clear_warn_code: str) -> bool:
@@ -391,6 +323,13 @@ class BatchVideoWorker(AsyncQThread):
         }
         self.project.update_scene_state(scene.id, "video", new_state)
         self.project.clear_warnings(scene.id, code=clear_warn_code)
+        # Refresh thumbnail from the freshly rendered video.
+        regenerate_thumbnail(
+            project_root=self.project.paths.root,
+            scene_id=scene.id,
+            visual_path=Path(result_path),
+            visual_kind="video",
+        )
         if self.estimator is not None:
             self.estimator.record_actual(action, elapsed)
         self.scene_finished.emit(scene.id, new_state)

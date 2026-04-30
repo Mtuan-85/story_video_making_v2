@@ -16,6 +16,7 @@ from PyQt6.QtCore import pyqtSignal
 
 from core.project import Project
 from core.schema import Scene
+from core.thumbnail import regenerate_thumbnail
 from engines.grok.browser import GrokConnection
 from engines.grok.engine import GrokImageEngine
 from runtime.estimator import Estimator
@@ -220,6 +221,12 @@ class BatchImageWorker(AsyncQThread):
         }
         self.project.update_scene_state(scene.id, "image", new_state)
         self.project.clear_warnings(scene.id, code="grok_no_image")
+        regenerate_thumbnail(
+            project_root=self.project.paths.root,
+            scene_id=scene.id,
+            visual_path=Path(result_path),
+            visual_kind="image",
+        )
         if self.estimator is not None:
             self.estimator.record_actual("gen_image", elapsed)
         self.scene_finished.emit(scene.id, new_state)

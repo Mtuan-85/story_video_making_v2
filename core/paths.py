@@ -68,6 +68,13 @@ class ProjectPaths:
     def renders_dir(self) -> Path:
         return self.root / "renders"
 
+    @property
+    def thumbnails_dir(self) -> Path:
+        return self.root / "thumbnails"
+
+    def thumbnail_path(self, scene_id: str) -> Path:
+        return self.thumbnails_dir / f"{scene_id}.jpg"
+
     def subtitle_dir(self, scene_id: str) -> Path:
         return self.temp_dir / f"subtitle_{scene_id}"
 

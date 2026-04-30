@@ -507,3 +507,88 @@ Smoke verify (no real run yet — pending user test):
 Sprint 2 complete on the build side. End-to-end test next:
 `Import voice` → `Render final` → verify `final.mp4` plays in VLC with
 voice + subtitle + BGM in sync.
+
+---
+
+## Live test fix — `test_live/` Batch animation popup count (2026-04-29)
+
+**Bug**: Trên `test_live/` có 5 scenes (3 video_grok + 1 slideshow + 1 image_grok),
+click "Batch animation" popup chỉ báo "Sắp gen 2 video" thay vì 4.
+
+**Inspect 4 chỗ** (xem chi tiết trong `test_live/re-test.md`):
+1. `workers/batch_video.py::is_eligible` — literal dùng `"slideshow"` đúng,
+   filter có include slideshow. KHÔNG có mismatch `slideshow_v4`.
+2. `ui/main_window.py::_start_batch_video` — count = `len(eligible)` từ cùng
+   filter, logic đúng.
+3. `core/schema.py` — `VisualType = Literal["image_grok", "video_grok", "slideshow"]`.
+4. `ui/scene_row.py` — `VISUAL_TYPE_OPTIONS = ["image_grok", "video_grok", "slideshow"]`.
+
+→ Schema/UI/worker nhất quán. Bug report hypothesis (`slideshow` vs `slideshow_v4`
+mismatch) sai. Slideshow KHÔNG bị skip.
+
+**Cause thực**: 2/3 scene `video_grok` trong `test_live/scenes.json`
+(SCENE-02, SCENE-04) có `videoPrompt: null` → `is_eligible` reject với reason
+"thiếu videoPrompt" → eligible = 2 (SCENE-01 video_grok + SCENE-03 slideshow).
+
+**Fix (Option C — code + data + UX)**:
+
+1. `workers/batch_video.py::is_eligible` — bỏ check `if not scene.videoPrompt`.
+   Grok I2V chấp nhận empty prompt (suy luận từ ref image). Vẫn require
+   `img_ready`. Trong `_gen_one_grok` pass `prompt_text = scene.videoPrompt or ""`
+   và emit log warning nếu rỗng.
+
+2. `ui/main_window.py::_start_batch_video` — popup confirmation breakdown rõ:
+   - Show count + breakdown (`X video_grok (I2V) + Y slideshow`).
+   - Cảnh báo các scene video_grok thiếu `videoPrompt` (sẽ vẫn gen).
+   - List scenes bị skip kèm reason.
+   - List scenes đã `video.status=ready` (skip silently khi `force=False`).
+   - Tách `already_ready` ra khỏi `skipped` để message không lẫn.
+
+3. `test_live/scenes.json` — fill `videoPrompt` cho SCENE-02 + SCENE-04 (data
+   sạch để re-test).
+
+**Expected sau fix**: Click Batch animation trên `test_live/` →
+popup "Sắp gen 4 animation (3 video_grok (I2V) + 1 slideshow). Bỏ qua: SCENE-05
+(image_grok — không cần animation)" → Yes → state.json: `video.status=ready`
+cho SCENE-01..04.
+
+**Cần test live**: chạy app, mở `test_live/`, click Batch animation, verify
+popup + verify state.json sau khi gen xong.
+
+---
+
+## 2026-04-30 — Voice mapping `duration = 0` bug fix
+
+**Symptom (per `test_live/voice/BUG_FIX_VOICE_MAPPING_V2.md`):**
+Sau Whisper + Claude phase mapping, mọi scene trong `voice_mapping.json` có
+`duration_original = 0.0`, `duration_adjusted = 0.0`, `scale_factor = 1.00`,
+`voice_out == voice_in`. Subtitle phrases trống.
+
+**Root cause** (NOT one of the 3 hypotheses in the doc):
+`ui/main_window.py::_start_voice_align` builds the scenes-dict passed to
+`VoiceAlignWorker` with only 3 keys (`id`, `story_en`, `story_vi`) — **omits
+`duration`**. Aligner's `_calc_phase_alloc` reads via
+`scenes_by_id[sid].get("duration", 0.0)` → silently falls back to 0 →
+`total_design = 0` → branch sets `scale = 1.0` and `adjusted = list(scene_durs)`
+(all zeros) → every scene's `duration_adjusted = 0`.
+
+Schema `core/schema.py::Scene.duration: int` was correct — the bug was at the
+UI→worker boundary, not in Pydantic.
+
+**Fix (2 changes):**
+
+1. `ui/main_window.py:672-679` — added `"duration": s.duration` to the
+   dict comprehension that builds `scenes` for `VoiceAlignWorker`.
+
+2. `voice/voice_aligner.py` (around line 363) — replaced silent
+   `.get("duration", 0.0)` with explicit `KeyError` raise listing available
+   keys. Future callers that forget the field will fail fast at the alignment
+   boundary instead of producing zero-duration output.
+
+**Cần test live**: trên `test_live/`, xóa `voice_mapping.json` cũ (zero-data),
+mở app → Import voice → assign 5 scenes → Start. Verify mới:
+- `duration_original` = 8 / 5 / 10 / 4 / 5
+- `phase[i].scale_factor` ≈ 0.71 / 1.76 / 0.96 (theo doc V2 §Test 2)
+- `duration_adjusted` > 0 cho tất cả scenes
+- `subtitle_phrases` có data
+- Phase 2 scale 1.76 > 1.5 → có warning trong `mapping.warnings`

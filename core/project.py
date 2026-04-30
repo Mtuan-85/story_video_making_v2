@@ -79,13 +79,18 @@ class Project:
 
     @classmethod
     def load(cls, project_dir: Path) -> "Project":
-        """Load a project from disk. Creates state.json on first run."""
+        """Load a project from disk. Creates state.json on first run.
+
+        Also auto-fills `Scene.effect` on scenes that don't carry one
+        (alternates zoom_in/out for static visuals, no_effect for video_grok)
+        and persists scenes.json if any defaults were filled in.
+        """
         paths = ProjectPaths(project_dir)
         if not paths.scenes_json.exists():
             raise FileNotFoundError(f"Không tìm thấy scenes.json: {paths.scenes_json}")
 
         log.info(f"Đang load project: {paths.root.name}")
-        scenes_json = cls._load_scenes(paths.scenes_json)
+        scenes_json, raw_scenes_data = cls._load_scenes_with_raw(paths.scenes_json)
 
         if paths.state_json.exists():
             state = cls._load_state(paths.state_json)
@@ -96,6 +101,10 @@ class Project:
 
         paths.ensure_dirs()
         project = cls(paths, scenes_json, state)
+        # Auto-fill effect for any scene whose raw JSON didn't declare one.
+        if cls._auto_fill_effects(project, raw_scenes_data):
+            project.save_scenes_json()
+            log.info("Auto-filled missing 'effect' fields → scenes.json saved")
         project._save_state_atomic()
         project._load_voice_mapping_if_present()
         return project
@@ -105,6 +114,57 @@ class Project:
         with path.open(encoding="utf-8") as f:
             data = json.load(f)
         return ScenesJson.model_validate(data)
+
+    @staticmethod
+    def _load_scenes_with_raw(path: Path) -> tuple[ScenesJson, list[dict]]:
+        """Load scenes.json + return raw per-scene dicts (pre-validation).
+
+        Used for auto-fill: we need to know which scenes had no `effect`
+        key in the source file (Pydantic's default substitution would hide it).
+        """
+        with path.open(encoding="utf-8") as f:
+            data = json.load(f)
+        raw = list(data.get("scenes", []))
+        return ScenesJson.model_validate(data), raw
+
+    @staticmethod
+    def _auto_fill_effects(project: "Project", raw_scenes: list[dict]) -> bool:
+        """Fill Scene.effect for entries whose source JSON didn't have it.
+
+        Default policy:
+            visual_type == "video_grok"     → effect = "no_effect"
+            visual_type ∈ {image_grok, slideshow} → alternate zoom_in / zoom_out
+        Returns True if any scene was changed (caller saves scenes.json).
+        """
+        had_effect_by_id: dict[str, bool] = {}
+        for raw in raw_scenes:
+            sid = raw.get("id")
+            if sid:
+                had_effect_by_id[sid] = "effect" in raw
+
+        alternate_idx = 0
+        changed = False
+        for scene in project.scenes_json.scenes:
+            if had_effect_by_id.get(scene.id, False):
+                # Source declared effect; leave it alone.
+                # Bump alternate counter only for static types so subsequent
+                # auto-fills line up with the user's chosen rhythm.
+                if scene.visual_type in ("image_grok", "slideshow"):
+                    alternate_idx += 1
+                continue
+
+            if scene.visual_type == "video_grok":
+                new_effect = "no_effect"
+            elif scene.visual_type in ("image_grok", "slideshow"):
+                new_effect = "zoom_in" if alternate_idx % 2 == 0 else "zoom_out"
+                alternate_idx += 1
+            else:
+                new_effect = "no_effect"
+
+            if scene.effect != new_effect:
+                scene.effect = new_effect  # type: ignore[assignment]
+                changed = True
+        return changed
 
     @staticmethod
     def _load_state(path: Path) -> dict[str, Any]:
@@ -211,6 +271,10 @@ class Project:
                 w for w in scene_state.get("warnings", []) if w.get("code") != code
             ]
         self._save_state_atomic()
+
+    def update_scene_field(self, scene_id: str, field: str, value: Any) -> Scene:
+        """Update one Scene field and atomic-save scenes.json. Re-validates."""
+        return self.update_scene_fields(scene_id, {field: value})
 
     def update_scene_fields(self, scene_id: str, updates: dict[str, Any]) -> Scene:
         """Replace scene fields and persist scenes.json. Re-validates via Pydantic.

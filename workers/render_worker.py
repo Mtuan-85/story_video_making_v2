@@ -121,6 +121,7 @@ class RenderWorker(AsyncTaskWorker):
                     aspect_ratio=aspect,
                     is_first=(i == 1),
                     is_last=(i == total),
+                    effect=scene.effect or "no_effect",
                 )
             except Exception as e:
                 self.scene_failed.emit(scene.id, str(e))

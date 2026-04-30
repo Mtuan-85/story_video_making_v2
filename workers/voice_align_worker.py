@@ -13,7 +13,7 @@ from typing import Any
 from PyQt6.QtCore import pyqtSignal
 
 from core.voice_mapping import VoiceFile, VoiceMapping
-from voice.voice_aligner import align_voice_file
+from voice.voice_aligner import align_voice_file, AlignResult
 from workers._async_thread import AsyncTaskWorker
 
 
@@ -55,6 +55,8 @@ class VoiceAlignWorker(AsyncTaskWorker):
 
     async def _async_run(self) -> None:
         results: list[VoiceFile] = []
+        all_silent: set[str] = set(self.silent_scenes)
+        all_warnings: list[str] = []
         total = len(self.voice_files)
 
         for i, voice_path in enumerate(self.voice_files, start=1):
@@ -72,7 +74,7 @@ class VoiceAlignWorker(AsyncTaskWorker):
                 continue
 
             try:
-                voice_file = await asyncio.to_thread(
+                align_res: AlignResult = await asyncio.to_thread(
                     align_voice_file,
                     voice_path,
                     scenes_for_file,
@@ -86,15 +88,23 @@ class VoiceAlignWorker(AsyncTaskWorker):
                 self.failed.emit(voice_path.name, str(e))
                 continue
 
+            voice_file = align_res.voice_file
+            all_silent.update(align_res.silent_scenes)
+            all_warnings.extend(align_res.warnings)
+
             self.progress.emit(voice_path.name, 3, 3)
             self.file_done.emit(voice_path.name, voice_file)
             results.append(voice_file)
             self.emit_log(
-                f"✓ {voice_path.name} aligned: {len(voice_file.scenes)} scenes"
+                f"✓ {voice_path.name} aligned: {len(voice_file.scenes)} scenes, "
+                f"{len(voice_file.phases)} phases"
             )
+            for w in align_res.warnings:
+                self.emit_log(f"⚠ {w}")
 
         mapping = VoiceMapping(
             voice_files=results,
-            silent_scenes=self.silent_scenes,
+            silent_scenes=sorted(all_silent),
+            warnings=all_warnings,
         )
         self.all_done.emit(mapping)

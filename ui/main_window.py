@@ -29,18 +29,18 @@ from core.project import Project
 from engines.grok import GrokImageEngine, GrokVideoEngine
 from runtime.estimator import Estimator
 from ui.connection_panel import ConnectionPanel
+from ui.dialogs.preview_dialog import PreviewDialog
 from ui.dialogs.preview_image import PreviewImageDialog
 from ui.dialogs.preview_video import PreviewVideoDialog
-from ui.dialogs.prompt_editor import PromptEditorDialog
 from ui.dialogs.voice_align_review import VoiceAlignReviewDialog
 from ui.dialogs.voice_import import VoiceImportDialog
 from ui.scene_list import SceneList
 from workers._async_thread import AsyncQThread
+from workers.export_worker import ExportKdenliveWorker
 from workers.render_worker import RenderWorker
 from workers.voice_align_worker import VoiceAlignWorker
 from workers.batch_image import BatchImageWorker
 from workers.batch_video import BatchVideoWorker, is_eligible as is_video_eligible
-from workers.ken_burns_worker import KenBurnsWorker, is_ken_burns_eligible
 from workers.single_image import SingleImageWorker
 from workers.single_video import SingleVideoWorker
 from workers.slideshow_worker import SlideshowWorker, is_slideshow_eligible
@@ -62,6 +62,7 @@ class MainWindow(QMainWindow):
         self._single_video_workers: dict[str, AsyncQThread] = {}
         self._voice_align_worker: VoiceAlignWorker | None = None
         self._render_worker: RenderWorker | None = None
+        self._export_worker: ExportKdenliveWorker | None = None
 
         self._build_ui()
         self._wire_signals()
@@ -122,6 +123,11 @@ class MainWindow(QMainWindow):
         self.btn_render.setEnabled(False)
         action_row.addWidget(self.btn_render)
 
+        self.btn_export_kdenlive = QPushButton("📤 Export Kdenlive XML")
+        self.btn_export_kdenlive.clicked.connect(self._on_export_kdenlive)
+        self.btn_export_kdenlive.setEnabled(False)
+        action_row.addWidget(self.btn_export_kdenlive)
+
         action_row.addSpacing(12)
         self.selection_label = QLabel("Đã chọn: 0/0")
         self.selection_label.setStyleSheet("color:#666")
@@ -161,12 +167,11 @@ class MainWindow(QMainWindow):
         self.connection_panel.page_ready.connect(self._on_page_ready)
         self.connection_panel.disconnected.connect(self._on_disconnected)
 
-        self.scene_list.regen_image_clicked.connect(self._regen_one)
-        self.scene_list.selected_visual_changed.connect(self._on_selected_visual_changed)
-        self.scene_list.warnings_clicked.connect(self._show_warnings)
         self.scene_list.preview_image_clicked.connect(self._show_preview_image)
         self.scene_list.preview_video_clicked.connect(self._show_preview_video)
-        self.scene_list.edit_clicked.connect(self._show_prompt_editor)
+        self.scene_list.edit_clicked.connect(self._show_preview_dialog)
+        self.scene_list.visual_type_changed.connect(self._on_visual_type_changed)
+        self.scene_list.effect_changed.connect(self._on_effect_changed)
         self.scene_list.batch_selection_changed.connect(self._on_batch_selection_changed)
 
     # ------------------------------------------------------------------
@@ -209,6 +214,7 @@ class MainWindow(QMainWindow):
         self.scene_list.bind_project(self.project)  # emits batch_selection_changed
         self.btn_import_voice.setEnabled(True)
         self.btn_render.setEnabled(self.project.voice_mapping is not None)
+        self.btn_export_kdenlive.setEnabled(True)
         self._append_log(f"✓ Đã load dự án: {meta.title}")
 
     # ------------------------------------------------------------------
@@ -340,29 +346,58 @@ class MainWindow(QMainWindow):
         selected_ids = set(self.scene_list.selected_scene_ids())
         eligible = []
         skipped = []
+        already_ready = []
+        no_prompt_warn: list[str] = []
         for s in self.project.scenes:
             if s.id not in selected_ids:
                 continue
             ok, reason = is_video_eligible(self.project, s)
-            if ok and self.project.get_scene_state(s.id)["video"]["status"] != "ready":
-                eligible.append(s)
-            elif not ok:
+            if not ok:
                 skipped.append((s.id, reason))
+                continue
+            if self.project.get_scene_state(s.id)["video"]["status"] == "ready":
+                already_ready.append(s.id)
+                continue
+            eligible.append(s)
+            if s.visual_type == "video_grok" and not s.videoPrompt:
+                no_prompt_warn.append(s.id)
 
         if not eligible:
             msg = "Không có scene nào đủ điều kiện gen video."
             if skipped:
                 msg += "\n\nLý do bỏ qua:\n" + "\n".join(f"  • {sid}: {r}" for sid, r in skipped[:5])
+            if already_ready:
+                msg += f"\n\nĐã có video sẵn ({len(already_ready)}): " + ", ".join(already_ready[:5])
             QMessageBox.information(self, "Không có gì để làm", msg)
             return
 
         info = self.estimator.estimate_batch("gen_video", n=len(eligible))
+
+        n_video_grok = sum(1 for s in eligible if s.visual_type == "video_grok")
+        n_slideshow = sum(1 for s in eligible if s.visual_type == "slideshow")
+        breakdown = []
+        if n_video_grok:
+            breakdown.append(f"{n_video_grok} video_grok (I2V)")
+        if n_slideshow:
+            breakdown.append(f"{n_slideshow} slideshow")
+        breakdown_str = " + ".join(breakdown) if breakdown else "—"
+
+        body = [f"Sắp gen {len(eligible)} animation ({breakdown_str})."]
+        if no_prompt_warn:
+            body.append(
+                f"\n⚠ {len(no_prompt_warn)} scene video_grok không có videoPrompt "
+                f"(Grok sẽ suy luận từ ref image): {', '.join(no_prompt_warn[:5])}"
+            )
+        if skipped:
+            body.append("\nBỏ qua:\n" + "\n".join(f"  • {sid}: {r}" for sid, r in skipped[:5]))
+        if already_ready:
+            body.append(f"\nĐã có video sẵn ({len(already_ready)}): " + ", ".join(already_ready[:5]))
+        body.append(f"\nƯớc tính: {info['formatted_avg']}\n{info['formatted_p90']}\n\nBắt đầu?")
+
         confirm = QMessageBox.question(
             self,
-            "Xác nhận batch video",
-            f"Sắp gen {len(eligible)} video (image-to-video).\n\n"
-            f"Ước tính: {info['formatted_avg']}\n{info['formatted_p90']}\n\n"
-            f"Bắt đầu?",
+            "Xác nhận batch animation",
+            "\n".join(body),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if confirm != QMessageBox.StandardButton.Yes:
@@ -451,11 +486,9 @@ class MainWindow(QMainWindow):
     def _regen_one_video(self, scene_id: str) -> None:
         """Dispatch a one-scene video re-gen by visual_type.
 
-        video_grok       → SingleVideoWorker (Grok I2V, needs browser)
+        video_grok    → SingleVideoWorker (Grok I2V, needs browser)
         slideshow     → SlideshowWorker (offline, needs ready image)
-        ken_burns_self   → KenBurnsWorker (offline, needs ready image)
-        ken_burns_cont   → KenBurnsWorker (offline, needs prev scene's video)
-        image_grok       → not a video type — refuse politely
+        image_grok    → not animated; effect-driven motion is added at final render only.
         """
         if self.project is None:
             QMessageBox.information(self, "Chưa sẵn sàng", "Load dự án trước")
@@ -486,18 +519,11 @@ class MainWindow(QMainWindow):
                 return
             worker = SlideshowWorker(self.project, scene_id, estimator=self.estimator)
 
-        elif vtype in ("ken_burns_self", "ken_burns_cont"):
-            mode = "self" if vtype == "ken_burns_self" else "cont"
-            ok, reason = is_ken_burns_eligible(self.project, scene_id, mode)
-            if not ok:
-                QMessageBox.warning(self, f"Không đủ điều kiện — {scene_id}", reason)
-                return
-            worker = KenBurnsWorker(self.project, scene_id, mode, estimator=self.estimator)
-
         else:
             QMessageBox.information(
                 self, "Không phải video",
-                f"Scene {scene_id} có visual_type={vtype} — không tạo video.",
+                f"Scene {scene_id} có visual_type={vtype} — không tạo video. "
+                "Hiệu ứng zoom được áp dụng lúc render final.",
             )
             return
 
@@ -529,10 +555,24 @@ class MainWindow(QMainWindow):
         self.btn_batch_image.setEnabled(engines_ready_image and selected > 0 and not batch_running)
         self.btn_batch_video.setEnabled(engines_ready_video and selected > 0 and not batch_running)
 
-    def _on_selected_visual_changed(self, scene_id: str, choice) -> None:
+    def _on_visual_type_changed(self, scene_id: str, new_value: str) -> None:
         if self.project is None:
             return
-        self.project.set_selected_visual(scene_id, choice)
+        try:
+            self.project.update_scene_field(scene_id, "visual_type", new_value)
+            self._append_log(f"{scene_id} visual_type → {new_value}")
+            self.scene_list.refresh_row(scene_id)
+        except Exception as e:
+            QMessageBox.critical(self, "Lỗi lưu", f"Cập nhật visual_type fail: {e}")
+
+    def _on_effect_changed(self, scene_id: str, new_value: str) -> None:
+        if self.project is None:
+            return
+        try:
+            self.project.update_scene_field(scene_id, "effect", new_value)
+            self._append_log(f"{scene_id} effect → {new_value}")
+        except Exception as e:
+            QMessageBox.critical(self, "Lỗi lưu", f"Cập nhật effect fail: {e}")
 
     def _resolve_asset_path(self, rel_or_abs: str | None) -> Path | None:
         if not rel_or_abs or self.project is None:
@@ -566,30 +606,41 @@ class MainWindow(QMainWindow):
         dlg.regen_requested.connect(self._regen_one_video)
         dlg.exec()
 
-    def _show_prompt_editor(self, scene_id: str) -> None:
+    def _show_preview_dialog(self, scene_id: str) -> None:
+        """Unified preview + edit (thumbnail / ✏ click). Save → atomic write scenes.json."""
         if self.project is None:
             return
         scene = self.project.scene(scene_id)
-        dlg = PromptEditorDialog(scene, parent=self)
-        if dlg.exec() == 0 or dlg.result_kind == 0:
+        scene_state = self.project.get_scene_state(scene_id)
+        dlg = PreviewDialog(
+            scene=scene,
+            scene_state=scene_state,
+            project_root=self.project.paths.root,
+            parent=self,
+        )
+        dlg.save_requested.connect(self._on_preview_save)
+        dlg.regen_requested.connect(self._on_preview_regen)
+        dlg.exec()
+
+    def _on_preview_save(self, scene_id: str, updates: dict) -> None:
+        if self.project is None:
             return
         try:
-            self.project.update_scene_fields(scene_id, dlg.collected_updates())
+            self.project.update_scene_fields(scene_id, updates)
         except Exception as e:
             QMessageBox.critical(self, "Lỗi lưu", f"Cập nhật scene fail: {e}")
             return
-
-        # Refresh row visual_type label (rebuild row since vtype is constructor-set)
-        self.scene_list.bind_project(self.project)
+        self.scene_list.refresh_row(scene_id)
         self._append_log(f"✓ Đã lưu prompts cho {scene_id}")
 
-        if dlg.result_kind == PromptEditorDialog.SAVE_AND_REGEN:
-            # Image scenes re-gen the image; video scenes re-gen the video.
-            new_vtype = self.project.scene(scene_id).visual_type
-            if new_vtype == "image_grok":
-                self._regen_one(scene_id)
-            else:
-                self._regen_one_video(scene_id)
+    def _on_preview_regen(self, scene_id: str) -> None:
+        if self.project is None:
+            return
+        new_vtype = self.project.scene(scene_id).visual_type
+        if new_vtype == "image_grok":
+            self._regen_one(scene_id)
+        else:
+            self._regen_one_video(scene_id)
 
     # ------------------------------------------------------------------
     # Voice alignment (Sprint 2)
@@ -623,6 +674,7 @@ class MainWindow(QMainWindow):
                 "id": s.id,
                 "story_en": s.story_en,
                 "story_vi": s.story_vi,
+                "duration": s.duration,
             }
             for s in self.project.scenes
         ]
@@ -736,17 +788,61 @@ class MainWindow(QMainWindow):
         )
         self.btn_stop.setEnabled(False)
 
-    def _show_warnings(self, scene_id: str) -> None:
+    # ------------------------------------------------------------------
+    # Kdenlive XML export (Sprint 2 Phase 3)
+    # ------------------------------------------------------------------
+
+    def _on_export_kdenlive(self) -> None:
         if self.project is None:
+            QMessageBox.warning(self, "Chưa load dự án", "Mở scenes.json trước.")
             return
-        warnings = self.project.get_scene_state(scene_id).get("warnings") or []
-        if not warnings:
-            return
-        text = "\n\n".join(
-            f"[{w.get('code')}] {w.get('msg')}\nThời điểm: {w.get('ts')}"
-            for w in warnings
+        output_path = self.project.paths.root / "export.kdenlive"
+        if output_path.exists():
+            reply = QMessageBox.question(
+                self, "File tồn tại",
+                f"{output_path.name} đã có. Ghi đè?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+        voice_dict = (
+            self.project.voice_mapping.model_dump()
+            if self.project.voice_mapping is not None else None
         )
-        QMessageBox.warning(self, f"Cảnh báo — {scene_id}", text)
+        worker = ExportKdenliveWorker(
+            project=self.project,
+            voice_mapping=voice_dict,
+            output_path=output_path,
+            also_srt=True,
+        )
+        worker.log_message.connect(self._append_log)
+        worker.export_done.connect(self._on_export_done)
+        worker.export_failed.connect(self._on_export_failed)
+        worker.finished.connect(self._cleanup_export)
+        self._export_worker = worker
+        self.btn_export_kdenlive.setEnabled(False)
+        self._append_log("▶ Export Kdenlive XML...")
+        worker.start()
+
+    def _on_export_done(self, kpath: str, srt: str) -> None:
+        msg = f"Đã xuất Kdenlive XML:\n{kpath}"
+        if srt:
+            msg += f"\n\nSubtitles SRT:\n{srt}"
+        msg += (
+            "\n\nMở Kdenlive → File → Open → chọn .kdenlive này.\n"
+            "Lưu ý: effects/transitions/color chưa export — re-add manual nếu cần."
+        )
+        QMessageBox.information(self, "Export OK", msg)
+
+    def _on_export_failed(self, reason: str) -> None:
+        QMessageBox.critical(self, "Export fail", reason)
+
+    def _cleanup_export(self) -> None:
+        if self._export_worker is not None:
+            self._export_worker.deleteLater()
+        self._export_worker = None
+        self.btn_export_kdenlive.setEnabled(self.project is not None)
+
 
 
 def run() -> None:  # pragma: no cover (manual run)

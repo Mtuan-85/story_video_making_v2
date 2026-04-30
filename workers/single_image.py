@@ -13,6 +13,7 @@ from pathlib import Path
 from PyQt6.QtCore import pyqtSignal
 
 from core.project import Project
+from core.thumbnail import regenerate_thumbnail
 from engines.grok.browser import GrokConnection
 from engines.grok.engine import GrokImageEngine
 from workers._async_thread import AsyncQThread
@@ -106,6 +107,12 @@ class SingleImageWorker(AsyncQThread):
         }
         self.project.update_scene_state(self.scene_id, "image", new_state)
         self.project.clear_warnings(self.scene_id, code="grok_no_image")
+        regenerate_thumbnail(
+            project_root=self.project.paths.root,
+            scene_id=self.scene_id,
+            visual_path=Path(result_path),
+            visual_kind="image",
+        )
         self.scene_finished.emit(self.scene_id, new_state)
         self.emit_log(f"{self.scene_id}: ✓ {rel_path}")
 

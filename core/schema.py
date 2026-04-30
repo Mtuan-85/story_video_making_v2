@@ -14,8 +14,12 @@ VisualType = Literal[
     "image_grok",
     "video_grok",
     "slideshow",
-    "ken_burns_self",
-    "ken_burns_cont",
+]
+
+EffectType = Literal[
+    "zoom_in",
+    "zoom_out",
+    "no_effect",
 ]
 
 AspectRatio = Literal["16:9", "9:16"]
@@ -53,6 +57,7 @@ class Scene(BaseModel):
 
     id: str = Field(min_length=1)
     visual_type: VisualType
+    effect: EffectType = "no_effect"
     story_vi: str | None = None
     story_en: str | None = None
     imagePrompt: str = Field(min_length=1)

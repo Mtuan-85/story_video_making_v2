@@ -20,6 +20,7 @@ from pathlib import Path
 from PyQt6.QtCore import pyqtSignal
 
 from core.project import Project
+from core.thumbnail import regenerate_thumbnail
 from render.slideshow import render_slideshow
 from runtime.estimator import Estimator
 from workers._async_thread import AsyncQThread
@@ -132,6 +133,12 @@ class SlideshowWorker(AsyncQThread):
         self.project.update_scene_state(self.scene_id, "video", new_state)
         self.project.clear_warnings(self.scene_id, code="slideshow_render_failed")
         self.project.clear_warnings(self.scene_id, code="slideshow_no_objects")
+        regenerate_thumbnail(
+            project_root=self.project.paths.root,
+            scene_id=self.scene_id,
+            visual_path=Path(result_path),
+            visual_kind="video",
+        )
         if self.estimator is not None:
             self.estimator.record_actual("slideshow_render", elapsed)
         self.scene_finished.emit(self.scene_id, new_state)

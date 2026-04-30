@@ -15,8 +15,9 @@ from loguru import logger as log
 
 from core.voice_mapping import SceneVoiceAssignment, SubtitlePhrase
 from render.subtitle_filter import build_subtitle_drawtext_chain
+from render.zoom_effect import build_zoom_effect_filter
 
-VISUAL_STATIC_TYPES = {"image_grok", "ken_burns_self", "ken_burns_cont", "slideshow"}
+VISUAL_STATIC_TYPES = {"image_grok", "slideshow"}
 FADE_DURATION = 0.25  # per-side fade; total transition between two scenes = 0.5s
 
 
@@ -46,12 +47,13 @@ def _build_visual_filter(
     target_dur: float,
     canvas_w: int,
     canvas_h: int,
+    effect: str = "no_effect",
 ) -> tuple[str, list[str]]:
     """Return (filter_string, warnings).
 
-    Static visuals (image / ken_burns / slideshow already-rendered) are scaled
-    + cropped to canvas. Grok video may need speedup or freeze-tail to match
-    target duration; speedup capped at 1.20x to avoid chipmunk-effect.
+    Static visuals (image / slideshow): apply Scene.effect (zoom_in/out/none) via
+    zoompan. Grok video: no zoom (would compound on existing motion); only
+    speedup/freeze-tail to match target_dur. Speedup capped at 1.20x.
     """
     warnings: list[str] = []
     crop_filter = (
@@ -60,13 +62,11 @@ def _build_visual_filter(
     )
 
     if visual_type in VISUAL_STATIC_TYPES:
-        # Source is either a still image (image_grok) or a pre-rendered mp4
-        # (ken_burns_*, slideshow). Either way, just scale/crop to canvas
-        # and let the outer `-t target_dur` clamp duration. For images we
-        # additionally rely on `-loop 1` upstream.
-        return crop_filter, warnings
+        # image_grok / slideshow → effect determines zoom motion.
+        return build_zoom_effect_filter(effect, target_dur, canvas_w, canvas_h), warnings
 
     if visual_type == "video_grok":
+        # Video is already in motion; ignore Scene.effect to avoid compound zoom.
         video_dur = get_duration(visual_path)
         if video_dur <= 0:
             return crop_filter, warnings  # ffprobe failed; ffmpeg will error later.
@@ -107,6 +107,7 @@ async def composite_scene(
     font_path: Path | None = None,
     is_first: bool = True,
     is_last: bool = True,
+    effect: str = "no_effect",
 ) -> dict:
     """Render one scene MP4. Returns `{"ok", "duration", "warnings", "error"}`."""
     canvas_w, canvas_h = _aspect_canvas(aspect_ratio)
@@ -115,10 +116,15 @@ async def composite_scene(
     if voice_assignment is None:
         target_dur = float(declared_duration)
     else:
-        target_dur = max(0.1, voice_assignment.voice_out - voice_assignment.voice_in)
+        # Voice-first v3: prefer `duration_adjusted` (preserves design ratio per phase).
+        # Fallback to voice window only if v2 mapping (duration_adjusted == 0).
+        if voice_assignment.duration_adjusted > 0:
+            target_dur = float(voice_assignment.duration_adjusted)
+        else:
+            target_dur = max(0.1, voice_assignment.voice_out - voice_assignment.voice_in)
 
     visual_filter, vw = _build_visual_filter(
-        visual_path, visual_type, target_dur, canvas_w, canvas_h
+        visual_path, visual_type, target_dur, canvas_w, canvas_h, effect=effect
     )
     warnings.extend(vw)
 

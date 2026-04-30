@@ -9,6 +9,7 @@ from pathlib import Path
 from PyQt6.QtCore import pyqtSignal
 
 from core.project import Project
+from core.thumbnail import regenerate_thumbnail
 from engines.grok.browser import GrokConnection
 from engines.grok.engine import GrokVideoEngine
 from runtime.estimator import Estimator
@@ -121,6 +122,12 @@ class SingleVideoWorker(AsyncQThread):
         }
         self.project.update_scene_state(self.scene_id, "video", new_state)
         self.project.clear_warnings(self.scene_id, code="grok_no_video")
+        regenerate_thumbnail(
+            project_root=self.project.paths.root,
+            scene_id=self.scene_id,
+            visual_path=Path(result_path),
+            visual_kind="video",
+        )
         if self.estimator is not None:
             self.estimator.record_actual("gen_video", elapsed)
         self.scene_finished.emit(self.scene_id, new_state)
