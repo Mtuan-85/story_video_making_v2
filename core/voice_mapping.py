@@ -1,89 +1,117 @@
-"""Schema for voice_mapping.json v3 — voice-first phase grouping.
+"""Schema for voice_mapping.json v4.0 — Plan D deterministic + LLM fallback.
 
-v3 changes vs v2:
-  - Voice is grouped into PHASES (consecutive segments separated by silence > threshold).
-  - Each phase contains 1+ scenes; scale factor scales the design durations to fit
-    the phase's actual voice duration WHILE PRESERVING THE DESIGN RATIO.
-  - Each scene assignment carries `duration_original`, `duration_adjusted`,
-    `scale_factor`, `phase_id` so render can use `duration_adjusted` directly
-    (no more voice_out - voice_in override that crushed visuals).
+v4.0 changes vs v3.0:
+  - Phase grouping removed. Scenes are aligned individually via deterministic
+    fuzzy match against Whisper transcript, with LLM fallback for low-score
+    cases.
+  - Top-level `scenes` array replaces the per-voice-file nesting.
+  - `voice_files` only carries metadata (file/duration/offset).
+  - `subtitle_phrases` now carry word-level timestamps for ASS karaoke.
 
-Produced by `voice/voice_aligner.py` (Whisper + Claude phase mapper).
-Consumed by `render/composite.py` to time each scene's visual + voice slice.
+Produced by `voice/voice_aligner.py::align_voice_to_scenes` (Whisper +
+deterministic_aligner + llm_fallback).
+Consumed by `render/composite_v2.py` + `voice/ass_generator.py`.
 """
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class WordTimestamp(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    word: str
+    start: float = Field(ge=0)
+    end: float = Field(ge=0)
+
+
 class SubtitlePhrase(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="allow")
 
     text: str
     start: float = Field(ge=0)
     end: float = Field(ge=0)
+    words: list[WordTimestamp] = Field(default_factory=list)
+
+
+RenderMode = Literal["voice", "design", "custom"]
 
 
 class SceneVoiceAssignment(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="allow")
 
     id: str = Field(min_length=1)
-    voice_in: float = Field(ge=0)
-    voice_out: float = Field(ge=0)
-    # v3 voice-first additions:
+    voice_in: float | None = None
+    voice_out: float | None = None
     duration_original: float = Field(default=0.0, ge=0)
     duration_adjusted: float = Field(default=0.0, ge=0)
-    scale_factor: float = Field(default=1.0, ge=0)
-    phase_id: int = Field(default=0, ge=0)
-    # Lifecycle:
-    confidence: float = Field(default=1.0, ge=0, le=1)
-    method: Literal["whisper_claude", "user_override"] = "whisper_claude"
+    is_silent: bool = False
+    method: str | None = None  # "deterministic" | "llm" | "llm_fallback" | "manual" | None
+    score: float | None = None
+    matched_text: str | None = None
     subtitle_phrases: list[SubtitlePhrase] = Field(default_factory=list)
+    warning: str | None = None
+    reasoning: str | None = None
+    fallback_from_score: float | None = None
+    # Render duration override (Step 5/6 of Phase 6).
+    render_mode: RenderMode = "voice"
+    render_duration: float | None = None  # populated on save; falls back to duration_adjusted at render time
+    custom_duration: float | None = None  # only meaningful when render_mode == "custom"
 
 
-class VoicePhaseMeta(BaseModel):
-    """Top-level phase summary so the review dialog can render a grouping view."""
+class VoiceFileMeta(BaseModel):
+    """Top-level voice file metadata (cumulative offsets in global timeline)."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="allow")
 
-    phase_id: int = Field(ge=1)
-    start: float = Field(ge=0)
-    end: float = Field(ge=0)
+    file: str  # filename only, e.g. "voice1.mp3"
     duration: float = Field(ge=0)
-    scenes: list[str] = Field(default_factory=list)
-    scale_factor: float = Field(default=1.0, ge=0)
-    text: str = ""
+    offset: float = Field(default=0.0, ge=0)
 
 
-class VoiceFile(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class VoiceMappingStats(BaseModel):
+    model_config = ConfigDict(extra="allow")
 
-    file: str  # project-relative, e.g. "voice/voice_01.mp3"
-    duration: float = Field(ge=0)
-    transcript: str = ""
-    phases: list[VoicePhaseMeta] = Field(default_factory=list)
-    scenes: list[SceneVoiceAssignment] = Field(default_factory=list)
+    total_scenes: int = 0
+    deterministic_pass: int = 0
+    deterministic_fail_need_fallback: int = 0
+    silent: int = 0
+    no_match: int = 0
+    llm_fallback_count: int = 0
 
 
 class VoiceMapping(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="allow")
 
-    version: Literal["3.0"] = "3.0"
-    voice_files: list[VoiceFile] = Field(default_factory=list)
-    silent_scenes: list[str] = Field(default_factory=list)
-    warnings: list[str] = Field(default_factory=list)
+    version: Literal["4.0"] = "4.0"
+    generated_at: str | None = None
+    voice_files: list[VoiceFileMeta] = Field(default_factory=list)
+    total_voice_duration: float = Field(default=0.0, ge=0)
+    scenes: list[SceneVoiceAssignment] = Field(default_factory=list)
+    stats: VoiceMappingStats = Field(default_factory=VoiceMappingStats)
 
-    def get_assignment_for_scene(
-        self, scene_id: str
-    ) -> tuple[VoiceFile, SceneVoiceAssignment] | None:
-        for vf in self.voice_files:
-            for s in vf.scenes:
-                if s.id == scene_id:
-                    return vf, s
+    # ------------------------------------------------------------------
+    # Convenience accessors (compatibility shims for callers that used the
+    # old v3.0 API while we migrate the rest of the code base).
+    # ------------------------------------------------------------------
+
+    def get_assignment_for_scene(self, scene_id: str) -> SceneVoiceAssignment | None:
+        for s in self.scenes:
+            if s.id == scene_id:
+                return s
         return None
 
     def is_silent(self, scene_id: str) -> bool:
-        return scene_id in self.silent_scenes
+        s = self.get_assignment_for_scene(scene_id)
+        return bool(s and s.is_silent)
+
+    @property
+    def silent_scenes(self) -> list[str]:
+        return [s.id for s in self.scenes if s.is_silent]
+
+    def to_render_dict(self) -> dict[str, Any]:
+        """Plain dict shape consumed by composite_v2 / ass_generator."""
+        return self.model_dump(mode="json")

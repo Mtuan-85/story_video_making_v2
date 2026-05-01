@@ -34,7 +34,30 @@
       "Bash(awk '{print $1}')",
       "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe *)",
       "Bash(QT_QPA_PLATFORM=offscreen PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(ffmpeg -y -hide_banner -loglevel error -ss 1.5 -i test_run/final_v2.mp4 -frames:v 1 test_run/_v2_frame_01.png)",
+      "Bash(ffmpeg -y -hide_banner -loglevel error -ss 9.5 -i test_run/final_v2.mp4 -frames:v 1 test_run/_v2_frame_02.png)",
+      "Bash(ffmpeg -y -hide_banner -loglevel error -ss 22 -i test_run/final_v2.mp4 -frames:v 1 test_run/_v2_frame_03.png)",
+      "Bash(echo \"rc=$?\")",
+      "Bash(mkdir -p test_live/temp/frames_v6)",
+      "Bash(ffmpeg -y -hide_banner -loglevel error -i test_live/final_v6.mp4 -vf \"fps=1,scale=480:-1\" -frames:v 5 test_live/temp/frames_v6/frame_%02d.jpg)",
+      "Bash(rm -rf test_live/temp/sc03_check)",
+      "Bash(mkdir -p test_live/temp/sc03_check)",
+      "Bash(ffmpeg -y -hide_banner -loglevel error -i test_live/renders_v6/SCENE-03.mp4 -vf \"fps=1,scale=480:-1\" -frames:v 4 test_live/temp/sc03_check/f%02d.jpg)",
+      "Bash(ffmpeg -y -hide_banner -loglevel error -i test_live/renders_v6/SCENE-05.mp4 -vf \"fps=4,scale=480:-1\" -frames:v 8 test_live/temp/sc03_check/sc05_%02d.jpg)",
+      "Bash(ffmpeg -y -hide_banner -loglevel error -i test_live/renders_v6/SCENE-03.mp4 -vf \"fps=2,scale=480:-1\" -frames:v 6 test_live/temp/sc03_v2/sc03_%02d.jpg)",
+      "Bash(ffmpeg -y -hide_banner -loglevel error -i test_live/renders_v6/SCENE-04.mp4 -vf \"fps=2,scale=480:-1\" -frames:v 4 test_live/temp/sc03_v2/sc04_%02d.jpg)",
+      "Bash(ffmpeg -y -hide_banner -loglevel error -i test_live/final_v6.mp4 -ss 0.7 -frames:v 1 -vf scale=480:-1 test_live/temp/sc03_v2/karaoke.jpg)",
+      "Bash(ffmpeg -y -hide_banner -loglevel error -i test_live/renders_v6/SCENE-04.mp4 -ss 0.05 -frames:v 1 -vf scale=480:-1 test_live/temp/sc03_v2/sc04_first.jpg)",
+      "Bash(ffmpeg -y -hide_banner -loglevel error -i test_live/renders_v6/SCENE-04.mp4 -sseof -0.1 -frames:v 1 -vf scale=480:-1 test_live/temp/sc03_v2/sc04_last.jpg)",
+      "Bash(ffmpeg -y -hide_banner -loglevel error -i test_live/renders_v6/SCENE-05.mp4 -ss 0.05 -frames:v 1 -vf scale=480:-1 test_live/temp/sc03_v2/sc05_first.jpg)",
+      "Bash(ffmpeg -y -hide_banner -loglevel error -i test_live/renders_v6/SCENE-05.mp4 -sseof -0.1 -frames:v 1 -vf scale=480:-1 test_live/temp/sc03_v2/sc05_last.jpg)",
+      "Bash(ffmpeg -y -hide_banner -loglevel error -sseof -0.1 -i test_live/renders_v6/SCENE-04.mp4 -frames:v 1 -vf scale=480:-1 test_live/temp/sc03_v2/sc04_last.jpg)",
+      "Bash(ffmpeg -y -hide_banner -loglevel error -ss 0.05 -i test_live/renders_v6/SCENE-04.mp4 -frames:v 1 -vf scale=480:-1 test_live/temp/sc03_v2/sc04_first.jpg)",
+      "Bash(ffmpeg -y -hide_banner -loglevel error -sseof -0.1 -i test_live/renders_v6/SCENE-05.mp4 -frames:v 1 -vf scale=480:-1 test_live/temp/sc03_v2/sc05_last.jpg)",
+      "Bash(ffmpeg -y -hide_banner -loglevel error -ss 0.05 -i test_live/renders_v6/SCENE-05.mp4 -frames:v 1 -vf scale=480:-1 test_live/temp/sc03_v2/sc05_first.jpg)",
+      "Bash(git *)"
     ]
   }
 }

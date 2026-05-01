@@ -32,7 +32,7 @@
     {
       "id": "SCENE-02",
       "visual_type": "video_grok",
-      "effect": "zoom_out",
+      "effect": "no_effect",
       "story_vi": null,
       "story_en": "A barista wipes the counter slowly. Steam curls from a fresh espresso.",
       "imagePrompt": "Behind a wooden cafe counter, a young barista in a navy apron quietly wipes the polished surface with a cream cloth. To the right, a small white espresso cup sits on a saucer with thick steam curling upward. Background: a wall of glass jars with coffee beans, soft warm light catching the shelves.",
@@ -43,12 +43,12 @@
     {
       "id": "SCENE-03",
       "visual_type": "slideshow",
-      "effect": "zoom_out",
+      "effect": "zoom_in",
       "story_vi": null,
       "story_en": "Three small things on the table. A cup, a notebook, a fountain pen.",
       "imagePrompt": "Three distinct objects on PURE WHITE BACKGROUND (#FFFFFF, completely solid white, no gradient, no texture, no shadow). Arranged horizontally with at least 80 pixels of pure white space between each. Left to right: 1) a small cream ceramic cappuccino cup with light foam art, 2) a leather-bound A5 notebook with a thin red bookmark ribbon, 3) a slim brass fountain pen. Each object centered vertically, equal sizing, no overlap, hand-drawn flat 2D illustration with clean dark outlines.",
       "videoPrompt": null,
-      "duration": 10,
+      "duration": 6,
       "emotion": null
     },
     {
@@ -56,7 +56,7 @@
       "visual_type": "video_grok",
       "effect": "zoom_in",
       "story_vi": null,
-      "story_en": "She opens the notebook. The page is empty, waiting.",
+      "story_en": "He opens the notebook. The page is empty, waiting.",
       "imagePrompt": "Top-down view of two hands gently opening a leather-bound notebook on a wooden cafe table. The pages are cream, slightly textured, completely empty (no readable letters or marks). A brass fountain pen rests beside the notebook. A small white espresso cup with a saucer on the upper-right corner. Soft amber light from the side, gentle shadow from the page edges.",
       "videoPrompt": "Two hands gently turn the cream notebook page; the brass fountain pen stays still beside it; soft amber light shifts slowly.",
       "duration": 4,

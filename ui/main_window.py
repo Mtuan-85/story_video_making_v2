@@ -713,7 +713,22 @@ class MainWindow(QMainWindow):
             f"✓ Alignment xong: {len(mapping.voice_files)} file, "
             f"silent={len(mapping.silent_scenes)} scenes — đã lưu voice_mapping.json"
         )
-        dlg = VoiceAlignReviewDialog(mapping, parent=self)
+        scenes_data = [
+            {
+                "id": s.id,
+                "story_en": s.story_en,
+                "story_vi": s.story_vi,
+                "duration": s.duration,
+            }
+            for s in self.project.scenes
+        ]
+        whisper_words_path = self.project.paths.root / "whisper_words.json"
+        dlg = VoiceAlignReviewDialog(
+            voice_mapping=mapping,
+            scenes_data=scenes_data,
+            whisper_words_path=whisper_words_path if whisper_words_path.exists() else None,
+            parent=self,
+        )
         dlg.saved.connect(self._on_voice_mapping_saved)
         dlg.exec()
 

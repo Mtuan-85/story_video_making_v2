@@ -1,431 +1,248 @@
-"""Voice-first alignment v2 — phase grouping + design ratio preservation.
+"""Plan D voice alignment orchestrator.
 
-Workflow:
-1. Whisper transcribe → segments + word timestamps.
-2. Group segments into VOICE PHASES (consecutive segments, gap >= silence_threshold = phase break).
-3. Claude CLI maps phases → scene groups (semantic match against scene story).
-4. Per phase: scale_factor = phase_voice_duration / sum(scene.design_durations).
-   Apply scale to each scene's design duration → duration_adjusted.
-5. Output `VoiceFile` v3 with `duration_original`, `duration_adjusted`,
-   `scale_factor`, `phase_id` per scene + top-level `phases` summary.
+Pipeline:
+    1. Scan voice folder → list of files with cumulative offsets.
+    2. Whisper transcribe all files → flat word list with global timestamps.
+    3. Deterministic fuzzy align each scene's `story_en` against the transcript.
+    4. LLM fallback (Claude) for scenes whose deterministic score is below
+       threshold (and not silent).
+    5. Extract subtitle phrases (with word-level timestamps) per scene for
+       ASS karaoke rendering.
 
-Render uses `duration_adjusted` (NOT voice_out - voice_in) → preserves design ratios.
-
-Sync orchestrator — call from a worker via `asyncio.to_thread(align_voice_file, ...)`.
+Output: voice_mapping.json v4.0 dict (also returned by `align_voice_to_scenes`).
 """
 
 from __future__ import annotations
 
 import json
-import os
 import shutil
-import subprocess
-from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 from loguru import logger as log
 
-from core.voice_mapping import (
-    SceneVoiceAssignment,
-    SubtitlePhrase,
-    VoiceFile,
-    VoicePhaseMeta,
+from voice.deterministic_aligner import (
+    SCORE_THRESHOLD,
+    align_deterministic,
+    calculate_stats,
 )
-from voice.whisper_runner import run_whisper
-
-CLAUDE_TIMEOUT_S = 180
-DEFAULT_SILENCE_THRESHOLD = 0.5  # seconds; gap >= this = phase break
-SCALE_WARN_LOW = 0.5  # warn if scale < this (voice quá ngắn so với design)
-SCALE_WARN_HIGH = 1.5  # warn if scale > this (voice quá dài so với design)
-
-
-# --- Internal types ---------------------------------------------------------
+from voice.llm_fallback import claude_align_scene
+from voice.voice_scanner import (
+    get_total_voice_duration,
+    scan_voice_folder,
+)
+from voice.whisper_runner import transcribe_all_voice_files
 
 
-@dataclass
-class _Word:
-    word: str
-    start: float
-    end: float
+async def align_voice_to_scenes(
+    scenes: list[dict],
+    voice_dir: Path,
+    output_dir: Path,
+    whisper_model: str = "base",
+    language: str = "en",
+) -> dict:
+    """Plan D entry: align voice to scenes (deterministic + LLM fallback).
 
+    Args:
+        scenes: list of scene dicts (from scenes.json) — each must have id +
+            story_en (may be empty/None for silent scenes) and duration.
+        voice_dir: folder containing voice mp3 files.
+        output_dir: where to save voice_mapping.json (and a .v3.bak backup
+            of the previous file, if any).
+        whisper_model: Whisper model size (default "base").
+        language: "en" or "vi".
 
-@dataclass
-class _Segment:
-    text: str
-    start: float
-    end: float
-    words: list[_Word] = field(default_factory=list)
+    Returns:
+        voice_mapping dict (also persisted to output_dir/voice_mapping.json).
+    """
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
+    log.info("Step 1: Scanning voice folder...")
+    voice_files = scan_voice_folder(voice_dir)
+    total_duration = get_total_voice_duration(voice_files)
 
-@dataclass
-class _Phase:
-    phase_id: int
-    start: float
-    end: float
-    duration: float
-    text: str
-    segments: list[_Segment]
-
-
-@dataclass
-class _PhaseAlloc:
-    phase: _Phase
-    scene_ids: list[str]
-    original_durations: list[float]
-    scale_factor: float
-    adjusted_durations: list[float]
-
-
-@dataclass
-class AlignResult:
-    """Bundle returned by `align_voice_file`: VoiceFile + side-band silent/warn lists."""
-
-    voice_file: VoiceFile
-    silent_scenes: list[str]
-    warnings: list[str]
-
-
-# --- Claude wrapper ---------------------------------------------------------
-
-
-def _resolve_claude_cmd() -> str:
-    found = shutil.which("claude") or shutil.which("claude.cmd") or shutil.which("claude.exe")
-    if not found:
-        raise RuntimeError(
-            "Không tìm thấy `claude` CLI trên PATH. Cài Claude Code và đăng nhập trước."
-        )
-    return found
-
-
-def _strip_code_fence(text: str) -> str:
-    s = text.strip()
-    if s.startswith("```"):
-        lines = s.split("\n")
-        s = "\n".join(lines[1:-1]) if len(lines) > 2 else s
-        if s.lstrip().lower().startswith("json"):
-            s = s.split("\n", 1)[1] if "\n" in s else ""
-    return s.strip()
-
-
-def _call_claude(prompt: str) -> str:
-    env = os.environ.copy()
-    env.pop("ANTHROPIC_API_KEY", None)
-    cmd = _resolve_claude_cmd()
-    log.info(f"Calling Claude CLI for phase mapping ({cmd})...")
-    result = subprocess.run(
-        [cmd, "--print"],
-        input=prompt,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        env=env,
-        timeout=CLAUDE_TIMEOUT_S,
+    log.info("Step 2: Whisper transcribe...")
+    whisper_words = await transcribe_all_voice_files(
+        voice_files,
+        language=language,
+        model_name=whisper_model,
     )
-    if result.returncode != 0:
-        raise RuntimeError(
-            f"Claude CLI failed (rc={result.returncode}): "
-            f"{(result.stderr or '')[:500]}"
-        )
-    return result.stdout
+    if not whisper_words:
+        raise RuntimeError("Whisper produced no words. Check voice file quality.")
 
+    log.info("Step 3: Deterministic align...")
+    det_results = align_deterministic(scenes, whisper_words)
+    log.info(f"Deterministic stats: {calculate_stats(det_results)}")
 
-# --- Phase grouping ---------------------------------------------------------
+    fallback_indices = [
+        i for i, r in enumerate(det_results)
+        if not r.get("is_silent") and (r.get("score") or 0) < SCORE_THRESHOLD
+    ]
 
+    if fallback_indices:
+        log.info(f"Step 4: LLM fallback for {len(fallback_indices)} scene(s)...")
+        for idx in fallback_indices:
+            r = det_results[idx]
+            scene = next(s for s in scenes if s["id"] == r["id"])
 
-def _parse_segments(whisper_json: dict[str, Any]) -> list[_Segment]:
-    out: list[_Segment] = []
-    for seg in whisper_json.get("segments", []):
-        words = [
-            _Word(w.get("word", ""), float(w.get("start", 0.0)), float(w.get("end", 0.0)))
-            for w in seg.get("words", [])
-        ]
-        out.append(
-            _Segment(
-                text=seg.get("text", "") or "",
-                start=float(seg.get("start", 0.0)),
-                end=float(seg.get("end", 0.0)),
-                words=words,
+            prev_end_idx = 0
+            next_start_idx = len(whisper_words)
+
+            for j, other in enumerate(det_results):
+                if j == idx or other.get("is_silent"):
+                    continue
+                wi = other.get("word_indices")
+                if not wi:
+                    continue
+                if j < idx:
+                    prev_end_idx = max(prev_end_idx, wi[1] + 1)
+                if j > idx:
+                    next_start_idx = min(next_start_idx, wi[0])
+
+            llm_result = await claude_align_scene(
+                scene=scene,
+                whisper_words=whisper_words,
+                search_start_idx=prev_end_idx,
+                search_end_idx=next_start_idx - 1,
             )
-        )
-    return out
-
-
-def _build_phase(phase_id: int, segments: list[_Segment]) -> _Phase:
-    return _Phase(
-        phase_id=phase_id,
-        start=segments[0].start,
-        end=segments[-1].end,
-        duration=segments[-1].end - segments[0].start,
-        text=" ".join(s.text.strip() for s in segments).strip(),
-        segments=segments,
-    )
-
-
-def group_segments_into_phases(
-    segments: list[_Segment],
-    silence_threshold: float = DEFAULT_SILENCE_THRESHOLD,
-) -> list[_Phase]:
-    """Split Whisper segments into phases by silence gap >= threshold."""
-    if not segments:
-        return []
-    phases: list[_Phase] = []
-    current = [segments[0]]
-    for prev, curr in zip(segments, segments[1:]):
-        gap = curr.start - prev.end
-        if gap >= silence_threshold:
-            phases.append(_build_phase(len(phases) + 1, current))
-            current = [curr]
-        else:
-            current.append(curr)
-    if current:
-        phases.append(_build_phase(len(phases) + 1, current))
-    log.info(f"Grouped {len(segments)} segments into {len(phases)} phases")
-    for p in phases:
-        log.info(f"  Phase{p.phase_id} {p.start:.2f}-{p.end:.2f}s ({p.duration:.2f}s): {p.text[:60]!r}")
-    return phases
-
-
-# --- Claude phase → scenes mapping ------------------------------------------
-
-
-CLAUDE_PHASE_PROMPT = """You are mapping voice phases to scenes for a video project.
-
-# VOICE PHASES (Whisper transcript, grouped by silence)
-{phases_desc}
-
-# SCENES (project design, in order)
-{scenes_desc}
-
-# TASK
-Group scenes by voice phase. Each phase contains 1+ scenes whose stories match the phase's voice text.
-
-# RULES
-1. Scenes MUST stay in the original order (sequential).
-2. Each phase's scenes' stories should match the phase's voice text semantically.
-3. If a scene has no matching voice (silent design scene), put its id in `silent_scenes`.
-4. Every scene id must appear EITHER in exactly one phase OR in silent_scenes.
-
-# OUTPUT — strict JSON only, no markdown, no commentary
-{{
-  "mapping": [
-    {{"phase_id": 1, "scenes": ["SCENE-01", "SCENE-02"]}},
-    {{"phase_id": 2, "scenes": ["SCENE-03"]}}
-  ],
-  "silent_scenes": ["SCENE-08"]
-}}
-"""
-
-
-def _call_claude_phase_mapping(
-    phases: list[_Phase], scenes: list[dict[str, Any]]
-) -> tuple[list[list[str]], list[str]]:
-    phases_desc = "\n".join(
-        f"  Phase {p.phase_id} ({p.start:.2f}-{p.end:.2f}s, dur={p.duration:.2f}s): {p.text!r}"
-        for p in phases
-    )
-    scenes_desc = "\n".join(
-        f"  {s['id']}: design_duration={s.get('duration', 0)}s, "
-        f"story={(s.get('story_en') or s.get('story_vi') or '')!r}"
-        for s in scenes
-    )
-    prompt = CLAUDE_PHASE_PROMPT.format(phases_desc=phases_desc, scenes_desc=scenes_desc)
-    raw = _call_claude(prompt)
-    clean = _strip_code_fence(raw)
-    try:
-        data = json.loads(clean)
-    except json.JSONDecodeError as e:
-        log.error(f"Claude returned non-JSON. First 500 chars:\n{clean[:500]}")
-        raise RuntimeError(f"Parse Claude response fail: {e}") from e
-
-    mapping_entries = data.get("mapping", [])
-    by_phase: dict[int, list[str]] = {entry["phase_id"]: list(entry.get("scenes", []))
-                                       for entry in mapping_entries}
-    aligned: list[list[str]] = [by_phase.get(p.phase_id, []) for p in phases]
-    silent = list(data.get("silent_scenes", []))
-    return aligned, silent
-
-
-# --- Scale factor + adjusted durations --------------------------------------
-
-
-def _calc_phase_alloc(phase: _Phase, scene_ids: list[str], scene_durs: list[float]) -> _PhaseAlloc:
-    total_design = sum(scene_durs)
-    if total_design <= 0:
-        scale = 1.0
-        adjusted = list(scene_durs)
+            llm_result["fallback_from_score"] = r.get("score", 0)
+            det_results[idx] = llm_result
     else:
-        scale = phase.duration / total_design
-        adjusted = [d * scale for d in scene_durs]
-    return _PhaseAlloc(
-        phase=phase,
-        scene_ids=scene_ids,
-        original_durations=scene_durs,
-        scale_factor=scale,
-        adjusted_durations=adjusted,
+        log.info("Step 4: No fallback needed, all scenes pass threshold")
+
+    log.info("Step 5: Extract subtitle phrases...")
+    for r in det_results:
+        if r.get("is_silent"):
+            r["subtitle_phrases"] = []
+            continue
+        r["subtitle_phrases"] = extract_subtitle_phrases(
+            whisper_words,
+            r["voice_in"],
+            r["voice_out"],
+        )
+
+    voice_scenes: list[dict] = []
+    for scene, r in zip(scenes, det_results):
+        if scene["id"] != r["id"]:
+            log.error(f"ID mismatch: scene {scene['id']} vs result {r['id']}")
+            continue
+
+        if r.get("is_silent"):
+            duration_adjusted = scene.get("duration", 5)
+        else:
+            duration_adjusted = r["voice_out"] - r["voice_in"]
+
+        entry = {
+            "id": scene["id"],
+            "voice_in": r.get("voice_in"),
+            "voice_out": r.get("voice_out"),
+            "duration_original": scene.get("duration", 5),
+            "duration_adjusted": round(duration_adjusted, 2),
+            "is_silent": r.get("is_silent", False),
+            "method": r.get("method"),
+            "score": r.get("score"),
+            "matched_text": r.get("matched_text"),
+            "subtitle_phrases": r.get("subtitle_phrases", []),
+        }
+        if r.get("warning"):
+            entry["warning"] = r["warning"]
+        if r.get("reasoning"):
+            entry["reasoning"] = r["reasoning"]
+        if "fallback_from_score" in r:
+            entry["fallback_from_score"] = r["fallback_from_score"]
+        voice_scenes.append(entry)
+
+    final_stats = calculate_stats(det_results)
+    final_stats["llm_fallback_count"] = sum(
+        1 for r in det_results if (r.get("method") or "").startswith("llm")
     )
 
+    voice_mapping = {
+        "version": "4.0",
+        "generated_at": datetime.now().isoformat(),
+        "voice_files": [vf.to_dict() for vf in voice_files],
+        "total_voice_duration": round(total_duration, 2),
+        "scenes": voice_scenes,
+        "stats": final_stats,
+    }
 
-def _scale_warning(scale: float, phase_id: int) -> str | None:
-    if scale < SCALE_WARN_LOW:
-        return f"Phase {phase_id}: scale {scale:.2f} < {SCALE_WARN_LOW} (voice quá ngắn so với design)"
-    if scale > SCALE_WARN_HIGH:
-        return f"Phase {phase_id}: scale {scale:.2f} > {SCALE_WARN_HIGH} (voice quá dài so với design)"
-    return None
+    output_path = output_dir / "voice_mapping.json"
+    if output_path.exists():
+        backup_path = output_path.with_suffix(".json.v3.bak")
+        shutil.copy(output_path, backup_path)
+        log.info(f"Backed up old voice_mapping -> {backup_path.name}")
+
+    output_path.write_text(
+        json.dumps(voice_mapping, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    # Save whisper words alongside so the review dialog can call realign helpers
+    # without re-running Whisper.
+    words_path = output_dir / "whisper_words.json"
+    words_path.write_text(
+        json.dumps(whisper_words, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    log.info(f"Saved {output_path} + {words_path.name}")
+    log.info(f"Final stats: {final_stats}")
+
+    return voice_mapping
 
 
-# --- Subtitle phrase extraction ---------------------------------------------
+def extract_subtitle_phrases(
+    whisper_words: list[dict],
+    voice_in: float,
+    voice_out: float,
+    max_chars: int = 50,
+) -> list[dict]:
+    """Extract subtitle phrases from words within voice_in/voice_out range."""
+    scene_words = [
+        w for w in whisper_words
+        if voice_in <= w["start"] and w["end"] <= voice_out
+    ]
+    if not scene_words:
+        return []
 
+    phrases: list[dict] = []
+    current: list[dict] = []
+    current_chars = 0
 
-def _extract_subtitle_phrases(
-    segments: list[_Segment], voice_in: float, voice_out: float
-) -> list[SubtitlePhrase]:
-    phrases: list[SubtitlePhrase] = []
-    for seg in segments:
-        if seg.end < voice_in or seg.start > voice_out:
-            continue
-        start = max(seg.start, voice_in)
-        end = min(seg.end, voice_out)
-        if end - start < 0.3:
-            continue
-        text = (seg.text or "").strip()
-        if not text:
-            continue
-        phrases.append(SubtitlePhrase(text=text, start=round(start, 2), end=round(end, 2)))
+    for w in scene_words:
+        word_text = w["word"].strip()
+        new_chars = current_chars + len(word_text) + 1
+        ends_with_punct = bool(word_text) and word_text[-1] in ".,!?;:"
+
+        if new_chars > max_chars and current:
+            phrases.append(_build_phrase(current))
+            current = [w]
+            current_chars = len(word_text) + 1
+        elif ends_with_punct and new_chars > max_chars * 0.6:
+            current.append(w)
+            phrases.append(_build_phrase(current))
+            current = []
+            current_chars = 0
+        else:
+            current.append(w)
+            current_chars = new_chars
+
+    if current:
+        phrases.append(_build_phrase(current))
+
     return phrases
 
 
-# --- Public API -------------------------------------------------------------
-
-
-def align_voice_file(
-    voice_path: Path,
-    scenes: list[dict[str, Any]],
-    work_dir: Path,
-    project_root: Path,
-    whisper_model: str = "base",
-    language: str = "en",
-    silence_threshold: float = DEFAULT_SILENCE_THRESHOLD,
-) -> AlignResult:
-    """Run the voice-first alignment pipeline for one voice file.
-
-    Returns `AlignResult(voice_file, silent_scenes, warnings)`:
-      - voice_file (schema v3) carries `phases` + per-scene `duration_*`/`scale_factor`/`phase_id`.
-      - silent_scenes: ids Claude marked as silent for THIS voice file.
-      - warnings: extreme-scale strings (out of [0.5, 1.5]).
-    """
-    voice_path = Path(voice_path)
-    work_dir = Path(work_dir)
-    project_root = Path(project_root)
-
-    # 1. Whisper
-    whisper_dir = work_dir / "whisper"
-    whisper_result = run_whisper(voice_path, whisper_dir, whisper_model, language)
-    segments = _parse_segments(whisper_result)
-    voice_duration = max((s.end for s in segments), default=0.0)
-    full_transcript = " ".join(s.text.strip() for s in segments).strip()
-
-    # 2. Phase grouping
-    phases = group_segments_into_phases(segments, silence_threshold)
-    if not phases:
-        log.warning("Whisper returned no segments — empty VoiceFile")
-        return AlignResult(
-            voice_file=VoiceFile(
-                file=_rel(voice_path, project_root),
-                duration=voice_duration,
-                transcript=full_transcript,
-                phases=[],
-                scenes=[],
-            ),
-            silent_scenes=[],
-            warnings=[],
-        )
-
-    # 3. Claude maps phases → scene groups
-    phase_to_scene_ids, silent_scene_ids = _call_claude_phase_mapping(phases, scenes)
-
-    # 4. Per phase: scale factor + adjusted durations
-    scenes_by_id = {s["id"]: s for s in scenes}
-    voice_assignments: list[SceneVoiceAssignment] = []
-    phase_metas: list[VoicePhaseMeta] = []
-    warnings: list[str] = []
-
-    for phase, scene_ids in zip(phases, phase_to_scene_ids):
-        if not scene_ids:
-            continue
-        # Drop unknown scene ids (Claude hallucination guard).
-        valid_ids = [sid for sid in scene_ids if sid in scenes_by_id]
-        if not valid_ids:
-            log.warning(f"Phase {phase.phase_id}: no valid scene ids in {scene_ids}")
-            continue
-
-        durs: list[float] = []
-        for sid in valid_ids:
-            scene = scenes_by_id[sid]
-            if "duration" not in scene:
-                raise KeyError(
-                    f"Scene {sid} dict missing 'duration' key. "
-                    f"Available keys: {list(scene.keys())}. "
-                    "Caller must include scene.duration when building scenes list."
-                )
-            durs.append(float(scene["duration"]))
-        alloc = _calc_phase_alloc(phase, valid_ids, durs)
-
-        warn = _scale_warning(alloc.scale_factor, phase.phase_id)
-        if warn:
-            warnings.append(warn)
-            log.warning(warn)
-
-        phase_metas.append(
-            VoicePhaseMeta(
-                phase_id=phase.phase_id,
-                start=round(phase.start, 2),
-                end=round(phase.end, 2),
-                duration=round(phase.duration, 2),
-                scenes=valid_ids,
-                scale_factor=round(alloc.scale_factor, 3),
-                text=phase.text,
-            )
-        )
-
-        cursor = phase.start
-        for sid, d_orig, d_adj in zip(valid_ids, alloc.original_durations, alloc.adjusted_durations):
-            voice_in = round(cursor, 2)
-            voice_out = round(cursor + d_adj, 2)
-            cursor = voice_out
-            phrases = _extract_subtitle_phrases(phase.segments, voice_in, voice_out)
-            voice_assignments.append(
-                SceneVoiceAssignment(
-                    id=sid,
-                    voice_in=voice_in,
-                    voice_out=voice_out,
-                    duration_original=round(d_orig, 2),
-                    duration_adjusted=round(d_adj, 2),
-                    scale_factor=round(alloc.scale_factor, 3),
-                    phase_id=phase.phase_id,
-                    confidence=0.92,
-                    method="whisper_claude",
-                    subtitle_phrases=phrases,
-                )
-            )
-
-    if warnings:
-        log.warning(f"{len(warnings)} extreme-scale warnings (see review dialog)")
-
-    vf = VoiceFile(
-        file=_rel(voice_path, project_root),
-        duration=round(voice_duration, 2),
-        transcript=full_transcript,
-        phases=phase_metas,
-        scenes=voice_assignments,
-    )
-    return AlignResult(voice_file=vf, silent_scenes=silent_scene_ids, warnings=warnings)
-
-
-def _rel(voice_path: Path, project_root: Path) -> str:
-    try:
-        rel = voice_path.resolve().relative_to(project_root.resolve())
-        return str(rel).replace("\\", "/")
-    except ValueError:
-        return str(voice_path)
+def _build_phrase(words: list[dict]) -> dict:
+    return {
+        "text": " ".join(w["word"].strip() for w in words),
+        "start": round(words[0]["start"], 2),
+        "end": round(words[-1]["end"], 2),
+        "words": [
+            {
+                "word": w["word"].strip(),
+                "start": round(w["start"], 3),
+                "end": round(w["end"], 3),
+            }
+            for w in words
+        ],
+    }
