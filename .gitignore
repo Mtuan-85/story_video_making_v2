@@ -52,6 +52,7 @@ test_run/voice/*.wav
 test_run/voice/*.m4a
 test_run/bgm/*.mp3
 test_run/renders/
+test_run/renders_v2/
 test_run/.tmp_assemble/
 test_run/.tmp/
 test_run/temp/
@@ -59,8 +60,35 @@ test_run/thumbnails/
 test_run/state.json
 test_run/state.json.bak.*
 test_run/voice_mapping.json
+test_run/voice_mapping.json.*.bak
+test_run/voice/
+test_run/whisper_words.json
 test_run/final.mp4
+test_run/final_v2.mp4
+test_run/final.ass
 test_run/preview.mp4
+
+# test_live runtime outputs (regenerated per run)
+test_live/sources/
+test_live/voice/*.mp3
+test_live/voice/*.wav
+test_live/voice/*.m4a
+test_live/bgm/
+test_live/renders/
+test_live/renders_v6/
+test_live/renders_override/
+test_live/temp/
+test_live/thumbnails/
+test_live/state.json
+test_live/state.json.bak.*
+test_live/voice_mapping.json
+test_live/voice_mapping.json.*.bak
+test_live/whisper_words.json
+test_live/whisper_words_audit.json
+test_live/final.mp4
+test_live/final_v6.mp4
+test_live/final.ass
+test_live/final_v6.ass
 
 # Standalone test scripts / artifacts
 test_kb*.mp4
