@@ -1,4 +1,10 @@
-"""Composite a single scene clip: visual + voice slice (no subtitles)."""
+"""Composite a single scene clip: visual + voice slice (no subtitles).
+
+Voice-led timeline: each scene's render = voice part (per render_mode) +
+freeze-frame tail for the natural pause to the next scene. The tail keeps
+both visuals and audio aligned with the original whisper timestamps so we
+never have to chop visual content to fit voice.
+"""
 
 from __future__ import annotations
 
@@ -18,6 +24,19 @@ _STATIC_VISUAL_TYPES = {"image_grok"}
 _STATIC_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp"}
 
 
+def _voice_part_duration(voice_scene: dict, voice_dur: float, design_dur: float) -> float:
+    """Duration of the voice section (before any freeze-pause tail)."""
+    if voice_scene.get("is_silent"):
+        return design_dur
+    mode = voice_scene.get("render_mode") or "voice"
+    if mode == "voice":
+        return voice_dur
+    if mode == "design":
+        return design_dur
+    # custom
+    return float(voice_scene.get("custom_duration") or design_dur)
+
+
 def composite_scene(
     scene: dict,                 # scenes.json scene dict (id, visual_type, effect, duration)
     voice_scene: dict,           # voice_mapping scene dict
@@ -31,35 +50,37 @@ def composite_scene(
 ) -> Path:
     """Render a single scene clip (visual + audio, no subtitles).
 
-    Output is `duration_adjusted` long, h264 + aac, sized to (width, height).
+    Total clip duration = voice_part_dur + freeze_pause_after. The visual
+    is fitted to voice_part_dur, then a clone-frame tpad freezes the last
+    frame for the freeze pause; audio is padded with apad to match.
     """
     visual_path = Path(visual_path)
     output_path = Path(output_path)
     project_root = Path(project_root)
 
-    duration_adjusted = float(voice_scene["duration_adjusted"])
     duration_design = float(voice_scene["duration_original"])
-    render_duration = float(voice_scene.get("render_duration") or duration_adjusted)
+    is_silent = bool(voice_scene.get("is_silent"))
+    if is_silent:
+        voice_in = 0.0
+        voice_out = 0.0
+        voice_dur = 0.0
+    else:
+        voice_in = float(voice_scene["voice_in"])
+        voice_out = float(voice_scene["voice_out"])
+        voice_dur = max(0.0, voice_out - voice_in)
+
+    voice_part_dur = _voice_part_duration(voice_scene, voice_dur, duration_design)
+    freeze_pause = max(0.0, float(voice_scene.get("freeze_pause_after") or 0.0))
+    total_render_dur = voice_part_dur + freeze_pause
+
     visual_type = scene["visual_type"]
     effect = scene.get("effect", "no_effect") or "no_effect"
 
     log.info(
         f"composite {scene['id']}: visual={visual_type} effect={effect} "
-        f"design={duration_design}s adjusted={duration_adjusted}s "
-        f"render={render_duration}s mode={voice_scene.get('render_mode', 'voice')}"
-    )
-
-    # The visual is fitted to render_duration (what actually gets played);
-    # ratio used by ken-burns/zoom kept against design so motion still feels
-    # designed.
-    visual_filter = build_visual_filter_with_fit(
-        visual_type=visual_type,
-        duration_design=duration_design,
-        duration_adjusted=render_duration,
-        effect=effect,
-        width=width,
-        height=height,
-        fps=fps,
+        f"design={duration_design}s voice_part={voice_part_dur:.2f}s "
+        f"freeze_pause={freeze_pause:.2f}s total={total_render_dur:.2f}s "
+        f"mode={voice_scene.get('render_mode', 'voice')}"
     )
 
     is_static = (
@@ -71,27 +92,27 @@ def composite_scene(
     else:
         visual_input = ["-i", str(visual_path)]
 
-    # Re-fit the visual filter with the actual source kind so slideshow .mp4
-    # routes through the video pipeline (setpts/tpad + optional zoompan tail)
-    # instead of the still-image zoompan path.
+    # Visual is fitted to the voice part only; tpad below freezes the last
+    # frame for the freeze pause without retiming the motion.
     visual_filter = build_visual_filter_with_fit(
         visual_type=visual_type,
         duration_design=duration_design,
-        duration_adjusted=render_duration,
+        duration_adjusted=voice_part_dur,
         effect=effect,
         width=width,
         height=height,
         fps=fps,
         source_is_video=not is_static,
     )
+    if freeze_pause > 0:
+        visual_filter = (
+            f"{visual_filter},tpad=stop_mode=clone:stop_duration={freeze_pause:.3f}"
+        )
 
     cleanup_files: list[Path] = []
-    if voice_scene.get("is_silent"):
-        audio_input, audio_filter = get_silent_audio_args(render_duration)
+    if is_silent:
+        audio_input, audio_filter = get_silent_audio_args(total_render_dur)
     else:
-        voice_in = float(voice_scene["voice_in"])
-        voice_out = float(voice_scene["voice_out"])
-        voice_dur = max(0.0, voice_out - voice_in)
         audio_input, audio_filter, concat_list = get_voice_slice_args(
             voice_files=voice_files,
             voice_in=voice_in,
@@ -99,14 +120,16 @@ def composite_scene(
             project_root=project_root,
         )
         cleanup_files.append(concat_list)
-        # Pad silence at the tail when the user wants a longer render than
-        # the voice actually covers (design / custom modes).
-        if render_duration > voice_dur + 0.01:
-            pad_dur = render_duration - voice_dur
-            audio_filter = f"{audio_filter},apad=pad_dur={pad_dur:.3f}"
+        # Pad silence for (a) extending past voice in design/custom mode and
+        # (b) the freeze-frame pause.
+        extra_silence = freeze_pause
+        if voice_part_dur > voice_dur + 0.01:
+            extra_silence += voice_part_dur - voice_dur
+        if extra_silence > 0.001:
+            audio_filter = f"{audio_filter},apad=pad_dur={extra_silence:.3f}"
             log.info(
-                f"  audio pad: voice={voice_dur:.2f}s render={render_duration:.2f}s "
-                f"pad +{pad_dur:.2f}s"
+                f"  audio pad: voice={voice_dur:.2f}s pad +{extra_silence:.2f}s "
+                f"(freeze={freeze_pause:.2f}s)"
             )
 
     filter_complex = (
@@ -123,7 +146,7 @@ def composite_scene(
         "-filter_complex", filter_complex,
         "-map", "[v]",
         "-map", "[a]",
-        "-t", f"{render_duration:.3f}",
+        "-t", f"{total_render_dur:.3f}",
         "-c:v", "libx264",
         "-preset", "medium",
         "-crf", "23",

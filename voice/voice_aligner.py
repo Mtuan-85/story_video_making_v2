@@ -153,6 +153,8 @@ async def align_voice_to_scenes(
             entry["fallback_from_score"] = r["fallback_from_score"]
         voice_scenes.append(entry)
 
+    voice_scenes = add_freeze_pauses(voice_scenes)
+
     final_stats = calculate_stats(det_results)
     final_stats["llm_fallback_count"] = sum(
         1 for r in det_results if (r.get("method") or "").startswith("llm")
@@ -188,6 +190,35 @@ async def align_voice_to_scenes(
     log.info(f"Final stats: {final_stats}")
 
     return voice_mapping
+
+
+def add_freeze_pauses(voice_scenes: list[dict]) -> list[dict]:
+    """Set ``freeze_pause_after`` for each scene = gap to next non-silent voice_in.
+
+    Voice-led timeline (Sprint 3 final): each rendered scene = voice part +
+    freeze-frame for the natural pause to the next scene. Silent scenes and
+    the last non-silent scene get 0 (no freeze tail). Mutates and returns the
+    list for ergonomics.
+    """
+    n = len(voice_scenes)
+    for i, vs in enumerate(voice_scenes):
+        if vs.get("is_silent"):
+            vs["freeze_pause_after"] = 0.0
+            continue
+
+        next_voice_in = None
+        for j in range(i + 1, n):
+            nxt = voice_scenes[j]
+            if not nxt.get("is_silent") and nxt.get("voice_in") is not None:
+                next_voice_in = nxt["voice_in"]
+                break
+
+        if next_voice_in is None:
+            vs["freeze_pause_after"] = 0.0
+        else:
+            pause = next_voice_in - (vs.get("voice_out") or 0)
+            vs["freeze_pause_after"] = round(max(0.0, pause), 3)
+    return voice_scenes
 
 
 def extract_subtitle_phrases(

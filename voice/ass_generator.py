@@ -74,17 +74,22 @@ def generate_final_ass(
     cursor_ms = 0  # cumulative position in final video
 
     for vs in voice_mapping.get("scenes", []):
-        # Render duration override: subtitle timing must match what is on screen.
-        scene_dur_s = vs.get("render_duration") or vs.get("duration_adjusted", 0)
-        scene_dur_ms = int(round(float(scene_dur_s) * 1000))
+        # voice_part = the duration the voice (or silent placeholder) occupies.
+        # freeze_pause = silent freeze-frame tail after the voice.
+        # Subtitle events only fire during voice_part — freeze pause is silent.
+        voice_part_s = float(
+            vs.get("render_duration") or vs.get("duration_adjusted", 0) or 0
+        )
+        freeze_pause_s = float(vs.get("freeze_pause_after") or 0)
+        scene_total_ms = int(round((voice_part_s + freeze_pause_s) * 1000))
 
         if vs.get("is_silent") or not vs.get("subtitle_phrases"):
-            cursor_ms += scene_dur_ms
+            cursor_ms += scene_total_ms
             continue
 
         scene_voice_in = vs.get("voice_in")
         if scene_voice_in is None:
-            cursor_ms += scene_dur_ms
+            cursor_ms += scene_total_ms
             continue
 
         for phrase in vs["subtitle_phrases"]:
@@ -109,7 +114,7 @@ def generate_final_ass(
             )
             subs.events.append(event)
 
-        cursor_ms += scene_dur_ms
+        cursor_ms += scene_total_ms
 
     subs.events.sort(key=lambda e: e.start)
 

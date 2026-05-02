@@ -60,6 +60,10 @@ class SceneVoiceAssignment(BaseModel):
     render_mode: RenderMode = "voice"
     render_duration: float | None = None  # populated on save; falls back to duration_adjusted at render time
     custom_duration: float | None = None  # only meaningful when render_mode == "custom"
+    # Sprint 3 final fix: voice-led timeline. Each scene's render is the voice
+    # part + a freeze-frame "pause" equal to the gap between this voice_out and
+    # the next non-silent scene's voice_in. Last non-silent scene → 0.
+    freeze_pause_after: float = Field(default=0.0, ge=0.0)
 
 
 class VoiceFileMeta(BaseModel):

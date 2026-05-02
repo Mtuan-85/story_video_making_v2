@@ -35,13 +35,15 @@ def build_zoom_filter(
     height: int,
     fps: int = FPS,
 ) -> str:
-    """Build zoompan filter for a still image (or pre-rendered frame stream).
+    """Build a smooth zoompan filter for a still image (used with `-loop 1`).
 
-    Linear interpolation over the OUTPUT frame counter `on` so the zoom is
-    smooth regardless of how many input frames are emitted by the loop. We
-    also force `d=1` so each input frame produces exactly one output frame —
-    avoids the multi-output-per-input mode where the `zoom` accumulator
-    drifts and frames jitter.
+    Anti-jitter strategy:
+      1. Pre-scale the source 4x via lanczos so zoompan has sub-pixel headroom
+         and rounding produces less visible shake.
+      2. Wrap x/y in trunc() to eliminate sub-pixel drift between frames.
+      3. d=total_frames — `-loop 1` emits exactly one input frame; zoompan
+         must extend that single input across every output frame, otherwise
+         the zoom accumulator resets each emitted frame and the motion stops.
     """
     if effect == "no_effect":
         return (
@@ -50,14 +52,14 @@ def build_zoom_filter(
         )
 
     total_frames = max(1, int(round(duration_sec * fps)))
+    upscale_w = width * 4
+    upscale_h = height * 4
     zoom_target = 1.0 + ZOOM_RANGE  # 1.2
     span = float(ZOOM_RANGE)
 
     if effect == "zoom_in":
-        # 1.0 → 1.2 over total_frames
         z_expr = f"min(1.0+{span:.4f}*on/{total_frames},{zoom_target:.4f})"
     elif effect == "zoom_out":
-        # 1.2 → 1.0 over total_frames
         z_expr = f"max({zoom_target:.4f}-{span:.4f}*on/{total_frames},1.0)"
     else:
         return (
@@ -66,9 +68,11 @@ def build_zoom_filter(
         )
 
     return (
+        f"scale={upscale_w}:{upscale_h}:flags=lanczos,"
         f"zoompan=z='{z_expr}':"
-        f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':"
-        f"d=1:s={width}x{height}:fps={fps},"
+        f"x='trunc(iw/2-(iw/zoom/2))':"
+        f"y='trunc(ih/2-(ih/zoom/2))':"
+        f"d={total_frames}:s={width}x{height}:fps={fps},"
         f"setsar=1"
     )
 
@@ -80,17 +84,18 @@ def _zoom_tail(
     height: int,
     fps: int,
 ) -> str | None:
-    """Return the trailing zoompan filter for a video stream, or None for no_effect.
+    """Trailing zoompan tail for a video stream (or None for no_effect).
 
-    Used by `build_video_filter` to stack a zoom on top of a normalised
-    canvas-sized video stream (after setpts/tpad/scale/pad). Same linear
-    `on/total_frames` expression as `build_zoom_filter` so motion stays
-    continuous.
+    Uses d=1 because the upstream is already a continuous video — one input
+    frame yields one output frame. Same anti-jitter knobs as the still-image
+    path: 4x lanczos pre-scale + trunc() on x/y.
     """
     if effect == "no_effect":
         return None
 
     total_frames = max(1, int(round(duration_sec * fps)))
+    upscale_w = width * 4
+    upscale_h = height * 4
     zoom_target = 1.0 + ZOOM_RANGE
     span = float(ZOOM_RANGE)
 
@@ -102,8 +107,10 @@ def _zoom_tail(
         return None
 
     return (
+        f"scale={upscale_w}:{upscale_h}:flags=lanczos,"
         f"zoompan=z='{z_expr}':"
-        f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':"
+        f"x='trunc(iw/2-(iw/zoom/2))':"
+        f"y='trunc(ih/2-(ih/zoom/2))':"
         f"d=1:s={width}x{height}:fps={fps}"
     )
 
@@ -118,20 +125,38 @@ def build_video_filter(
 ) -> str:
     """Filter chain for a video-source visual (video_grok / slideshow .mp4).
 
-    Pipeline: setpts/tpad to fit duration → scale/pad to canvas → optional
-    zoompan stacked on top. The zoom is applied AFTER the canvas-sized
-    stream so it sees stable 1920x1080 frames.
+    Pipeline:
+      1. setpts speedup OR tpad freeze-extend to fit duration_adjusted.
+         Speedup is capped at 1.2x — anything tighter is unnatural for
+         spoken-narration timing — so a steeper ratio caps the speedup at
+         1.2x then trims the excess.
+      2. scale + pad to canvas.
+      3. fps normalize.
+      4. Optional zoom tail (with its own pre-scale).
     """
     parts: list[str] = []
 
     if abs(duration_adjusted - duration_design) >= TOLERANCE:
         if duration_adjusted < duration_design:
-            pts_factor = duration_adjusted / duration_design
-            log.info(
-                f"video speedup: design={duration_design}s adjusted={duration_adjusted}s "
-                f"setpts={pts_factor:.4f}*PTS"
-            )
-            parts.append(f"setpts={pts_factor:.4f}*PTS")
+            ratio = duration_design / duration_adjusted
+            if ratio <= 1.2:
+                pts_factor = duration_adjusted / duration_design
+                log.info(
+                    f"video speedup: design={duration_design}s "
+                    f"adjusted={duration_adjusted}s "
+                    f"setpts={pts_factor:.4f}*PTS (ratio {ratio:.2f}x)"
+                )
+                parts.append(f"setpts={pts_factor:.4f}*PTS")
+            else:
+                # Cap at 1.2x then trim the leftover.
+                pts_factor_capped = 1.0 / 1.2  # ≈ 0.8333
+                log.info(
+                    f"video speedup capped 1.2x + trim: design={duration_design}s "
+                    f"adjusted={duration_adjusted}s (raw ratio {ratio:.2f}x)"
+                )
+                parts.append(f"setpts={pts_factor_capped:.4f}*PTS")
+                parts.append(f"trim=duration={duration_adjusted:.3f}")
+                parts.append("setpts=PTS-STARTPTS")
         else:
             extra = duration_adjusted - duration_design
             log.info(
