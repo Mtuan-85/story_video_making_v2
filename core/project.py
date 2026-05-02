@@ -81,16 +81,27 @@ class Project:
     def load(cls, project_dir: Path) -> "Project":
         """Load a project from disk. Creates state.json on first run.
 
+        Source-of-truth split:
+          - scenes.json — ORIGINAL design, read-only after first load.
+          - scenes_edited.json — working copy. Auto-cloned on first load,
+            then every save lands here. Use ``reset_to_design()`` to roll back.
+
         Also auto-fills `Scene.effect` on scenes that don't carry one
         (alternates zoom_in/out for static visuals, no_effect for video_grok)
-        and persists scenes.json if any defaults were filled in.
+        and persists scenes_edited.json if any defaults were filled in.
         """
         paths = ProjectPaths(project_dir)
-        if not paths.scenes_json.exists():
-            raise FileNotFoundError(f"Không tìm thấy scenes.json: {paths.scenes_json}")
+        if not paths.scenes_original.exists():
+            raise FileNotFoundError(f"Không tìm thấy scenes.json: {paths.scenes_original}")
 
         log.info(f"Đang load project: {paths.root.name}")
-        scenes_json, raw_scenes_data = cls._load_scenes_with_raw(paths.scenes_json)
+
+        first_load = not paths.scenes_edited.exists()
+        if first_load:
+            log.info("First load: cloning scenes.json → scenes_edited.json")
+            shutil.copy2(paths.scenes_original, paths.scenes_edited)
+
+        scenes_json, raw_scenes_data = cls._load_scenes_with_raw(paths.scenes_edited)
 
         if paths.state_json.exists():
             state = cls._load_state(paths.state_json)
@@ -104,10 +115,23 @@ class Project:
         # Auto-fill effect for any scene whose raw JSON didn't declare one.
         if cls._auto_fill_effects(project, raw_scenes_data):
             project.save_scenes_json()
-            log.info("Auto-filled missing 'effect' fields → scenes.json saved")
+            log.info("Auto-filled missing 'effect' fields → scenes_edited.json saved")
         project._save_state_atomic()
         project._load_voice_mapping_if_present()
         return project
+
+    def reset_to_design(self) -> None:
+        """Restore scenes_edited.json from scenes.json and reload (loses edits)."""
+        if not self.paths.scenes_original.exists():
+            raise FileNotFoundError(
+                f"scenes.json not found: {self.paths.scenes_original}"
+            )
+        shutil.copy2(self.paths.scenes_original, self.paths.scenes_edited)
+        log.info("Reset: scenes_edited.json restored from scenes.json")
+        scenes_json, raw = self._load_scenes_with_raw(self.paths.scenes_edited)
+        self.scenes_json = scenes_json
+        if self._auto_fill_effects(self, raw):
+            self.save_scenes_json()
 
     @staticmethod
     def _load_scenes(path: Path) -> ScenesJson:
@@ -300,8 +324,13 @@ class Project:
         return new_scene
 
     def save_scenes_json(self) -> None:
-        """Atomic write of scenes.json (mirrors state.json pattern)."""
-        target = self.paths.scenes_json
+        """Atomic write of scenes_edited.json (mirrors state.json pattern).
+
+        scenes.json (original design) is never modified by the app — only
+        scenes_edited.json reflects user edits. ``reset_to_design()`` clones
+        the original back over the edited copy.
+        """
+        target = self.paths.scenes_edited
         target.parent.mkdir(parents=True, exist_ok=True)
         tmp = target.with_suffix(".json.tmp")
         tmp.write_text(

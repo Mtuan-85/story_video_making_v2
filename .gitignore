@@ -85,6 +85,7 @@ test_live/voice_mapping.json
 test_live/voice_mapping.json.*.bak
 test_live/whisper_words.json
 test_live/whisper_words_audit.json
+test_live/scenes_edited.json
 test_live/final.mp4
 test_live/final_v6.mp4
 test_live/final.ass
@@ -119,3 +120,6 @@ brave-grok-profile/
 
 # Runtime stats (per-install data)
 runtime/timing_history.jsonl
+
+# Sprint 3 cleanup backups (kept locally, not versioned)
+backup_legacy/

@@ -10,7 +10,7 @@ v4.0 changes vs v3.0:
 
 Produced by `voice/voice_aligner.py::align_voice_to_scenes` (Whisper +
 deterministic_aligner + llm_fallback).
-Consumed by `render/composite_v2.py` + `voice/ass_generator.py`.
+Consumed by `render/composite.py` + `voice/ass_generator.py`.
 """
 
 from __future__ import annotations
@@ -113,5 +113,5 @@ class VoiceMapping(BaseModel):
         return [s.id for s in self.scenes if s.is_silent]
 
     def to_render_dict(self) -> dict[str, Any]:
-        """Plain dict shape consumed by composite_v2 / ass_generator."""
+        """Plain dict shape consumed by composite / ass_generator."""
         return self.model_dump(mode="json")

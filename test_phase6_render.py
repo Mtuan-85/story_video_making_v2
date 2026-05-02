@@ -18,8 +18,8 @@ sys.path.insert(0, str(ROOT))
 
 from core.project import Project
 from core.voice_mapping import VoiceMapping
-from render.assemble_v2 import apply_ass_subtitle, assemble_concat
-from render.composite_v2 import composite_scene_v2
+from render.assemble import apply_ass_subtitle, assemble_concat
+from render.composite import composite_scene
 from voice.ass_generator import generate_final_ass
 
 
@@ -69,7 +69,7 @@ async def main() -> None:
 
         out = renders_dir / f"{scene.id}.mp4"
         await asyncio.to_thread(
-            composite_scene_v2,
+            composite_scene,
             scene=scene_dict,
             voice_scene=vs,
             visual_path=visual_path,

@@ -307,7 +307,7 @@ class _SceneRow(QFrame):
 class VoiceAlignReviewDialog(QDialog):
     """Voice alignment review (v4.0 — Plan D)."""
 
-    saved = pyqtSignal(object)
+    save_requested = pyqtSignal(object)  # emits VoiceMapping after Save
     re_align_requested = pyqtSignal()
 
     def __init__(
@@ -454,5 +454,5 @@ class VoiceAlignReviewDialog(QDialog):
         except Exception as e:
             QMessageBox.critical(self, "Schema validation failed", str(e))
             return
-        self.saved.emit(self.mapping)
+        self.save_requested.emit(self.mapping)
         self.accept()

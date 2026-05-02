@@ -1,6 +1,6 @@
 """Phase 5 — e2e render driver on test_run.
 
-Walks scenes.json + voice_mapping.json + state.json, runs composite_v2 per
+Walks scenes.json + voice_mapping.json + state.json, runs composite per
 scene, concats, applies the ASS file from Phase 4. No worker / qasync — this
 is a synchronous test driver.
 """
@@ -14,8 +14,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from render.assemble_v2 import apply_ass_subtitle, assemble_concat
-from render.composite_v2 import composite_scene_v2
+from render.assemble import apply_ass_subtitle, assemble_concat
+from render.composite import composite_scene
 from render.visual_fit import aspect_to_size
 from voice.ass_generator import generate_final_ass
 
@@ -93,7 +93,7 @@ def main() -> None:
             continue
 
         out = RENDERS_V2 / f"{sid}.mp4"
-        composite_scene_v2(
+        composite_scene(
             scene=scene_for_composite,
             voice_scene=vs,
             visual_path=visual_path,

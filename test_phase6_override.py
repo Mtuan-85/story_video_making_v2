@@ -18,7 +18,7 @@ sys.stdout.reconfigure(encoding="utf-8")  # noqa: S101
 ROOT = Path(__file__).parent
 sys.path.insert(0, str(ROOT))
 
-from render.composite_v2 import composite_scene_v2
+from render.composite import composite_scene
 
 
 def ffprobe_duration(path: Path) -> float:
@@ -49,7 +49,7 @@ async def main() -> None:
     output = project_root / "renders_override" / "SCENE-03.mp4"
     output.parent.mkdir(exist_ok=True)
     await asyncio.to_thread(
-        composite_scene_v2,
+        composite_scene,
         scene=sc03,
         voice_scene=vs03,
         visual_path=visual_path,

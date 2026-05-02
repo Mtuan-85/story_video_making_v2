@@ -1,4 +1,4 @@
-"""Async render pipeline (Plan D): composite_v2 each scene → concat → ASS burn."""
+"""Async render pipeline (Plan D): composite each scene → concat → ASS burn."""
 
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ from PyQt6.QtCore import pyqtSignal
 from core.project import Project
 from core.schema import Scene
 from core.voice_mapping import VoiceMapping
-from render.assemble_v2 import apply_ass_subtitle, assemble_concat
-from render.composite_v2 import composite_scene_v2
+from render.assemble import apply_ass_subtitle, assemble_concat
+from render.composite import composite_scene
 from voice.ass_generator import generate_final_ass
 from workers._async_thread import AsyncTaskWorker
 
@@ -33,7 +33,7 @@ def _resolve_path(project: Project, rel_or_abs: str | None) -> Path | None:
 class RenderWorker(AsyncTaskWorker):
     """Plan D render pipeline.
 
-    Pass 1: composite_v2 per scene (visual + voice slice, NO subtitle).
+    Pass 1: composite per scene (visual + voice slice, NO subtitle).
     Pass 2: assemble_concat → final_raw.mp4.
     Pass 3: generate_final_ass from voice_mapping → final.ass.
     Pass 4: apply_ass_subtitle (libass burn) → final.mp4.
@@ -106,13 +106,13 @@ class RenderWorker(AsyncTaskWorker):
 
             output = renders_dir / f"{scene.id}.mp4"
             self.emit_log(
-                f"[{i}/{total}] composite_v2 {scene.id} "
+                f"[{i}/{total}] composite {scene.id} "
                 f"({scene.visual_type}, "
                 f"{'silent' if voice_scene.get('is_silent') else 'voice'})..."
             )
             try:
                 await asyncio.to_thread(
-                    composite_scene_v2,
+                    composite_scene,
                     scene=scene.model_dump(),
                     voice_scene=voice_scene,
                     visual_path=visual_path,

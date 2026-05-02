@@ -20,6 +20,14 @@ class ProjectPaths:
         return self.root / "scenes.json"
 
     @property
+    def scenes_original(self) -> Path:
+        return self.root / "scenes.json"
+
+    @property
+    def scenes_edited(self) -> Path:
+        return self.root / "scenes_edited.json"
+
+    @property
     def state_json(self) -> Path:
         return self.root / "state.json"
 

@@ -33,7 +33,6 @@ from ui.dialogs.preview_dialog import PreviewDialog
 from ui.dialogs.preview_image import PreviewImageDialog
 from ui.dialogs.preview_video import PreviewVideoDialog
 from ui.dialogs.voice_align_review import VoiceAlignReviewDialog
-from ui.dialogs.voice_import import VoiceImportDialog
 from ui.scene_list import SceneList
 from workers._async_thread import AsyncQThread
 from workers.export_worker import ExportKdenliveWorker
@@ -113,10 +112,19 @@ class MainWindow(QMainWindow):
         action_row.addWidget(self.btn_stop)
 
         action_row.addSpacing(12)
-        self.btn_import_voice = QPushButton("🎤 Import voice")
-        self.btn_import_voice.clicked.connect(self._open_voice_import)
-        self.btn_import_voice.setEnabled(False)
-        action_row.addWidget(self.btn_import_voice)
+        self.btn_process_voice = QPushButton("🎤 Process voice")
+        self.btn_process_voice.setToolTip("Auto-align voice files in voice/ → scenes (Plan D)")
+        self.btn_process_voice.clicked.connect(self._on_process_voice)
+        self.btn_process_voice.setEnabled(False)
+        action_row.addWidget(self.btn_process_voice)
+
+        self.btn_reset_design = QPushButton("🔄 Reset to design")
+        self.btn_reset_design.setToolTip(
+            "Restore scenes from scenes.json (lose all edits in scenes_edited.json)"
+        )
+        self.btn_reset_design.clicked.connect(self._on_reset_to_design)
+        self.btn_reset_design.setEnabled(False)
+        action_row.addWidget(self.btn_reset_design)
 
         self.btn_render = QPushButton("🎬 Render final")
         self.btn_render.clicked.connect(self._start_render)
@@ -212,7 +220,8 @@ class MainWindow(QMainWindow):
             f"{len(self.project.scenes)} scenes — <span style='color:#666'>{self.project.paths.root}</span>"
         )
         self.scene_list.bind_project(self.project)  # emits batch_selection_changed
-        self.btn_import_voice.setEnabled(True)
+        self.btn_process_voice.setEnabled(True)
+        self.btn_reset_design.setEnabled(True)
         self.btn_render.setEnabled(self.project.voice_mapping is not None)
         self.btn_export_kdenlive.setEnabled(True)
         self._append_log(f"✓ Đã load dự án: {meta.title}")
@@ -643,30 +652,33 @@ class MainWindow(QMainWindow):
             self._regen_one_video(scene_id)
 
     # ------------------------------------------------------------------
-    # Voice alignment (Sprint 2)
+    # Voice alignment (Plan D — auto-trigger, no wizard)
     # ------------------------------------------------------------------
 
-    def _open_voice_import(self) -> None:
-        if self.project is None:
-            return
-        scene_ids = [s.id for s in self.project.scenes]
-        default_lang = self.project.scenes_json.meta.language
-        dlg = VoiceImportDialog(self.project.paths.root, scene_ids, default_lang, parent=self)
-        dlg.alignment_requested.connect(self._start_voice_align)
-        dlg.exec()
+    _VOICE_EXTS = (".mp3", ".wav", ".m4a", ".flac")
 
-    def _start_voice_align(
-        self,
-        voice_files: list,
-        assignments: dict,
-        silent_scenes: list,
-        whisper_model: str,
-        language: str,
-    ) -> None:
+    def _scan_voice_dir(self, voice_dir: Path) -> list[Path]:
+        files: list[Path] = []
+        for ext in self._VOICE_EXTS:
+            files.extend(voice_dir.glob(f"*{ext}"))
+        return sorted(files, key=lambda p: p.name.lower())
+
+    def _on_process_voice(self) -> None:
+        """Auto-align voice/ folder against scenes (Plan D, no wizard)."""
         if self.project is None:
             return
         if self._voice_align_worker is not None and self._voice_align_worker.isRunning():
             QMessageBox.information(self, "Đang chạy", "Alignment đang chạy, đợi xong rồi thử lại.")
+            return
+
+        voice_dir = self.project.paths.voice_dir
+        voice_files = self._scan_voice_dir(voice_dir)
+        if not voice_files:
+            QMessageBox.warning(
+                self,
+                "Không có voice",
+                f"Folder voice/ trống. Bỏ file mp3/wav vào:\n{voice_dir}",
+            )
             return
 
         scenes = [
@@ -678,17 +690,20 @@ class MainWindow(QMainWindow):
             }
             for s in self.project.scenes
         ]
+        language = self.project.scenes_json.meta.language
         self._append_log(
-            f"▶ Bắt đầu alignment: {len(voice_files)} file, model={whisper_model}, lang={language}"
+            f"▶ Plan D align: {len(voice_files)} voice file(s), {len(scenes)} scene(s), "
+            f"lang={language}"
         )
+
         worker = VoiceAlignWorker(
             voice_files=voice_files,
-            scene_assignments=assignments,
+            scene_assignments={},  # Plan D auto-matches; legacy field
             scenes=scenes,
             work_dir=self.project.paths.temp_dir,
             project_root=self.project.paths.root,
-            silent_scenes=silent_scenes,
-            whisper_model=whisper_model,
+            silent_scenes=[],  # Plan D detects silent via low score
+            whisper_model="base",
             language=language,
         )
         worker.log_message.connect(self._append_log)
@@ -698,8 +713,29 @@ class MainWindow(QMainWindow):
         worker.all_done.connect(self._on_voice_align_done)
         worker.finished.connect(self._cleanup_voice_align)
         self._voice_align_worker = worker
-        self.btn_import_voice.setEnabled(False)
+        self.btn_process_voice.setEnabled(False)
+        self.btn_process_voice.setText("🎤 Processing...")
         worker.start()
+
+    def _on_reset_to_design(self) -> None:
+        if self.project is None:
+            return
+        reply = QMessageBox.question(
+            self,
+            "Reset to design?",
+            "Tất cả edits trong scenes_edited.json sẽ bị mất. "
+            "Restore từ scenes.json gốc?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            self.project.reset_to_design()
+        except Exception as e:
+            QMessageBox.critical(self, "Reset failed", str(e))
+            return
+        self.scene_list.bind_project(self.project)
+        self._append_log("✓ Reset: scenes_edited.json restored from scenes.json")
 
     def _on_voice_align_done(self, mapping) -> None:
         from core.voice_mapping import VoiceMapping  # local import to keep top tidy
@@ -722,19 +758,36 @@ class MainWindow(QMainWindow):
             }
             for s in self.project.scenes
         ]
+        whisper_words: list = []
         whisper_words_path = self.project.paths.root / "whisper_words.json"
+        if whisper_words_path.exists():
+            try:
+                import json as _json
+                whisper_words = _json.loads(whisper_words_path.read_text(encoding="utf-8"))
+            except Exception as e:
+                log.warning(f"could not load whisper_words.json: {e}")
         dlg = VoiceAlignReviewDialog(
             voice_mapping=mapping,
             scenes_data=scenes_data,
-            whisper_words_path=whisper_words_path if whisper_words_path.exists() else None,
+            whisper_words=whisper_words,
             parent=self,
         )
-        dlg.saved.connect(self._on_voice_mapping_saved)
-        dlg.exec()
+        dlg.save_requested.connect(self._on_voice_mapping_saved)
+        result = dlg.exec()
+        # Re-align all = result code 2 (set by dialog button).
+        if result == 2:
+            self._on_process_voice()
 
     def _on_voice_mapping_saved(self, mapping) -> None:
+        from core.voice_mapping import VoiceMapping
         if self.project is None:
             return
+        if isinstance(mapping, dict):
+            try:
+                mapping = VoiceMapping.model_validate(mapping)
+            except Exception as e:
+                self._append_log(f"❌ voice_mapping schema invalid: {e}")
+                return
         self.project.save_voice_mapping(mapping)
         self._append_log("✓ Đã lưu chỉnh sửa timestamps")
         self.btn_render.setEnabled(True)
@@ -744,7 +797,8 @@ class MainWindow(QMainWindow):
         if worker is not None:
             worker.deleteLater()
         self._voice_align_worker = None
-        self.btn_import_voice.setEnabled(self.project is not None)
+        self.btn_process_voice.setEnabled(self.project is not None)
+        self.btn_process_voice.setText("🎤 Process voice")
         if self.project is not None and self.project.voice_mapping is not None:
             self.btn_render.setEnabled(True)
 
