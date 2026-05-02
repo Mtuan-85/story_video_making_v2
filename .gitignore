@@ -29,7 +29,6 @@ Thumbs.db
 *.log
 logs/
 log/
-BUILD_LOG.md
 
 # OS
 desktop.ini
@@ -40,33 +39,6 @@ config.json
 .env
 .env.local
 *.secret
-
-# Test outputs (do not commit large generated content)
-test_run/sources/*.jpg
-test_run/sources/*.jpeg
-test_run/sources/*.png
-test_run/sources/*.mp4
-test_run/sources/*.mov
-test_run/voice/*.mp3
-test_run/voice/*.wav
-test_run/voice/*.m4a
-test_run/bgm/*.mp3
-test_run/renders/
-test_run/renders_v2/
-test_run/.tmp_assemble/
-test_run/.tmp/
-test_run/temp/
-test_run/thumbnails/
-test_run/state.json
-test_run/state.json.bak.*
-test_run/voice_mapping.json
-test_run/voice_mapping.json.*.bak
-test_run/voice/
-test_run/whisper_words.json
-test_run/final.mp4
-test_run/final_v2.mp4
-test_run/final.ass
-test_run/preview.mp4
 
 # test_live runtime outputs (regenerated per run)
 test_live/sources/
@@ -121,5 +93,3 @@ brave-grok-profile/
 # Runtime stats (per-install data)
 runtime/timing_history.jsonl
 
-# Sprint 3 cleanup backups (kept locally, not versioned)
-backup_legacy/
