@@ -63,9 +63,25 @@ class MainWindow(QMainWindow):
         self._voice_align_worker: VoiceAlignWorker | None = None
         self._render_worker: RenderWorker | None = None
         self._export_worker: ExportKdenliveWorker | None = None
+        self._active_workers: list = []
 
         self._build_ui()
         self._wire_signals()
+
+    # ------------------------------------------------------------------
+    # Worker registry (for Stop All)
+    # ------------------------------------------------------------------
+
+    def _register_worker(self, worker) -> None:
+        if worker is None or worker in self._active_workers:
+            return
+        self._active_workers.append(worker)
+        if hasattr(worker, "finished"):
+            worker.finished.connect(lambda w=worker: self._unregister_worker(w))
+
+    def _unregister_worker(self, worker) -> None:
+        if worker in self._active_workers:
+            self._active_workers.remove(worker)
 
     # ------------------------------------------------------------------
     # UI construction
@@ -111,6 +127,15 @@ class MainWindow(QMainWindow):
         self.btn_stop.clicked.connect(self._stop_batch)
         self.btn_stop.setEnabled(False)
         action_row.addWidget(self.btn_stop)
+
+        self.btn_stop_all = QPushButton("🛑 Stop All")
+        self.btn_stop_all.setToolTip("Dừng tất cả workers đang chạy")
+        self.btn_stop_all.setStyleSheet(
+            "QPushButton { background-color: #c62828; color: white; font-weight: bold; }"
+            "QPushButton:hover { background-color: #b71c1c; }"
+        )
+        self.btn_stop_all.clicked.connect(self._on_stop_all)
+        action_row.addWidget(self.btn_stop_all)
 
         action_row.addSpacing(12)
         self.btn_process_voice = QPushButton("🎤 Process voice")
@@ -337,6 +362,7 @@ class MainWindow(QMainWindow):
         self.btn_stop.setEnabled(True)
         self._append_log("▶ Bắt đầu batch ảnh...")
         self._batch_worker.start()
+        self._register_worker(self._batch_worker)
 
     def _stop_batch(self) -> None:
         if self._batch_worker is not None:
@@ -348,6 +374,47 @@ class MainWindow(QMainWindow):
         if self._render_worker is not None and self._render_worker.isRunning():
             self._render_worker.request_stop()
             self._append_log("⏸ Đang dừng render...")
+
+    def _on_stop_all(self) -> None:
+        active = [w for w in self._active_workers if self._is_worker_running(w)]
+        if not active:
+            QMessageBox.information(
+                self, "Stop All", "Không có worker nào đang chạy."
+            )
+            return
+
+        n = len(active)
+        reply = QMessageBox.question(
+            self,
+            "Stop All?",
+            f"Dừng tất cả {n} worker đang chạy?\n\n"
+            "Lưu ý: Một số tác vụ có thể đã hoàn thành 1 phần (vd download dở dang).",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        log.info(f"Stop All: stopping {n} workers")
+        for worker in list(active):
+            try:
+                if hasattr(worker, "request_stop"):
+                    worker.request_stop()
+                elif hasattr(worker, "stop"):
+                    worker.stop()
+                log.info(f"Sent stop to: {worker.__class__.__name__}")
+            except Exception as e:
+                log.error(f"Failed to stop {worker.__class__.__name__}: {e}")
+        self._append_log(f"🛑 Stop All: signaled {n} worker(s) to stop")
+
+    @staticmethod
+    def _is_worker_running(worker) -> bool:
+        try:
+            if hasattr(worker, "isRunning"):
+                return bool(worker.isRunning())
+        except Exception:
+            return False
+        return True
 
     def _on_scene_started(self, scene_id: str) -> None:
         self.scene_list.refresh_row(scene_id)
@@ -458,6 +525,7 @@ class MainWindow(QMainWindow):
         self.btn_stop.setEnabled(True)
         self._append_log("▶ Bắt đầu batch video (I2V)...")
         self._batch_video_worker.start()
+        self._register_worker(self._batch_video_worker)
 
     def _on_batch_video_done(self, success: int, total: int) -> None:
         self.btn_stop.setEnabled(False)
@@ -508,6 +576,7 @@ class MainWindow(QMainWindow):
         worker.finished.connect(lambda sid=scene_id: self._cleanup_single(sid))
         self._single_workers[scene_id] = worker
         worker.start()
+        self._register_worker(worker)
 
     def _cleanup_single(self, scene_id: str) -> None:
         w = self._single_workers.pop(scene_id, None)
@@ -565,6 +634,7 @@ class MainWindow(QMainWindow):
         worker.finished.connect(lambda sid=scene_id: self._cleanup_single_video(sid))
         self._single_video_workers[scene_id] = worker
         worker.start()
+        self._register_worker(worker)
 
     def _cleanup_single_video(self, scene_id: str) -> None:
         w = self._single_video_workers.pop(scene_id, None)
@@ -738,6 +808,7 @@ class MainWindow(QMainWindow):
         self.btn_process_voice.setEnabled(False)
         self.btn_process_voice.setText("🎤 Processing...")
         worker.start()
+        self._register_worker(worker)
 
     def _on_reset_to_design(self) -> None:
         if self.project is None:
@@ -861,6 +932,7 @@ class MainWindow(QMainWindow):
         self.btn_stop.setEnabled(True)
         self._append_log("▶ Bắt đầu render final...")
         worker.start()
+        self._register_worker(worker)
 
     def _on_render_ok(self, path: str) -> None:
         self._append_log(f"✓ Render xong: {path}")
@@ -914,6 +986,7 @@ class MainWindow(QMainWindow):
         self.btn_export_kdenlive.setEnabled(False)
         self._append_log("▶ Export Kdenlive XML...")
         worker.start()
+        self._register_worker(worker)
 
     def _on_export_done(self, kpath: str, srt: str) -> None:
         msg = f"Đã xuất Kdenlive XML:\n{kpath}"

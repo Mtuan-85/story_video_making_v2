@@ -49,7 +49,6 @@ class GrokImageEngine(_GrokEngineBase):
         prompt: str,
         settings: dict[str, Any],
         ref_image: Path | None = None,
-        image_refs: list[Path] | None = None,
     ) -> Path:
         output_path = settings.get("output_path")
         if not output_path:
@@ -70,15 +69,8 @@ class GrokImageEngine(_GrokEngineBase):
             "style": settings.get("style", ""),
         }
 
-        # image_refs (multi, max 5) takes precedence over single ref_image.
-        # Both → image_to_image flow with the upload step driven by ref/list.
-        refs_list: list[Path] | None = None
-        if image_refs:
-            refs_list = [Path(p) for p in image_refs if p]
-        ref_value: Any = refs_list if refs_list else ref_image
-
-        prompts = [{"id": "single", "text": prompt, "ref": ref_value}]
-        flow_key = "image_to_image" if ref_value else "text_to_image"
+        prompts = [{"id": "single", "text": prompt, "ref": ref_image}]
+        flow_key = "image_to_image" if ref_image else "text_to_image"
 
         runner = FlowRunner(self.page, config, prompts)
         result = await runner.run(flow_key)

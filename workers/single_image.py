@@ -16,6 +16,7 @@ from core.project import Project
 from core.thumbnail import regenerate_thumbnail
 from engines.grok.browser import GrokConnection
 from engines.grok.engine import GrokImageEngine
+from engines.grok.image_ref_engine import GrokImageRefEngine
 from workers._async_thread import AsyncQThread
 from workers._retry import run_with_retry
 from workers.batch_image import _build_image_settings, _now_iso
@@ -65,23 +66,43 @@ class SingleImageWorker(AsyncQThread):
         settings["pick_mode"] = self.pick_mode
         prompt = settings.pop("prompt")
 
-        image_refs: list[Path] | None = None
-        if self.project.get_use_refs_for_image():
-            refs = self.project.get_image_refs()
-            if refs:
-                image_refs = refs
+        use_refs = self.project.get_use_refs_for_image()
+        refs = self.project.get_image_refs() if use_refs else []
+        if use_refs and not refs:
+            self.emit_log(
+                f"{self.scene_id}: Use refs enabled nhưng list trống — fallback text-to-image"
+            )
+            use_refs = False
 
         def _refresh_page() -> None:
             if self.connection is not None and self.connection.page is not None:
                 self.engine.page = self.connection.page
 
-        async def _factory():
-            return await self.engine.gen_image(
-                prompt=prompt,
-                settings=dict(settings),
-                ref_image=None,
-                image_refs=image_refs,
-            )
+        if use_refs:
+            ref_engine = GrokImageRefEngine(self.engine.page)
+            ref_engine.set_stop_event(self.stop_event)
+            aspect = self.project.scenes_json.meta.aspect_ratio
+
+            async def _factory():
+                if self.connection is not None and self.connection.page is not None:
+                    ref_engine.page = self.connection.page
+                result = await ref_engine.gen_image_with_refs(
+                    scene_id=self.scene_id,
+                    prompt=prompt,
+                    ref_paths=refs,
+                    output_path=Path(output_path),
+                    aspect=aspect,
+                )
+                if not result.get("ok"):
+                    raise RuntimeError(
+                        f"image_ref_engine fail: {result.get('reason')}"
+                    )
+                return Path(result["path"])
+        else:
+            async def _factory():
+                return await self.engine.gen_image(
+                    prompt=prompt, settings=dict(settings), ref_image=None,
+                )
 
         try:
             if self.connection is not None:
