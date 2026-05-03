@@ -26,10 +26,18 @@ from engines.grok import selectors as SEL
 # --- Human-like helpers ------------------------------------------------------
 
 _TYPING_DELAYS = {
-    "fast": (10, 25),
+    "fast": (15, 60),
     "human": (40, 110),
     "slow": (80, 200),
 }
+
+# Minimal human-mimic pauses (~+15% over base typing time). Cheap signals
+# only: per-char variance + short punctuation break + rare micro-hiccup.
+# Word/thinking/shift-key pauses intentionally omitted (too costly).
+_PUNC_PAUSE_RANGE = (0.08, 0.15)
+_MICRO_HICCUP_PROB = 0.03
+_MICRO_HICCUP_RANGE = (0.04, 0.10)
+_POST_TYPING_RANGE = (0.10, 0.20)
 
 
 async def human_pause(min_ms: int = 800, max_ms: int = 2500) -> None:
@@ -37,7 +45,7 @@ async def human_pause(min_ms: int = 800, max_ms: int = 2500) -> None:
 
 
 async def human_type(page: Page, selector: str, text: str, speed: str = "fast") -> None:
-    lo, hi = _TYPING_DELAYS.get(speed, _TYPING_DELAYS["fast"])
+    lo_ms, hi_ms = _TYPING_DELAYS.get(speed, _TYPING_DELAYS["fast"])
     # Click once to focus, clear any leftover content, then type via keyboard.
     # page.type re-resolves + re-checks actionability on every keystroke and
     # times out on TipTap; keyboard.type writes to the focused element directly.
@@ -46,17 +54,22 @@ async def human_type(page: Page, selector: str, text: str, speed: str = "fast") 
     await page.keyboard.press("Control+A")
     await page.keyboard.press("Delete")
     await asyncio.sleep(0.1)
-    delay = random.randint(lo, hi)
     # Plain Enter submits the Grok form; split on \n and use Shift+Enter
     # for soft line breaks within the prompt.
     lines = text.split("\n")
-    for i, line in enumerate(lines):
-        if line:
-            await page.keyboard.type(line, delay=delay)
-        if i < len(lines) - 1:
+    for line_idx, line in enumerate(lines):
+        for char in line:
+            # Per-keystroke delay sampled fresh each char → kills the
+            # constant-cadence signal that fixed-delay typing exposes.
+            await page.keyboard.type(char)
+            await asyncio.sleep(random.uniform(lo_ms, hi_ms) / 1000.0)
+            if char in ".,!?;:":
+                await asyncio.sleep(random.uniform(*_PUNC_PAUSE_RANGE))
+            if random.random() < _MICRO_HICCUP_PROB:
+                await asyncio.sleep(random.uniform(*_MICRO_HICCUP_RANGE))
+        if line_idx < len(lines) - 1:
             await page.keyboard.press("Shift+Enter")
-    if random.random() < 0.05:
-        await asyncio.sleep(random.uniform(0.2, 0.6))
+    await asyncio.sleep(random.uniform(*_POST_TYPING_RANGE))
 
 
 async def human_click(locator) -> None:
