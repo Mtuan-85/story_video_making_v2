@@ -29,6 +29,7 @@ from core.project import Project
 from engines.grok import GrokImageEngine, GrokVideoEngine
 from runtime.estimator import Estimator
 from ui.connection_panel import ConnectionPanel
+from ui.refs_panel import RefImagesPanel
 from ui.dialogs.preview_dialog import PreviewDialog
 from ui.dialogs.preview_image import PreviewImageDialog
 from ui.dialogs.preview_video import PreviewVideoDialog
@@ -79,7 +80,7 @@ class MainWindow(QMainWindow):
         self.connection_panel = ConnectionPanel()
         outer.addWidget(self.connection_panel)
 
-        # Project header
+        # Project header + reference-images panel side-by-side
         self.project_box = QGroupBox("Dự án")
         proj_layout = QHBoxLayout(self.project_box)
         self.btn_load = QPushButton("📂 Mở scenes.json")
@@ -89,7 +90,13 @@ class MainWindow(QMainWindow):
         self.project_label = QLabel("(Chưa load dự án)")
         self.project_label.setStyleSheet("color:#666")
         proj_layout.addWidget(self.project_label, 1)
-        outer.addWidget(self.project_box)
+
+        project_row = QHBoxLayout()
+        project_row.addWidget(self.project_box, 2)
+        self.refs_panel = RefImagesPanel()
+        self.refs_panel.refs_changed.connect(self._on_refs_changed)
+        project_row.addWidget(self.refs_panel, 1)
+        outer.addLayout(project_row)
 
         # Scene list + actions
         self.scene_box = QGroupBox("Scenes")
@@ -224,7 +231,20 @@ class MainWindow(QMainWindow):
         self.btn_reset_design.setEnabled(True)
         self.btn_render.setEnabled(self.project.voice_mapping is not None)
         self.btn_export_kdenlive.setEnabled(True)
+
+        self.refs_panel.set_state(
+            paths=[str(p) for p in self.project.get_image_refs()],
+            use_refs=self.project.get_use_refs_for_image(),
+        )
+        self.refs_panel.setEnabled(True)
+
         self._append_log(f"✓ Đã load dự án: {meta.title}")
+
+    def _on_refs_changed(self, paths: list, use_refs: bool) -> None:
+        if self.project is None:
+            return
+        self.project.set_image_refs([str(p) for p in paths])
+        self.project.set_use_refs_for_image(bool(use_refs))
 
     # ------------------------------------------------------------------
     # Connection callbacks

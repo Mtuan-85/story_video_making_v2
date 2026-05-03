@@ -176,8 +176,11 @@ class FlowRunner:
 
         if action == "upload_ref_if_present":
             ref = self._resolved_value(step)
+            if isinstance(ref, (list, tuple)):
+                paths = [Path(p) for p in ref if p]
+                return await actions.upload_ref_if_present(page, ref_paths=paths)
             return await actions.upload_ref_if_present(
-                page, Path(ref) if ref else None
+                page, ref_path=Path(ref) if ref else None
             )
 
         if action == "wait_video_ready":

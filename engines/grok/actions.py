@@ -502,17 +502,34 @@ async def _wait_upload_preview_ready(page: Page, timeout_ms: int = 60000) -> boo
     return False
 
 
-async def upload_ref_if_present(page: Page, ref_path: Path | None) -> dict[str, Any]:
-    """Upload ref image. Skip silently when ref_path is None."""
-    if not ref_path:
+async def upload_ref_if_present(
+    page: Page,
+    ref_path: Path | None = None,
+    ref_paths: list[Path] | None = None,
+) -> dict[str, Any]:
+    """Upload reference image(s). Single (legacy) or multi (image-flow refs).
+
+    ref_paths takes precedence when provided. Capped at 5 (Grok limit).
+    """
+    paths: list[Path] = []
+    if ref_paths:
+        paths = [Path(p) for p in ref_paths if p]
+    elif ref_path:
+        paths = [Path(ref_path)]
+
+    if not paths:
         return {"ok": True, "skipped": True}
 
-    full_path = Path(ref_path)
-    if not full_path.exists():
-        return {"ok": False, "reason": f"ref file không tồn tại: {full_path}"}
+    if len(paths) > 5:
+        log.warning(f"Truncating {len(paths)} refs to max 5")
+        paths = paths[:5]
+
+    missing = [str(p) for p in paths if not p.exists()]
+    if missing:
+        return {"ok": False, "reason": f"ref file(s) không tồn tại: {missing}"}
 
     try:
-        log.info(f"Đang upload ref: {full_path}")
+        log.info(f"Đang upload {len(paths)} ref(s): {[p.name for p in paths]}")
         upload_btn = page.locator(SEL.UPLOAD).first
         await upload_btn.wait_for(state="visible", timeout=10000)
         await upload_btn.click()
@@ -522,15 +539,16 @@ async def upload_ref_if_present(page: Page, ref_path: Path | None) -> dict[str, 
             return {"ok": False, "reason": "không tìm thấy <input type='file'> sau khi click Upload"}
 
         file_input = page.locator(SEL.FILE_INPUT).first
-        await file_input.set_input_files(str(full_path))
+        await file_input.set_input_files([str(p) for p in paths])
 
-        log.info("Đợi preview ref hiện ra...")
-        if not await _wait_upload_preview_ready(page, timeout_ms=60000):
-            log.warning("Không detect preview, fallback sleep 15s")
-            await asyncio.sleep(15.0)
+        log.info(f"Đợi preview ref hiện ra ({len(paths)} files)...")
+        timeout = 60000 + (len(paths) - 1) * 15000
+        if not await _wait_upload_preview_ready(page, timeout_ms=timeout):
+            log.warning(f"Không detect preview, fallback sleep {15 * len(paths)}s")
+            await asyncio.sleep(15.0 * len(paths))
 
-        log.info(f"Đã upload ref: {full_path.name}")
-        return {"ok": True, "path": str(full_path)}
+        log.info(f"Đã upload {len(paths)} ref(s): {[p.name for p in paths]}")
+        return {"ok": True, "paths": [str(p) for p in paths]}
     except Exception as e:
         return {"ok": False, "reason": f"upload_ref: {e}"}
 

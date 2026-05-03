@@ -158,13 +158,22 @@ class BatchImageWorker(AsyncQThread):
         settings["pick_mode"] = self.pick_mode
         prompt = settings.pop("prompt")
 
+        image_refs: list[Path] | None = None
+        if self.project.get_use_refs_for_image():
+            refs = self.project.get_image_refs()
+            if refs:
+                image_refs = refs
+
         def _refresh_page() -> None:
             if self.connection is not None and self.connection.page is not None:
                 self.engine.page = self.connection.page
 
         async def _factory():
             return await self.engine.gen_image(
-                prompt=prompt, settings=dict(settings), ref_image=None,
+                prompt=prompt,
+                settings=dict(settings),
+                ref_image=None,
+                image_refs=image_refs,
             )
 
         t0 = time.monotonic()

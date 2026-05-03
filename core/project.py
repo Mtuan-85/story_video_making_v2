@@ -201,6 +201,8 @@ class Project:
             "version": STATE_VERSION,
             "updated_at": _now_iso(),
             "scenes": {scene.id: _initial_scene_state() for scene in scenes_json.scenes},
+            "image_refs": [],
+            "use_refs_for_image": False,
         }
 
     @staticmethod
@@ -216,6 +218,8 @@ class Project:
             log.warning(f"Bỏ scene cũ khỏi state: '{stale}'")
             scenes.pop(stale)
         state.setdefault("version", STATE_VERSION)
+        state.setdefault("image_refs", [])
+        state.setdefault("use_refs_for_image", False)
         state["updated_at"] = _now_iso()
         return state
 
@@ -338,6 +342,27 @@ class Project:
             encoding="utf-8",
         )
         os.replace(tmp, target)
+
+    # ------------------------------------------------------------------
+    # Project-level image references (multi-ref image gen)
+    # ------------------------------------------------------------------
+
+    MAX_IMAGE_REFS = 5
+
+    def get_image_refs(self) -> list[Path]:
+        return [Path(p) for p in self.state.get("image_refs", []) if p]
+
+    def set_image_refs(self, paths: list[str]) -> None:
+        capped = list(paths)[: self.MAX_IMAGE_REFS]
+        self.state["image_refs"] = capped
+        self._save_state_atomic()
+
+    def get_use_refs_for_image(self) -> bool:
+        return bool(self.state.get("use_refs_for_image", False))
+
+    def set_use_refs_for_image(self, value: bool) -> None:
+        self.state["use_refs_for_image"] = bool(value)
+        self._save_state_atomic()
 
     def reset_scene(self, scene_id: str, key: StateKey | None = None) -> None:
         """Reset image/video/voice for one scene, or the whole scene if key is None."""
