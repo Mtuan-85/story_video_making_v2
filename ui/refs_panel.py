@@ -37,6 +37,8 @@ class RefImagesPanel(QGroupBox):
         super().__init__("Reference Images (Image gen)", parent)
         self._refs: list[str] = []
         self._build_ui()
+        self.setMinimumWidth(280)
+        self.setMaximumWidth(400)
         self.setEnabled(False)
 
     # ------------------------------------------------------------------

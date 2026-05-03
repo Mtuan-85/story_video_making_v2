@@ -50,7 +50,7 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("Story Video Maker")
-        self.resize(1100, 750)
+        self.resize(1400, 850)
 
         self.project: Project | None = None
         self.image_engine: GrokImageEngine | None = None
@@ -80,7 +80,7 @@ class MainWindow(QMainWindow):
         self.connection_panel = ConnectionPanel()
         outer.addWidget(self.connection_panel)
 
-        # Project header + reference-images panel side-by-side
+        # Project header (full-width — RefImagesPanel now lives next to Log)
         self.project_box = QGroupBox("Dự án")
         proj_layout = QHBoxLayout(self.project_box)
         self.btn_load = QPushButton("📂 Mở scenes.json")
@@ -90,13 +90,7 @@ class MainWindow(QMainWindow):
         self.project_label = QLabel("(Chưa load dự án)")
         self.project_label.setStyleSheet("color:#666")
         proj_layout.addWidget(self.project_label, 1)
-
-        project_row = QHBoxLayout()
-        project_row.addWidget(self.project_box, 2)
-        self.refs_panel = RefImagesPanel()
-        self.refs_panel.refs_changed.connect(self._on_refs_changed)
-        project_row.addWidget(self.refs_panel, 1)
-        outer.addLayout(project_row)
+        outer.addWidget(self.project_box)
 
         # Scene list + actions
         self.scene_box = QGroupBox("Scenes")
@@ -157,7 +151,9 @@ class MainWindow(QMainWindow):
         scene_layout.addWidget(self.scene_list, 1)
         outer.addWidget(self.scene_box, 1)
 
-        # Log panel
+        # Log + Reference Images side-by-side
+        log_row = QHBoxLayout()
+
         log_box = QGroupBox("Log")
         log_layout = QVBoxLayout(log_box)
         self.log_view = QTextEdit()
@@ -172,7 +168,13 @@ class MainWindow(QMainWindow):
         log_btns.addWidget(btn_clear_log)
         log_layout.addLayout(log_btns)
 
-        outer.addWidget(log_box)
+        log_row.addWidget(log_box, 7)
+
+        self.refs_panel = RefImagesPanel()
+        self.refs_panel.refs_changed.connect(self._on_refs_changed)
+        log_row.addWidget(self.refs_panel, 3)
+
+        outer.addLayout(log_row)
 
         # Loguru sink → log panel
         log.add(self._sink, level="INFO", format="{time:HH:mm:ss} | {level} | {message}")
