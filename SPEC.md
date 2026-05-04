@@ -330,6 +330,8 @@ class ScenesJson(BaseModel):
 {
   "version": 1,
   "updated_at": "2026-04-27T10:30:00",
+  "image_refs": ["D:/photos/character.png", "D:/photos/style.png"],
+  "use_refs_for_image": true,
   "scenes": {
     "SCENE-01": {
       "image": {
@@ -356,6 +358,10 @@ class ScenesJson(BaseModel):
   }
 }
 ```
+
+**Project-level fields** (added Sprint 3):
+- `image_refs: list[str]` — absolute paths of reference images (max 5) for image-with-refs flow.
+- `use_refs_for_image: bool` — when true, `BatchImageWorker` / `SingleImageWorker` route through `GrokImageRefEngine` (linear single-result) instead of the masonry `GrokImageEngine`. Empty list with flag on → log warning + fallback to masonry.
 
 ### Status enum
 
@@ -450,7 +456,8 @@ class EngineConnection(Protocol):
 ### `engines/grok/` — Implementation
 
 **Phải implement đủ**:
-- `GrokImageEngine` — implements ImageEngine
+- `GrokImageEngine` — implements ImageEngine (masonry + Claude pick, used when no refs)
+- `GrokImageRefEngine` — image-with-refs linear flow (1-5 reference uploads, single result, video-style 30s wait pattern)
 - `GrokVideoEngine` — implements VideoEngine
 - `GrokConnection` — implements EngineConnection
 
@@ -1008,6 +1015,33 @@ QSettings save:
 - Last project loaded
 - Window size + position
 - Default settings (quality, resolution, etc.)
+
+### 12.6. Reference Images panel (Sprint 3)
+
+`ui/refs_panel.py::RefImagesPanel` — sits beside the Log box (7:3 split, 280-400px clamp). Disabled until a project loads.
+
+```
+┌─ Reference Images (Image gen) ────────────┐
+│ ☐ Use refs for image gen                   │
+│ [📁 Browse...] (N/5)                       │
+│ 1. character.png      [✗ Remove]           │
+│ 2. style_ref.png      [✗ Remove]           │
+└────────────────────────────────────────────┘
+```
+
+- Multi-select file dialog; capped at 5 entries
+- Per-row remove button
+- Toggle + list emit `refs_changed(paths, use_refs)` → `MainWindow._on_refs_changed` writes both fields to project state via `set_image_refs` / `set_use_refs_for_image`
+- On project load, `set_state(paths, use_refs)` restores from `state.json`
+
+### 12.7. Stop All button (Sprint 3)
+
+`🛑 Stop All` (red) sits next to `■ Dừng` in the action row. Backed by `_active_workers: list` registry.
+
+- Every `worker.start()` site calls `_register_worker(worker)`. The worker's `finished` signal auto-`_unregister_worker`.
+- Click → confirm dialog with running-worker count → loop `request_stop()` on every entry.
+- Idle click → info dialog "Không có worker nào đang chạy".
+- Wrapped sites: `BatchImageWorker`, `BatchVideoWorker`, `SingleImageWorker`, `SingleVideoWorker` / `SlideshowWorker`, `VoiceAlignWorker`, `RenderWorker`, `ExportKdenliveWorker`.
 
 ---
 

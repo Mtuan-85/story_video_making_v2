@@ -38,10 +38,11 @@ test_run/      # Working example project (scenes.json + state)
 **engines/grok/**
 - `browser.py` — `GrokConnection`: connect_over_cdp + tab select + `reconnect_cdp()` + `kill_and_relaunch_brave()`
 - `selectors.py` — DOM selectors (prefix-match `aria-label`)
-- `actions.py` — 23 atomic async actions (ensure_at, set_mode, fill_prompt, submit_and_wait_ready, click_image, download_to, wait_video_ready, …)
+- `actions.py` — atomic async actions (ensure_at, set_mode, fill_prompt with per-char human typing, submit_and_wait_ready, upload_ref_if_present multi-file, click_image, download_to, wait_image_ready, wait_video_ready, …)
 - `flows.py` — 4 declarative flows: text_to_image / image_to_image / text_to_video / image_to_video
-- `runner.py` — `FlowRunner`: dispatch step dict → action call, supports stop event
-- `engine.py` — `GrokImageEngine`, `GrokVideoEngine` (high-level adapter implementing Protocols)
+- `runner.py` — `FlowRunner`: dispatch step dict → action call, supports stop event + list-vs-scalar ref dispatch
+- `engine.py` — `GrokImageEngine`, `GrokVideoEngine` (masonry + Claude pick)
+- `image_ref_engine.py` — `GrokImageRefEngine`: linear flow for image-with-refs (upload → set_aspect → prompt → submit → 30s fixed wait → poll overlay+download → save). 11 stop checkpoints.
 - `claude_picker.py` — Claude CLI vision-pick best image candidate
 
 **render/**
@@ -63,8 +64,9 @@ test_run/      # Working example project (scenes.json + state)
 - `render_worker.py` — Composite all scenes → assemble final.mp4
 
 **ui/**
-- `main_window.py` — Wires connection + project + scene list + buttons + dialogs + workers
+- `main_window.py` — Wires connection + project + scene list + buttons + dialogs + workers; Stop All button + worker registry
 - `connection_panel.py` — CDP URL + connect/disconnect + tab dropdown
+- `refs_panel.py` — `RefImagesPanel`: multi-ref upload (max 5) for image-with-refs flow, persisted to state.json
 - `scene_list.py` + `scene_row.py` — Per-scene row (status icons, regen/edit, batch checkbox)
 - `dialogs/` — `preview_image`, `preview_video`, `prompt_editor`, `voice_import`, `voice_align_review`
 
@@ -123,10 +125,17 @@ Click 🔌 **Kết nối** → chọn Grok tab → app sẵn sàng.
 📂 **Mở scenes.json** → app đọc + tạo `state.json` + render scene rows.
 
 ### 4. Gen ảnh
-Tick scenes → ➕ **Batch ảnh** → confirm estimate → `BatchImageWorker` chạy:
-- Per scene: `GrokImageEngine.gen_image()` → ảnh download về `sources/picN.jpg`
+Tick scenes → ➕ **Batch ảnh** → confirm estimate → `BatchImageWorker` chạy.
+
+Two engines depending on the **Reference Images panel**:
+- ☐ Use refs OFF → `GrokImageEngine` (4-candidate masonry + Claude pick)
+- ☑ Use refs ON (1-5 ref images uploaded) → `GrokImageRefEngine` (linear single-result flow). Aspect auto-resets to "Original" on Grok after upload — engine re-applies project aspect.
+
+Per scene:
+- `gen_image()` → ảnh download về `sources/picN.jpg`
 - Fail → `run_with_retry`: kill brave + `launch_brave.bat` + wait CDP + reconnect → retry (max 3)
 - Exhaust → popup `[Retry / Skip / Abort]`
+- 🛑 **Stop All** button signals `request_stop` to every active worker (batch image/video, single image/video, voice, render, export)
 
 ### 5. Gen animation (ai cần)
 Tick scenes → 🎞 **Batch animation** → `BatchVideoWorker` dispatch theo `visual_type`:
