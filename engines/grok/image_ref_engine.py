@@ -12,6 +12,7 @@ Stops on the worker's asyncio.Event between every step.
 from __future__ import annotations
 
 import asyncio
+import re
 import time
 from pathlib import Path
 from typing import Any
@@ -92,9 +93,9 @@ class GrokImageRefEngine:
                 return {"ok": False, "reason": f"click_submit: {r.get('reason')}"}
 
             self._check_stop()
-            ready = await self._wait_download_button(timeout_s=wait_timeout_s)
+            ready = await self._wait_image_ready(initial_wait_s=30, timeout_s=120)
             if not ready:
-                return {"ok": False, "reason": "timeout waiting download button"}
+                return {"ok": False, "reason": "timeout waiting image ready"}
 
             self._check_stop()
             r = await self._download_to(output_path)
@@ -124,32 +125,60 @@ class GrokImageRefEngine:
             log.error(f"[{scene_id}] Image-with-refs failed: {e}")
             return {"ok": False, "reason": str(e)}
 
-    async def _wait_download_button(self, timeout_s: int = 60) -> bool:
+    async def _wait_image_ready(
+        self, initial_wait_s: int = 30, timeout_s: int = 120
+    ) -> bool:
+        """Image-with-refs wait — same shape as ``actions.wait_video_ready``.
+
+        Inlined (instead of calling the action) so we can interleave
+        ``_check_stop()`` between every sleep tick — Stop All stays responsive
+        even during the 30s initial wait. The ref-upload preview makes the
+        Download button visible from T=0, so the overlay-gone + download-visible
+        double-check is the only reliable "image truly ready" signal.
+        """
         try:
             await self.page.wait_for_url("**/imagine/post/**", timeout=20000)
         except Exception as e:
             log.warning(f"URL didn't navigate to /post/: {e}")
 
+        log.info(
+            f"_wait_image_ready: initial sleep {initial_wait_s}s with stop checks..."
+        )
+        for _ in range(initial_wait_s):
+            self._check_stop()
+            await asyncio.sleep(1)
+
+        overlay_pattern = re.compile(r"Generating\s+\d+%")
+        poll_budget_s = max(0, timeout_s - initial_wait_s)
+        log.info(f"Polling for image ready (max {poll_budget_s}s)...")
         start = time.time()
-        while (time.time() - start) < timeout_s:
+
+        while (time.time() - start) < poll_budget_s:
             self._check_stop()
             try:
-                btn = self.page.locator(SEL.DOWNLOAD).first
-                if await btn.count() > 0 and await btn.is_visible():
-                    log.info(f"Download button visible after {time.time() - start:.1f}s")
-                    await asyncio.sleep(0.5)
-                    return True
+                overlays = self.page.locator("div").filter(has_text=overlay_pattern)
+                overlay_count = await overlays.count()
             except Exception:
-                pass
+                overlay_count = -1
+
+            if overlay_count == 0:
+                try:
+                    btn = self.page.locator(SEL.DOWNLOAD).first
+                    if await btn.count() > 0 and await btn.is_visible():
+                        log.info("Image ready (overlay gone, download visible)")
+                        await asyncio.sleep(1.0)
+                        return True
+                except Exception:
+                    pass
 
             err = await A.detect_error(self.page)
             if err:
                 log.error(f"Error toast: {err}")
                 return False
 
-            await asyncio.sleep(1.0)
+            await asyncio.sleep(2)
 
-        log.error(f"Timeout waiting download button after {timeout_s}s")
+        log.error(f"Timeout waiting image ready after {timeout_s}s")
         return False
 
     async def _download_to(self, output_path: Path) -> dict[str, Any]:

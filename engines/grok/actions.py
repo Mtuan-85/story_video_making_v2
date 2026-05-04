@@ -558,7 +558,7 @@ async def upload_ref_if_present(
 
 async def wait_video_ready(
     page: Page,
-    initial_wait_s: int = 20,
+    initial_wait_s: int = 30,
     timeout_ms: int = 600000,
 ) -> dict[str, Any]:
     """Wait for video gen: fixed initial sleep + poll until done.
@@ -613,6 +613,53 @@ async def wait_video_ready(
         await asyncio.sleep(2)
 
     return {"ok": False, "reason": "gen_timeout", "last_progress": last_pct}
+
+
+async def wait_image_ready(
+    page: Page,
+    initial_wait_s: int = 30,
+    timeout_ms: int = 120000,
+) -> dict[str, Any]:
+    """Wait for image-with-refs gen: fixed sleep + poll overlay gone + download visible.
+
+    Mirrors ``wait_video_ready``. The fixed sleep matters because the ref-upload
+    preview makes the Download button visible from T=0 — polling immediately
+    would download the ref, not the generated image. The overlay-gone +
+    download-visible double-check is the "image truly ready" signal.
+    """
+    overlay_pattern = re.compile(r"Generating\s+\d+%")
+
+    log.info(f"wait_image_ready: fixed sleep {initial_wait_s}s before polling...")
+    await asyncio.sleep(initial_wait_s)
+
+    log.info("Polling for image gen completion...")
+    start = time.time()
+    poll_budget_ms = max(0, timeout_ms - initial_wait_s * 1000)
+
+    while (time.time() - start) * 1000 < poll_budget_ms:
+        try:
+            overlays = page.locator("div").filter(has_text=overlay_pattern)
+            overlay_count = await overlays.count()
+        except Exception:
+            overlay_count = -1
+
+        if overlay_count == 0:
+            try:
+                btn = page.locator(SEL.DOWNLOAD).first
+                if await btn.count() > 0 and await btn.is_visible():
+                    log.info("Image ready (overlay gone, download button visible)")
+                    await asyncio.sleep(1.0)
+                    return {"ok": True}
+            except Exception:
+                pass
+
+        err = await detect_error(page)
+        if err:
+            return {"ok": False, **err}
+
+        await asyncio.sleep(2)
+
+    return {"ok": False, "reason": "gen_timeout"}
 
 
 # --- Download ----------------------------------------------------------------
