@@ -60,7 +60,7 @@ class Scene(BaseModel):
     effect: EffectType = "no_effect"
     story_vi: str | None = None
     story_en: str | None = None
-    imagePrompt: str = Field(min_length=1)
+    imagePrompt: str | None = None
     videoPrompt: str | None = None
     duration: int = Field(ge=1, le=60)
     emotion: str | None = None

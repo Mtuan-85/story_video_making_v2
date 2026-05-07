@@ -542,10 +542,11 @@ async def upload_ref_if_present(
         await file_input.set_input_files([str(p) for p in paths])
 
         log.info(f"Đợi preview ref hiện ra ({len(paths)} files)...")
-        timeout = 60000 + (len(paths) - 1) * 15000
+        timeout = 30000 + (len(paths) - 1) * 5000
         if not await _wait_upload_preview_ready(page, timeout_ms=timeout):
-            log.warning(f"Không detect preview, fallback sleep {15 * len(paths)}s")
-            await asyncio.sleep(15.0 * len(paths))
+            fallback_s = 30 + (len(paths) - 1) * 5
+            log.warning(f"Không detect preview, fallback sleep {fallback_s}s")
+            await asyncio.sleep(fallback_s)
 
         log.info(f"Đã upload {len(paths)} ref(s): {[p.name for p in paths]}")
         return {"ok": True, "paths": [str(p) for p in paths]}
