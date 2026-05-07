@@ -130,6 +130,52 @@ Run `run.bat`, connect Brave to Grok logged-in tab, load a project, then:
 
 ---
 
+## Session 2026-05-07
+
+### Commits landed on `main` (pushed)
+
+| SHA | Title |
+|---|---|
+| `2cc0167` | UI: ignore wheel events on scene-row + preview-dialog combos |
+| `584cdb3` | core+grok: imagePrompt optional, faster ref-upload timeouts |
+| `55694cf` | test_live: switch fixture to "The Gift of Mimamoru" + drop stale reports |
+| `4c015fa` | chore: drop legacy BUILD_LOG_SPRINT3_FINAL.md, refresh local permissions |
+
+### What was built / fixed today
+
+1. **Combo wheel-event bug** (`ui/scene_row.py`, `ui/dialogs/preview_dialog.py`)
+   - Symptom: scrolling the scene list silently flipped `visual_type` (e.g. `image_grok` → `video_grok` → `slideshow`) and persisted to `scenes_edited.json` because `QComboBox` grabs the wheel event under the cursor by default.
+   - Fix: `NoWheelComboBox(QComboBox)` with `wheelEvent(e): e.ignore()` — applied to `visual_combo` + `effect_combo` in both files.
+   - Click-to-open + arrow-keys still work; only passive hover-scroll is neutered.
+
+2. **Schema + Grok timeouts** (`core/schema.py`, `engines/grok/actions.py`)
+   - `Scene.imagePrompt`: required (`min_length=1`) → `Optional[str]` so video-only scenes (slideshow / video_grok with videoPrompt) validate without dummy text.
+   - `upload_ref_if_present`: base wait 60s→30s, per-extra-ref 15s→5s, fallback sleep mirrors the new schedule (was 15s × N regardless).
+
+3. **Test fixture swap** (`test_live/`)
+   - Replaced `Rainy Cafe` placeholder `scenes.json` with full "The Gift of Mimamoru" project (63 scenes); added `naomi_1_scenes.json` alternate fixture.
+   - Removed `VERIFY_REPORT.md` + `voice/BUG_FIX_VOICE_MAPPING_V2.md` (one-off notes).
+
+4. **Cleanup**: deleted legacy `BUILD_LOG_SPRINT3_FINAL.md` (this file is the active one); refreshed `.claude/settings.local.json` permissions.
+
+### Kdenlive export verified (no code change)
+
+Manual trace of `render/kdenlive_export.py` + dry-run on `test_live/` (63 scenes, 7 video-ready, 63 image-ready, no voice, 2 BGM files):
+
+- **Trigger**: only the "📤 Export Kdenlive XML" button → `_on_export_kdenlive` (main_window.py:958). Output fixed to `<root>/export.kdenlive`. No auto-export elsewhere.
+- **`<producer>` set written**: 63 visuals (mp4 if `video.status==ready`, else jpg from image), `audio_voice` (only `voice_files[0]`), `audio_bgm` (only first sorted file in `bgm/`).
+- **Caveats found** (not fixed today):
+  - Multi-voice projects lose every file after `voice_files[0]`.
+  - `bgm/` second+ files ignored.
+  - Scenes without ready visual silently skipped (only logged).
+  - Effects/transitions/colors not exported (already in SPEC).
+
+### Resume hint
+
+Working tree clean, `origin/main` at `4c015fa`. The Kdenlive caveats above are candidates for the next session if multi-voice / multi-BGM projects matter.
+
+---
+
 ## Known limitations
 
 - All verification across both sessions was static (compile + headless `MainWindow()` instantiation + signature checks). The two real bug classes — (a) single regen with refs producing download spam, (b) ref-image being downloaded instead of generated image — are both unreachable in the new code paths. **Live confirmation still required**, especially Test 1 (the 30s wait fix).
