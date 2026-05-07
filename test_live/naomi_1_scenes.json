@@ -7,8 +7,8 @@
     "language": "en"
   },
   "settings": {
-    "baseStyle": "STYLE: Cozy flat cartoon illustration, children's book style. No harsh outlines, soft edges. Flat shading with one soft shadow layer. Slightly chibi proportions (large head, small body). Subtle paper grain texture. Warm cozy atmosphere. GUIDELINE:                  Palette: soft pastel earth tones, warm yellow background. Subtle shadow under characters for grounding. Children's book illustration aesthetic.",
-    "baseNegative": "NEGATIVE: no harsh outlines, no realistic proportions, no complex shading, no busy background.",
+    "baseStyle": "cozy flat cartoon illustration, children's book style. No harsh outlines, soft edges. Flat shading with one soft shadow layer. Slightly chibi proportions (large head, small body). Subtle paper grain texture. Warm cozy atmosphere. GUIDELINE: Palette: soft pastel earth tones, pinky, green are main color, warm yellow background. Subtle shadow under characters for grounding. Children's book illustration aesthetic style.",
+    "baseNegative": "no harsh outlines, no realistic proportions, no complex shading, no busy background.",
     "topic": "The Gift of Mimamoru",
     "voice_model_id": null,
     "voice_speed": 1.0,
