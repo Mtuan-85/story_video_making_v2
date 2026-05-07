@@ -57,7 +57,10 @@
       "Bash(ffmpeg -y -hide_banner -loglevel error -ss 0.05 -i test_live/renders_v6/SCENE-04.mp4 -frames:v 1 -vf scale=480:-1 test_live/temp/sc03_v2/sc04_first.jpg)",
       "Bash(ffmpeg -y -hide_banner -loglevel error -sseof -0.1 -i test_live/renders_v6/SCENE-05.mp4 -frames:v 1 -vf scale=480:-1 test_live/temp/sc03_v2/sc05_last.jpg)",
       "Bash(ffmpeg -y -hide_banner -loglevel error -ss 0.05 -i test_live/renders_v6/SCENE-05.mp4 -frames:v 1 -vf scale=480:-1 test_live/temp/sc03_v2/sc05_first.jpg)",
-      "Bash(git *)"
+      "Bash(git *)",
+      "Bash(mkdir -p D:/Projects/story_video_making/backup_legacy)",
+      "Bash(cp D:/Projects/story_video_making/render/composite.py D:/Projects/story_video_making/render/assemble.py D:/Projects/story_video_making/render/subtitle_filter.py D:/Projects/story_video_making/render/zoom_effect.py D:/Projects/story_video_making/voice/subtitle_builder.py D:/Projects/story_video_making/ui/dialogs/voice_import.py D:/Projects/story_video_making/backup_legacy/)",
+      "Bash(find . -type d -name __pycache__ -not -path \"./.venv/*\" -not -path \"./voice/.venv/*\" -exec rm -rf {} +)"
     ]
   }
 }
