@@ -35,6 +35,13 @@ VISUAL_TYPES = ["image_grok", "video_grok", "slideshow"]
 EFFECTS = ["zoom_in", "zoom_out", "no_effect"]
 
 
+class NoWheelComboBox(QComboBox):
+    # Ignore wheel events so scrolling the dialog never accidentally
+    # cycles the visual_type / effect selection.
+    def wheelEvent(self, e) -> None:  # type: ignore[override]
+        e.ignore()
+
+
 class PreviewDialog(QDialog):
     """Unified scene preview + edit."""
 
@@ -89,14 +96,14 @@ class PreviewDialog(QDialog):
         # 5. Meta row
         meta = QHBoxLayout()
         meta.addWidget(QLabel("Visual:"))
-        self.visual_combo = QComboBox()
+        self.visual_combo = NoWheelComboBox()
         self.visual_combo.addItems(VISUAL_TYPES)
         self.visual_combo.setCurrentText(self.scene.visual_type)
         meta.addWidget(self.visual_combo)
         meta.addSpacing(12)
 
         meta.addWidget(QLabel("Effect:"))
-        self.effect_combo = QComboBox()
+        self.effect_combo = NoWheelComboBox()
         self.effect_combo.addItems(EFFECTS)
         self.effect_combo.setCurrentText(self.scene.effect or "no_effect")
         meta.addWidget(self.effect_combo)

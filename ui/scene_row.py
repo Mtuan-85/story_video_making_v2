@@ -37,6 +37,13 @@ EFFECT_OPTIONS = ["zoom_in", "zoom_out", "no_effect"]
 THUMB_SIZE = 60
 
 
+class NoWheelComboBox(QComboBox):
+    # Ignore wheel events so scrolling the scene list never accidentally
+    # changes a row's visual_type / effect.
+    def wheelEvent(self, e) -> None:  # type: ignore[override]
+        e.ignore()
+
+
 class SceneRow(QFrame):
     """Single scene row.
 
@@ -114,14 +121,14 @@ class SceneRow(QFrame):
         row.addWidget(self.id_label)
 
         # 4. Visual type dropdown
-        self.visual_combo = QComboBox()
+        self.visual_combo = NoWheelComboBox()
         self.visual_combo.addItems(VISUAL_TYPE_OPTIONS)
         self.visual_combo.setMinimumWidth(120)
         self.visual_combo.currentTextChanged.connect(self._on_visual_changed)
         row.addWidget(self.visual_combo)
 
         # 5. Effect dropdown
-        self.effect_combo = QComboBox()
+        self.effect_combo = NoWheelComboBox()
         self.effect_combo.addItems(EFFECT_OPTIONS)
         self.effect_combo.setMinimumWidth(110)
         self.effect_combo.currentTextChanged.connect(self._on_effect_changed)
