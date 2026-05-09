@@ -148,12 +148,43 @@ async def verify_input_empty(page: Page, timeout: int = 5000) -> dict[str, Any]:
         return {"ok": False, "reason": f"input not empty: {e}"}
 
 
-async def fill_prompt(page: Page, text: str, speed: str = "fast") -> dict[str, Any]:
+async def fill_prompt(
+    page: Page,
+    text: str,
+    speed: str = "fast",
+    fast_mode: bool = False,
+    stop_event: asyncio.Event | None = None,
+) -> dict[str, Any]:
     try:
-        await human_type(page, SEL.PROMPT_INPUT, text, speed=speed)
+        if fast_mode:
+            await _fast_paste_prompt(page, text, stop_event=stop_event)
+        else:
+            await human_type(page, SEL.PROMPT_INPUT, text, speed=speed)
         return {"ok": True}
     except Exception as e:
         return {"ok": False, "reason": f"fill_prompt: {e}"}
+
+
+async def _fast_paste_prompt(
+    page: Page,
+    text: str,
+    stop_event: asyncio.Event | None = None,
+) -> None:
+    await page.locator(SEL.PROMPT_INPUT).first.click()
+    await asyncio.sleep(0.3)
+    await page.keyboard.press("Control+A")
+    await page.keyboard.press("Delete")
+    await asyncio.sleep(0.1)
+    lines = text.split("\n")
+    for i, line in enumerate(lines):
+        if line:
+            await page.keyboard.insert_text(line)
+        if i < len(lines) - 1:
+            await page.keyboard.press("Shift+Enter")
+    for _ in range(5):
+        if stop_event is not None and stop_event.is_set():
+            raise asyncio.CancelledError("stop requested during fast_paste settle")
+        await asyncio.sleep(1)
 
 
 async def click_submit(page: Page) -> dict[str, Any]:

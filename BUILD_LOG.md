@@ -176,6 +176,137 @@ Working tree clean, `origin/main` at `4c015fa`. The Kdenlive caveats above are c
 
 ---
 
+## Session 2026-05-07 (cont.) — Patch A + Patch B (UI + project naming)
+
+User feedback drove this round; spec lives in repo-root `claude_change_edit.md` (6 issues, 4 actionable). Audit of current code first, then 2 patches landed back-to-back. Not committed yet — awaiting live test of the new flow.
+
+### Audit findings (no code change for these)
+
+- **CDP/Brave restart on regen** — false alarm. `kill_and_relaunch_brave` has exactly one call site (`workers/_retry.py:56`), only fires on gen-factory exception. Click → kill is actually first-attempt failure → retry kill. Skipped per user instruction.
+- **`scenes_edited.json` auto-loaded on project open** — already implemented at `core/project.py:99–104`; first-load auto-clones `scenes.json` → `scenes_edited.json`, then reads from edited as source of truth.
+- **Slideshow dispatch** — already implemented; `main_window._regen_one_video` (line 586) routes by `visual_type` field, no `videoPrompt` involvement.
+
+### Patch A — Per-row Gen-lẻ + split Re-gen button
+
+**Goal:** clicking 🖼/🎬 on a scene row should always open an editable prompt + Gen flow, even when the asset hasn't been generated. The unified PreviewDialog gets two action buttons (Gen Image / Gen Animation) instead of one ambiguous Re-gen.
+
+Files changed:
+
+- `ui/scene_row.py` — dropped `preview_image_clicked` / `preview_video_clicked` signals; 🖼 + 🎬 always enabled and route to `edit_clicked`. `_apply_asset` updates tooltip per status; voice button stays disabled.
+- `ui/scene_list.py` — removed the two now-dead signals + their forwarding wires.
+- `ui/dialogs/preview_dialog.py` — replaced `regen_requested` with `gen_image_requested` + `gen_animation_requested`; UI button "🔄 Save & Re-gen" → "🖼 Save & Gen Image" + "🎞 Save & Gen Animation".
+- `ui/main_window.py` — dropped `_show_preview_image` / `_show_preview_video` / `_on_preview_regen` and the `PreviewImageDialog` / `PreviewVideoDialog` imports. `_show_preview_dialog` now wires `gen_image_requested → _regen_one`, `gen_animation_requested → _regen_one_video` (which already auto-dispatches video_grok vs slideshow by `visual_type`).
+- Deleted `ui/dialogs/preview_image.py`, `ui/dialogs/preview_video.py` — orphan after the refactor.
+
+Verification: AST parse + headless import smoke-test pass on all four modified UI modules. No live test yet.
+
+### Patch B — Flexible project file naming + lazy subdir creation
+
+**Goal:** user can select any `<stem>.json` from any folder; companions derived from stem; subfolders created on-demand by writers (no eager `ensure_dirs`).
+
+Files changed:
+
+- `core/paths.py` (rewrite) — `ProjectPaths(scenes_file: Path)` takes a file, derives:
+  - `scenes_json` / `scenes_original` → `<stem>.json`
+  - `scenes_edited` → `<stem>_edited.json`
+  - `state_json` → `<stem>_state.json`
+  - `legacy_state_json` → `state.json` (for one-shot fallback only)
+  Subdirs (sources/voice/bgm/temp/thumbnails/renders), `voice_mapping.json`, `final.mp4` keep fixed names at root. `ensure_dirs()` is a no-op kept for API stability — every writer in repo (`render/*.py`, `workers/*.py`, `core/thumbnail.py`, `engines/grok/actions.py`) already calls `mkdir(parents=True, exist_ok=True)` on its own target (verified via grep).
+- `core/project.py` — `Project.load(scenes_file: Path)` instead of `(project_dir)`. If a directory is passed, falls back to `<dir>/scenes.json` (preserves existing tests/scripts). Legacy state migration: only fires when `stem == "scenes"` AND `<stem>_state.json` doesn't exist AND `state.json` exists in same folder → loads from legacy, writes future state to `<stem>_state.json`. Legacy file kept as backup. **Critical:** migration is gated to stem="scenes" so a new project file in the same folder (e.g. `naomi_1_scenes.json`) does NOT inherit state from the old `scenes.json` project.
+- `ui/main_window.py` — `_load_project()` passes the selected file path directly: `Project.load(scenes_path)`. Dialog caption updated to "Chọn file project (.json)".
+
+Verification (live, against `test_live/` fixture):
+
+1. `Project.load(Path("test_live"))` — legacy folder API → falls back to `scenes.json`, migrates state ✓
+2. `Project.load(Path("test_live/scenes.json"))` — file API, stem="scenes" → migration triggers, loads 63 scenes ✓
+3. `Project.load(Path("test_live/naomi_1_scenes.json"))` — custom stem → first-load clones edited file, fresh state (no inherit) ✓ (63 scenes)
+
+Test artefacts cleaned up; `test_live/` returned to pre-test set (`scenes.json`, `scenes_edited.json`, `state.json`, `naomi_1_scenes.json`).
+
+### Resume hint
+
+Patches A + B uncommitted. Working tree includes:
+
+- Modified: `ui/scene_row.py`, `ui/scene_list.py`, `ui/dialogs/preview_dialog.py`, `ui/main_window.py`, `core/paths.py`, `core/project.py`
+- Deleted: `ui/dialogs/preview_image.py`, `ui/dialogs/preview_video.py`
+- Pre-existing untracked: `claude_change_edit.md` (the spec), `docs/fast_mode_spec.md`, `test_live/assets_to_generate.md`, `test_live/file_rename_map.md`, `test_live/renamed/`, `.claude/settings.local.json` mod, `SPRINT3_FINAL_FIX.md` deletion.
+
+**Open items:**
+
+- Live UI test required: open `test_live/scenes.json` in the running app, click 🖼/🎬 on a row before any asset exists → confirm PreviewDialog opens with empty prompt editable; Save & Gen Image / Animation triggers correct worker; voice button stays disabled.
+- `README.md:71` and `SPEC.md:162-163, 1391` still mention `preview_image` / `preview_video` dialogs — update next session.
+- `claude_change_edit.md` issue #1 (CDP kill on regen) was deferred (root cause is retry on first-attempt failure). If user reports it again with logs, revisit `workers/_retry.py:54-61` to add a CDP health-check before kill.
+
+---
+
+## Session 2026-05-09 — Retry/Cancel popup + Fast Mode
+
+Two patches landed back-to-back, both uncommitted, awaiting live test.
+
+### Patch 1: Retry/Cancel popup simplification
+
+User asked for simpler popup logic when a scene's gen exhausts the 3-attempt retry. Spec ratified: only Retry / Cancel (drop Skip / Abort).
+
+Files changed:
+
+- `ui/main_window.py:_ask_user_decision` — popup giờ 2 buttons (Retry / Cancel). Text giải thích rõ "Retry → +3 attempts; fail tiếp dừng hẳn".
+- `workers/batch_image.py:_gen_one` — bỏ nhánh `skip`. `cancel` → `_abort=True` + `_mark_failed("user_cancel")`. `retry` → run_with_retry vòng 2 (3 attempts); fail tiếp → `_abort=True` + `_mark_failed("retry_exhausted")`. Defensive abort cho path `outcome.ok=False` không qua popup.
+- `workers/batch_video.py:_gen_one_grok` — đối xứng batch_image, warn_code=`grok_no_video`.
+
+Rationale (user): scene fail = browser/network/Grok DOM issue → retry flow đã handle bằng kill+relaunch Brave; nếu retry vòng 2 vẫn fail thì user muốn dừng cả batch để gen lại sau (cần full chain done, không skip rồi tiếp).
+
+### Patch 2: Fast Mode (per-scene paste-prompt re-gen)
+
+Spec rewritten as `docs/fast_mode_spec.md` v2 (simplified from v1). Drops batch + scene_row checkbox; only PreviewDialog + single workers. 8 file touched.
+
+Key design points:
+- Transient (no persist).
+- `fast_mode=True` → `actions._fast_paste_prompt` thay `human_type`: paste line-by-line via `keyboard.insert_text` + Shift+Enter, sleep 5s with stop check (5×1s).
+- Stop responsiveness: plumbed `stop_event: asyncio.Event | None` qua `actions.fill_prompt` → `_fast_paste_prompt`. Engines stash stop_event in config; runner reads from config; ref_engine passes `self._stop_event` directly.
+- Signal payload: `gen_image_requested(str, bool)` / `gen_animation_requested(str, bool)`. No sync signal needed.
+- Slideshow branch ignores fast_mode (no Grok involvement).
+
+Files changed:
+
+1. `engines/grok/actions.py` — `fill_prompt(... fast_mode=False, stop_event=None)`; new helper `_fast_paste_prompt(page, text, stop_event)`.
+2. `engines/grok/runner.py` — `fill_prompt` action reads `config["fast_mode"]` + `config["stop_event"]`.
+3. `engines/grok/engine.py` — `GrokImageEngine.gen_image` + `GrokVideoEngine.gen_video` pump `settings["fast_mode"]` + `settings["stop_event"]` into config.
+4. `engines/grok/image_ref_engine.py` — `gen_image_with_refs(... fast_mode=False)` passes both `fast_mode` and `self._stop_event` into `A.fill_prompt`.
+5. `ui/dialogs/preview_dialog.py` — added `QCheckBox("⚡ Fast")` in btns row; signal payload extended to `(str, bool)`; `_on_gen_image` / `_on_gen_animation` emit checkbox state.
+6. `ui/main_window.py` — `_regen_one` + `_regen_one_video` accept `fast_mode: bool = False`, pass to worker constructors. PyQt auto-binds the bool from signal payload.
+7. `workers/single_image.py` — `__init__` accepts `fast_mode`, sets `settings["fast_mode"]` + `settings["stop_event"]`, passes `fast_mode` to `gen_image_with_refs`.
+8. `workers/single_video.py` — same shape; `settings["fast_mode"]` + `settings["stop_event"]` before `gen_video`.
+
+### Static verification (run today)
+
+- `py_compile` clean on 8 touched files.
+- Signature checks: `actions.fill_prompt` has `fast_mode` + `stop_event`; `_fast_paste_prompt` exists; both PyQt signals have `(QString, bool)` payload; both single workers accept `fast_mode`.
+
+### Live test checklist (Fast Mode)
+
+- [ ] Mở dialog 1 scene → tick ⚡ → Gen Image (no refs) → log show paste behavior, ảnh ra OK.
+- [ ] Tick ⚡ → Gen Image (có refs) → đi qua `image_ref_engine` cùng hành vi.
+- [ ] Tick ⚡ → Gen Video (video_grok) → OK; (slideshow) → fast_mode bị bỏ qua, slideshow render bình thường.
+- [ ] Untick → human_type chạy như cũ, không regression.
+- [ ] Mở lại dialog → checkbox reset OFF (transient).
+- [ ] Bấm Stop trong lúc 5s settle cuối → worker thoát ≤ 1s.
+- [ ] Batch ảnh / batch video → log không thấy `fast paste`, vẫn human_type.
+
+### Live test checklist (Retry/Cancel)
+
+- [ ] Force fail 1 scene 3 lần (vd ngắt mạng) → popup hiện ra → Cancel → batch dừng, scene marked `user_cancel`.
+- [ ] Force fail 1 scene 3 lần → Retry → +3 attempts → nếu thành công: tiếp scene kế; nếu fail: batch dừng, scene marked `retry_exhausted`.
+
+### Resume hint
+
+Working tree includes:
+- Uncommitted: `BUILD_LOG.md`, `ui/main_window.py`, `workers/batch_image.py`, `workers/batch_video.py`, `engines/grok/actions.py`, `engines/grok/runner.py`, `engines/grok/engine.py`, `engines/grok/image_ref_engine.py`, `ui/dialogs/preview_dialog.py`, `workers/single_image.py`, `workers/single_video.py`, `docs/fast_mode_spec.md` (v2 rewrite).
+- Patch A/B từ session 2026-05-07 vẫn chưa commit (xem hint phía trên).
+
+Khi nào live test xong, gom 3 patch (retry/cancel + fast_mode + Patch A/B) thành commits riêng.
+
+---
+
 ## Known limitations
 
 - All verification across both sessions was static (compile + headless `MainWindow()` instantiation + signature checks). The two real bug classes — (a) single regen with refs producing download spam, (b) ref-image being downloaded instead of generated image — are both unreachable in the new code paths. **Live confirmation still required**, especially Test 1 (the 30s wait fix).

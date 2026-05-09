@@ -42,6 +42,7 @@ class SingleImageWorker(AsyncQThread):
         scene_id: str,
         pick_mode: str = "auto",
         connection: GrokConnection | None = None,
+        fast_mode: bool = False,
     ) -> None:
         super().__init__()
         self.project = project
@@ -49,6 +50,7 @@ class SingleImageWorker(AsyncQThread):
         self.scene_id = scene_id
         self.pick_mode = pick_mode
         self.connection = connection
+        self.fast_mode = fast_mode
 
     async def _async_run(self) -> None:
         scene = self.project.scene(self.scene_id)
@@ -64,6 +66,8 @@ class SingleImageWorker(AsyncQThread):
 
         settings = _build_image_settings(self.project, scene, output_path)
         settings["pick_mode"] = self.pick_mode
+        settings["fast_mode"] = self.fast_mode
+        settings["stop_event"] = self.stop_event
         prompt = settings.pop("prompt")
 
         use_refs = self.project.get_use_refs_for_image()
@@ -92,6 +96,7 @@ class SingleImageWorker(AsyncQThread):
                     ref_paths=refs,
                     output_path=Path(output_path),
                     aspect=aspect,
+                    fast_mode=self.fast_mode,
                 )
                 if not result.get("ok"):
                     raise RuntimeError(

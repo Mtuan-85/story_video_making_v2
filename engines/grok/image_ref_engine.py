@@ -46,6 +46,7 @@ class GrokImageRefEngine:
         output_path: Path,
         aspect: str,
         wait_timeout_s: int = 60,
+        fast_mode: bool = False,
     ) -> dict[str, Any]:
         """Run flow: upload refs → set_aspect → fill_prompt → submit → download.
 
@@ -83,7 +84,10 @@ class GrokImageRefEngine:
                 )
 
             self._check_stop()
-            r = await A.fill_prompt(self.page, prompt)
+            r = await A.fill_prompt(
+                self.page, prompt,
+                fast_mode=fast_mode, stop_event=self._stop_event,
+            )
             if not r.get("ok"):
                 return {"ok": False, "reason": f"fill_prompt: {r.get('reason')}"}
 

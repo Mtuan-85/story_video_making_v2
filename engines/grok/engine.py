@@ -42,6 +42,8 @@ class GrokImageEngine(_GrokEngineBase):
         typing_speed: "fast"|"human"|"slow" (default "fast")
         wait_timeout_s: int               (default 60)
         debug_dir: Path | None            (candidates log root, optional)
+        fast_mode: bool                   (default False — paste prompt thay human_type)
+        stop_event: asyncio.Event | None  (default None — để fast_paste check stop trong 5s settle)
     """
 
     async def gen_image(
@@ -67,6 +69,8 @@ class GrokImageEngine(_GrokEngineBase):
             "pick_fn": claude_picker.pick_best,
             "topic": settings.get("topic", ""),
             "style": settings.get("style", ""),
+            "fast_mode": bool(settings.get("fast_mode", False)),
+            "stop_event": settings.get("stop_event"),
         }
 
         prompts = [{"id": "single", "text": prompt, "ref": ref_image}]
@@ -106,6 +110,8 @@ class GrokVideoEngine(_GrokEngineBase):
         typing_speed: "fast"|"human"|"slow" (default "fast")
         video_timeout_s: int           (default 600)
         video_initial_wait_s: int      (default 20)
+        fast_mode: bool                (default False — paste prompt thay human_type)
+        stop_event: asyncio.Event | None (default None — để fast_paste check stop trong 5s settle)
     """
 
     async def gen_video(
@@ -132,6 +138,8 @@ class GrokVideoEngine(_GrokEngineBase):
             "video_timeout_s": settings.get("video_timeout_s", 600),
             "video_initial_wait_s": settings.get("video_initial_wait_s", 20),
             "output_path": Path(output_path),
+            "fast_mode": bool(settings.get("fast_mode", False)),
+            "stop_event": settings.get("stop_event"),
         }
 
         prompts = [{"id": "single", "text": prompt, "ref": ref}]

@@ -46,6 +46,7 @@ class SingleVideoWorker(AsyncQThread):
         scene_id: str,
         estimator: Estimator | None = None,
         connection: GrokConnection | None = None,
+        fast_mode: bool = False,
     ) -> None:
         super().__init__()
         self.project = project
@@ -53,6 +54,7 @@ class SingleVideoWorker(AsyncQThread):
         self.scene_id = scene_id
         self.estimator = estimator
         self.connection = connection
+        self.fast_mode = fast_mode
 
     async def _async_run(self) -> None:
         scene = self.project.scene(self.scene_id)
@@ -76,6 +78,8 @@ class SingleVideoWorker(AsyncQThread):
         self.emit_log(f"{self.scene_id}: đang re-gen video (I2V)...")
 
         settings = _build_video_settings(self.project, output_path)
+        settings["fast_mode"] = self.fast_mode
+        settings["stop_event"] = self.stop_event
 
         def _refresh_page() -> None:
             if self.connection is not None and self.connection.page is not None:

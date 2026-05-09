@@ -27,6 +27,7 @@ from PyQt6.QtGui import QPixmap
 from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PyQt6.QtMultimediaWidgets import QVideoWidget
 from PyQt6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QDialog,
     QFrame,
@@ -55,8 +56,8 @@ class PreviewDialog(QDialog):
     """Unified scene preview + edit."""
 
     save_requested = pyqtSignal(str, dict)  # scene_id, updates
-    gen_image_requested = pyqtSignal(str)  # scene_id
-    gen_animation_requested = pyqtSignal(str)  # scene_id
+    gen_image_requested = pyqtSignal(str, bool)  # scene_id, fast_mode
+    gen_animation_requested = pyqtSignal(str, bool)  # scene_id, fast_mode
 
     def __init__(self, scene, scene_state: dict, project_root: Path, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -146,6 +147,13 @@ class PreviewDialog(QDialog):
         b_gen_anim.setToolTip("Save prompt + Generate video (requires existing image for I2V)")
         b_gen_anim.clicked.connect(self._on_gen_animation)
         btns.addWidget(b_gen_anim)
+
+        self.fast_check = QCheckBox("⚡ Fast")
+        self.fast_check.setToolTip(
+            "Fast mode: paste prompt thẳng + đợi 5s thay vì gõ từng ký tự.\n"
+            "Chỉ áp dụng cho lần Gen này, không persist."
+        )
+        btns.addWidget(self.fast_check)
 
         b_open = QPushButton("📁 Folder")
         b_open.clicked.connect(self._open_folder)
@@ -274,12 +282,12 @@ class PreviewDialog(QDialog):
 
     def _on_gen_image(self) -> None:
         self.save_requested.emit(self.scene.id, self._collect_updates())
-        self.gen_image_requested.emit(self.scene.id)
+        self.gen_image_requested.emit(self.scene.id, self.fast_check.isChecked())
         self.accept()
 
     def _on_gen_animation(self) -> None:
         self.save_requested.emit(self.scene.id, self._collect_updates())
-        self.gen_animation_requested.emit(self.scene.id)
+        self.gen_animation_requested.emit(self.scene.id, self.fast_check.isChecked())
         self.accept()
 
     def _open_folder(self) -> None:

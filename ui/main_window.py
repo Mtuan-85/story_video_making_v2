@@ -565,7 +565,7 @@ class MainWindow(QMainWindow):
     # Single re-gen
     # ------------------------------------------------------------------
 
-    def _regen_one(self, scene_id: str) -> None:
+    def _regen_one(self, scene_id: str, fast_mode: bool = False) -> None:
         if self.project is None or self.image_engine is None:
             QMessageBox.information(self, "Chưa sẵn sàng", "Cần kết nối browser + load dự án trước")
             return
@@ -574,6 +574,7 @@ class MainWindow(QMainWindow):
         worker = SingleImageWorker(
             self.project, self.image_engine, scene_id,
             connection=self.connection_panel.connection,
+            fast_mode=fast_mode,
         )
         worker.scene_started.connect(self._on_scene_started)
         worker.scene_finished.connect(self._on_scene_finished)
@@ -589,7 +590,7 @@ class MainWindow(QMainWindow):
         if w is not None:
             w.deleteLater()
 
-    def _regen_one_video(self, scene_id: str) -> None:
+    def _regen_one_video(self, scene_id: str, fast_mode: bool = False) -> None:
         """Dispatch a one-scene video re-gen by visual_type.
 
         video_grok    → SingleVideoWorker (Grok I2V, needs browser)
@@ -616,6 +617,7 @@ class MainWindow(QMainWindow):
             worker: AsyncQThread = SingleVideoWorker(
                 self.project, self.video_engine, scene_id, estimator=self.estimator,
                 connection=self.connection_panel.connection,
+                fast_mode=fast_mode,
             )
 
         elif vtype == "slideshow":

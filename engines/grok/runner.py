@@ -123,7 +123,12 @@ class FlowRunner:
 
         if action == "fill_prompt":
             speed = self.config.get("typing_speed", "fast")
-            return await actions.fill_prompt(page, self._resolved_value(step), speed=speed)
+            fast_mode = bool(self.config.get("fast_mode", False))
+            stop_event = self.config.get("stop_event")
+            return await actions.fill_prompt(
+                page, self._resolved_value(step),
+                speed=speed, fast_mode=fast_mode, stop_event=stop_event,
+            )
 
         if action == "click_submit":
             return await actions.click_submit(page)
