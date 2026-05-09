@@ -61,10 +61,10 @@ class Project:
     """Load scenes.json + state.json for a project directory.
 
     Lifecycle:
-        project = Project.load(Path("projects/morning_coffee"))
+        project = Project.load(Path("projects/morning_coffee/my_story.json"))
         project.update_scene_state("SCENE-01", "image", {"status": "ready", "path": "sources/pic1.jpg"})
         project.set_selected_visual("SCENE-01", "image")
-        # state.json is persisted on every mutation (atomic write).
+        # <stem>_state.json is persisted on every mutation (atomic write).
     """
 
     def __init__(self, paths: ProjectPaths, scenes_json: ScenesJson, state: dict[str, Any]):
@@ -78,27 +78,33 @@ class Project:
     # ------------------------------------------------------------------
 
     @classmethod
-    def load(cls, project_dir: Path) -> "Project":
-        """Load a project from disk. Creates state.json on first run.
+    def load(cls, scenes_file: Path) -> "Project":
+        """Load a project from disk, anchored at the user-selected scenes file.
 
-        Source-of-truth split:
-          - scenes.json — ORIGINAL design, read-only after first load.
-          - scenes_edited.json — working copy. Auto-cloned on first load,
-            then every save lands here. Use ``reset_to_design()`` to roll back.
+        ``scenes_file`` is any ``<stem>.json`` (the original design file).
+        Companions are derived: ``<stem>_edited.json`` (working copy) and
+        ``<stem>_state.json`` (runtime state). Subfolders (sources/, voice/…)
+        are created lazily by writers, no eager mkdir here.
 
-        Also auto-fills `Scene.effect` on scenes that don't carry one
-        (alternates zoom_in/out for static visuals, no_effect for video_grok)
-        and persists scenes_edited.json if any defaults were filled in.
+        Backward compat: if a legacy ``state.json`` exists in the same folder
+        and ``<stem>_state.json`` does not, the legacy file is used as the
+        load source; subsequent writes land in ``<stem>_state.json``.
         """
-        paths = ProjectPaths(project_dir)
-        if not paths.scenes_original.exists():
-            raise FileNotFoundError(f"Không tìm thấy scenes.json: {paths.scenes_original}")
+        scenes_file = Path(scenes_file)
+        if scenes_file.is_dir():
+            # Tolerate callers passing a directory: fall back to scenes.json
+            # inside it (preserves existing tests/scripts).
+            scenes_file = scenes_file / "scenes.json"
 
-        log.info(f"Đang load project: {paths.root.name}")
+        paths = ProjectPaths(scenes_file)
+        if not paths.scenes_original.exists():
+            raise FileNotFoundError(f"Không tìm thấy file project: {paths.scenes_original}")
+
+        log.info(f"Đang load project: {paths.root.name} / {paths.scenes_original.name}")
 
         first_load = not paths.scenes_edited.exists()
         if first_load:
-            log.info("First load: cloning scenes.json → scenes_edited.json")
+            log.info(f"First load: cloning {paths.scenes_original.name} → {paths.scenes_edited.name}")
             shutil.copy2(paths.scenes_original, paths.scenes_edited)
 
         scenes_json, raw_scenes_data = cls._load_scenes_with_raw(paths.scenes_edited)
@@ -106,19 +112,132 @@ class Project:
         if paths.state_json.exists():
             state = cls._load_state(paths.state_json)
             state = cls._reconcile(state, scenes_json)
+        elif paths.stem == "scenes" and paths.legacy_state_json.exists():
+            # Legacy convention had a single state.json per folder. Only
+            # migrate when this load is for the original ``scenes.json`` —
+            # other project files in the same folder must not inherit it.
+            log.info(
+                f"Migrating legacy state.json → {paths.state_json.name} "
+                "(legacy file kept as backup)"
+            )
+            state = cls._load_state(paths.legacy_state_json)
+            state = cls._reconcile(state, scenes_json)
         else:
-            log.info("Chưa có state.json — khởi tạo mới")
+            log.info(f"Chưa có {paths.state_json.name} — khởi tạo mới")
             state = cls._build_initial_state(scenes_json)
 
-        paths.ensure_dirs()
         project = cls(paths, scenes_json, state)
         # Auto-fill effect for any scene whose raw JSON didn't declare one.
         if cls._auto_fill_effects(project, raw_scenes_data):
             project.save_scenes_json()
-            log.info("Auto-filled missing 'effect' fields → scenes_edited.json saved")
+            log.info(f"Auto-filled missing 'effect' fields → {paths.scenes_edited.name} saved")
         project._save_state_atomic()
         project._load_voice_mapping_if_present()
         return project
+
+    def reload(self) -> dict[str, Any]:
+        """Re-read scenes_edited + state from disk, then reconcile asset
+        state against sources/ via multi-pattern auto-scan.
+
+        For each scene we ask ``paths.find_image(idx)`` / ``find_video(idx)``:
+        a hit upgrades the matching state entry to ``"ready"`` with the
+        discovered relative path; previously-ready entries whose file has
+        disappeared are downgraded back to ``"pending"``. Returns a summary
+        suitable for the reload notification dialog.
+        """
+        log.info(f"Reload: re-reading {self.paths.scenes_edited.name}")
+        scenes_json, raw = self._load_scenes_with_raw(self.paths.scenes_edited)
+        self.scenes_json = scenes_json
+        if self._auto_fill_effects(self, raw):
+            self.save_scenes_json()
+
+        if self.paths.state_json.exists():
+            self.state = self._reconcile(self._load_state(self.paths.state_json), self.scenes_json)
+        else:
+            self.state = self._build_initial_state(self.scenes_json)
+
+        scenes_count = len(self.scenes_json.scenes)
+        images_found = 0
+        videos_found = 0
+        missing: list[dict[str, Any]] = []
+        matched: set[Path] = set()
+        video_types = {"video_grok", "slideshow", "ken_burns_self", "ken_burns_cont"}
+        root = self.paths.root
+
+        for idx, scene in enumerate(self.scenes_json.scenes, start=1):
+            scene_state = self.state["scenes"].setdefault(scene.id, _initial_scene_state())
+
+            img = self.paths.find_image(idx)
+            if img is not None:
+                images_found += 1
+                matched.add(img)
+                rel = self._safe_relative(img, root)
+                cur = scene_state["image"]
+                if cur.get("status") != "ready" or cur.get("path") != rel:
+                    cur["status"] = "ready"
+                    cur["path"] = rel
+                    cur["fail_reason"] = None
+            else:
+                cur = scene_state["image"]
+                if cur.get("status") == "ready":
+                    cur["status"] = "pending"
+                    cur["path"] = None
+
+            vid = self.paths.find_video(idx)
+            if vid is not None:
+                videos_found += 1
+                matched.add(vid)
+                rel = self._safe_relative(vid, root)
+                cur = scene_state["video"]
+                if cur.get("status") != "ready" or cur.get("path") != rel:
+                    cur["status"] = "ready"
+                    cur["path"] = rel
+                    cur["fail_reason"] = None
+                    if cur.get("source_type") is None:
+                        cur["source_type"] = scene.visual_type
+            else:
+                cur = scene_state["video"]
+                if cur.get("status") == "ready":
+                    cur["status"] = "pending"
+                    cur["path"] = None
+
+            scene_missing: list[str] = []
+            if img is None:
+                scene_missing.append("image")
+            if vid is None and scene.visual_type in video_types:
+                scene_missing.append("video")
+            if scene_missing:
+                missing.append({
+                    "scene_id": scene.id,
+                    "scene_idx": idx,
+                    "missing": scene_missing,
+                })
+
+        orphans: list[str] = []
+        if self.paths.sources_dir.exists():
+            for f in self.paths.sources_dir.iterdir():
+                if f.is_file() and f not in matched:
+                    orphans.append(f.name)
+
+        self._save_state_atomic()
+        log.info(
+            f"Reload done: {scenes_count} scenes, {images_found} images, "
+            f"{videos_found} videos, {len(missing)} missing, {len(orphans)} orphans"
+        )
+        return {
+            "scenes_count": scenes_count,
+            "images_found": images_found,
+            "videos_found": videos_found,
+            "missing": missing,
+            "orphans": orphans,
+        }
+
+    @staticmethod
+    def _safe_relative(p: Path, root: Path) -> str:
+        try:
+            return str(p.relative_to(root)).replace("\\", "/")
+        except ValueError:
+            return str(p)
 
     def reset_to_design(self) -> None:
         """Restore scenes_edited.json from scenes.json and reload (loses edits)."""

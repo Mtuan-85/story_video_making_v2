@@ -1,7 +1,17 @@
 """Path resolution utilities for project layout.
 
-A project lives at projects/{project_name}/ and contains:
-  scenes.json, state.json, sources/, voice/, bgm/, temp/, final.mp4
+A project lives under any directory chosen by the user. The user picks a
+scenes-style JSON file (e.g. ``my_story.json``); its companions are derived
+from the file stem:
+
+    <stem>.json          — original design (selected by user)
+    <stem>_edited.json   — working copy + edits (auto-cloned on first load)
+    <stem>_state.json    — runtime state (per-scene asset status, warnings)
+
+Other artefacts (sources/, voice/, bgm/, temp/, thumbnails/, renders/,
+voice_mapping.json, final.mp4) are project-folder scoped and use fixed names.
+Subdirectories are created lazily by writers; ``ensure_dirs()`` is kept as a
+no-op for callers that prefer eager creation.
 """
 
 from __future__ import annotations
@@ -10,25 +20,50 @@ from pathlib import Path
 
 
 class ProjectPaths:
-    """Resolve all standard paths for a single project directory."""
+    """Resolve all standard paths for a single project, anchored at one
+    scenes-style JSON file.
 
-    def __init__(self, project_dir: Path):
-        self.root = Path(project_dir).resolve()
+    Backward compat: when the file is named ``scenes.json`` (legacy
+    convention) the derived stem is ``"scenes"`` so the edited file maps
+    cleanly to the existing ``scenes_edited.json``. The legacy ``state.json``
+    is exposed via ``legacy_state_json`` for one-shot migration on load.
+    """
+
+    # Auto-scan: stems tried (in order) when looking up scene assets in
+    # sources/. First match wins. Lets users rename pic39.jpg → scene_39.jpg
+    # without breaking the app.
+    _IMAGE_STEMS = ("pic{n}", "pic{n:02d}", "scene_{n}", "scene_{n:02d}")
+    _IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".webp")
+    _VIDEO_STEMS = ("vid{n}", "vid{n:02d}", "scene_{n}", "scene_{n:02d}")
+    _VIDEO_EXTS = (".mp4", ".mov", ".webm")
+
+    def __init__(self, scenes_file: Path):
+        scenes_file = Path(scenes_file).resolve()
+        self.scenes_file = scenes_file
+        self.root = scenes_file.parent
+        self.stem = scenes_file.stem
 
     @property
     def scenes_json(self) -> Path:
-        return self.root / "scenes.json"
+        return self.root / f"{self.stem}.json"
 
     @property
     def scenes_original(self) -> Path:
-        return self.root / "scenes.json"
+        return self.scenes_json
 
     @property
     def scenes_edited(self) -> Path:
-        return self.root / "scenes_edited.json"
+        return self.root / f"{self.stem}_edited.json"
 
     @property
     def state_json(self) -> Path:
+        return self.root / f"{self.stem}_state.json"
+
+    @property
+    def legacy_state_json(self) -> Path:
+        """Old convention: ``state.json`` next to ``scenes.json``. Used as a
+        one-shot fallback during load when no ``<stem>_state.json`` exists.
+        """
         return self.root / "state.json"
 
     @property
@@ -52,12 +87,44 @@ class ProjectPaths:
         return self.root / "final.mp4"
 
     def image_path(self, scene_index: int) -> Path:
-        """sources/pic{N}.jpg — N is 1-based."""
+        """sources/pic{N}.jpg — N is 1-based. Default WRITE path used by
+        engines/workers. Readers should use ``find_image`` instead so user
+        renames (e.g. pic39.jpg → scene_39.jpg) are tolerated.
+        """
         return self.sources_dir / f"pic{scene_index}.jpg"
 
     def video_path(self, scene_index: int) -> Path:
-        """sources/vid{N}.mp4 — N is 1-based."""
+        """sources/vid{N}.mp4 — N is 1-based. Default WRITE path; readers
+        should use ``find_video``.
+        """
         return self.sources_dir / f"vid{scene_index}.mp4"
+
+    def find_image(self, scene_index: int) -> Path | None:
+        """Locate the image for ``scene_index`` under sources/ across the
+        accepted stem/extension combos. Returns None when nothing matches.
+        """
+        return self._find_asset(scene_index, self._IMAGE_STEMS, self._IMAGE_EXTS)
+
+    def find_video(self, scene_index: int) -> Path | None:
+        """Same as ``find_image`` but for video assets."""
+        return self._find_asset(scene_index, self._VIDEO_STEMS, self._VIDEO_EXTS)
+
+    def _find_asset(
+        self,
+        scene_index: int,
+        stems: tuple[str, ...],
+        exts: tuple[str, ...],
+    ) -> Path | None:
+        sources = self.sources_dir
+        if not sources.exists():
+            return None
+        for stem_tpl in stems:
+            stem = stem_tpl.format(n=scene_index)
+            for ext in exts:
+                candidate = sources / f"{stem}{ext}"
+                if candidate.exists():
+                    return candidate
+        return None
 
     def voice_batch_path(self, batch_id: int) -> Path:
         return self.voice_dir / f"batch_{batch_id}.mp3"
@@ -90,6 +157,9 @@ class ProjectPaths:
         return self.temp_dir / f"scene_{scene_id}.mp4"
 
     def ensure_dirs(self) -> None:
-        """Create standard subdirectories if they don't exist."""
-        for d in (self.sources_dir, self.voice_dir, self.bgm_dir, self.temp_dir):
-            d.mkdir(parents=True, exist_ok=True)
+        """No-op kept for API stability: every writer in this codebase
+        already calls ``mkdir(parents=True, exist_ok=True)`` on its own
+        target, so eager creation here is redundant. Callers that still
+        prefer it can opt in by using the ``mkdir`` helpers directly.
+        """
+        return

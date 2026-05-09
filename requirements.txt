@@ -45,7 +45,7 @@ loguru>=0.7.2
 Pillow>=10.0.0
 opencv-python>=4.9.0
 numpy>=1.26.0,<2.0.0
-python-vlc>=3.0.0  # Optional: VLC bindings for video preview in PreviewDialog
+# python-vlc removed — PreviewDialog now uses PyQt6's native QMediaPlayer
 
 
 # -----------------------------------------------------------------------------

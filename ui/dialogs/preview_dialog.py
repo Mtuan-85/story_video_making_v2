@@ -1,14 +1,20 @@
 """Unified preview + edit dialog for one scene.
 
-Triggered by clicking a row's thumbnail OR the ✏ edit button.
-Shows the current visual (image static; video via VLC if available, else
-external player), editable story / prompts / visual_type / effect / duration,
-and Save / Re-gen / Open folder buttons.
+Triggered by clicking a row's thumbnail, the 🖼/🎬 status buttons, or the ✏
+edit button. Shows the current visual (image static; video via Qt's native
+QMediaPlayer + QVideoWidget — no external player required), editable
+story / prompts / visual_type / effect / duration, and three action buttons:
 
-Save: emit `save_requested(scene_id, updates)` — main_window persists via
-`Project.update_scene_fields`.
+  💾 Save        — persist edits without gen.
+  🖼 Gen Image   — persist edits, then run image worker (overwrites existing).
+  🎞 Gen Video   — persist edits, then run video worker. Dispatches by
+                   visual_type: video_grok (I2V) or slideshow.
 
-Re-gen: emit save first (sync state), then `regen_requested(scene_id)`.
+Signals:
+    save_requested(scene_id, updates)        — main_window persists via
+                                                Project.update_scene_fields.
+    gen_image_requested(scene_id)            — main_window dispatches image gen.
+    gen_animation_requested(scene_id)        — main_window dispatches video gen.
 """
 
 from __future__ import annotations
@@ -16,8 +22,10 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, QUrl, pyqtSignal
 from PyQt6.QtGui import QPixmap
+from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer
+from PyQt6.QtMultimediaWidgets import QVideoWidget
 from PyQt6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -25,6 +33,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QSlider,
     QSpinBox,
     QTextEdit,
     QVBoxLayout,
@@ -46,15 +55,18 @@ class PreviewDialog(QDialog):
     """Unified scene preview + edit."""
 
     save_requested = pyqtSignal(str, dict)  # scene_id, updates
-    regen_requested = pyqtSignal(str)  # scene_id
+    gen_image_requested = pyqtSignal(str)  # scene_id
+    gen_animation_requested = pyqtSignal(str)  # scene_id
 
     def __init__(self, scene, scene_state: dict, project_root: Path, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.scene = scene
         self.scene_state = scene_state or {}
         self.project_root = Path(project_root)
-        self._vlc = None
-        self._vlc_player = None
+        self._media_player: QMediaPlayer | None = None
+        self._audio_output: QAudioOutput | None = None
+        self._position_slider: QSlider | None = None
+        self._slider_dragging = False
 
         self.setWindowTitle(f"Preview — {scene.id}")
         self.resize(960, 760)
@@ -125,9 +137,15 @@ class PreviewDialog(QDialog):
         b_save.clicked.connect(self._on_save)
         btns.addWidget(b_save)
 
-        b_regen = QPushButton("🔄 Save & Re-gen")
-        b_regen.clicked.connect(self._on_regen)
-        btns.addWidget(b_regen)
+        b_gen_image = QPushButton("🖼 Gen Image")
+        b_gen_image.setToolTip("Save prompt + Generate image (overwrite existing)")
+        b_gen_image.clicked.connect(self._on_gen_image)
+        btns.addWidget(b_gen_image)
+
+        b_gen_anim = QPushButton("🎞 Gen Video")
+        b_gen_anim.setToolTip("Save prompt + Generate video (requires existing image for I2V)")
+        b_gen_anim.clicked.connect(self._on_gen_animation)
+        btns.addWidget(b_gen_anim)
 
         b_open = QPushButton("📁 Folder")
         b_open.clicked.connect(self._open_folder)
@@ -185,46 +203,58 @@ class PreviewDialog(QDialog):
         layout.addWidget(label)
 
     def _load_video(self, layout: QVBoxLayout, path: Path) -> None:
-        try:
-            import vlc  # type: ignore
-        except Exception:
-            label = QLabel(f"VLC chưa cài — bấm để mở {path.name} bằng player hệ thống")
-            label.setStyleSheet("color:#e67e22;")
-            layout.addWidget(label)
-            btn = QPushButton(f"▶ Mở {path.name}")
-            btn.clicked.connect(lambda: os.startfile(str(path)))
-            layout.addWidget(btn)
-            return
-
-        self._vlc = vlc.Instance("--no-xlib")  # type: ignore[attr-defined]
-        self._vlc_player = self._vlc.media_player_new()
-        media = self._vlc.media_new(str(path))
-        self._vlc_player.set_media(media)
-
-        video_widget = QFrame()
+        video_widget = QVideoWidget()
         video_widget.setMinimumHeight(380)
         video_widget.setStyleSheet("background:#000;")
         layout.addWidget(video_widget, 1)
 
-        # Bind player to widget HWND (Windows) / xid (Linux).
-        if hasattr(video_widget, "winId"):
-            try:
-                self._vlc_player.set_hwnd(int(video_widget.winId()))
-            except Exception:
-                pass
+        self._media_player = QMediaPlayer(self)
+        self._audio_output = QAudioOutput(self)
+        self._media_player.setAudioOutput(self._audio_output)
+        self._media_player.setVideoOutput(video_widget)
+        self._media_player.setSource(QUrl.fromLocalFile(str(path)))
 
         controls = QHBoxLayout()
         b_play = QPushButton("▶ Play")
-        b_play.clicked.connect(lambda: self._vlc_player.play())
+        b_play.clicked.connect(self._media_player.play)
         controls.addWidget(b_play)
         b_pause = QPushButton("⏸ Pause")
-        b_pause.clicked.connect(lambda: self._vlc_player.pause())
+        b_pause.clicked.connect(self._media_player.pause)
         controls.addWidget(b_pause)
         b_stop = QPushButton("⏹ Stop")
-        b_stop.clicked.connect(lambda: self._vlc_player.stop())
+        b_stop.clicked.connect(self._media_player.stop)
         controls.addWidget(b_stop)
-        controls.addStretch()
+
+        self._position_slider = QSlider(Qt.Orientation.Horizontal)
+        self._position_slider.setRange(0, 0)
+        self._position_slider.sliderPressed.connect(self._on_slider_pressed)
+        self._position_slider.sliderReleased.connect(self._on_slider_released)
+        controls.addWidget(self._position_slider, 1)
+
+        self._media_player.positionChanged.connect(self._on_position_changed)
+        self._media_player.durationChanged.connect(self._on_duration_changed)
+        self._media_player.errorOccurred.connect(self._on_media_error)
         layout.addLayout(controls)
+
+    def _on_position_changed(self, pos: int) -> None:
+        if self._position_slider is not None and not self._slider_dragging:
+            self._position_slider.setValue(pos)
+
+    def _on_duration_changed(self, dur: int) -> None:
+        if self._position_slider is not None:
+            self._position_slider.setRange(0, dur)
+
+    def _on_slider_pressed(self) -> None:
+        self._slider_dragging = True
+
+    def _on_slider_released(self) -> None:
+        self._slider_dragging = False
+        if self._media_player is not None and self._position_slider is not None:
+            self._media_player.setPosition(self._position_slider.value())
+
+    def _on_media_error(self, _err, msg: str) -> None:
+        from loguru import logger as log
+        log.warning(f"QMediaPlayer error: {msg}")
 
     # --- Save / Re-gen / Folder ---------------------------------------------
 
@@ -242,9 +272,14 @@ class PreviewDialog(QDialog):
         self.save_requested.emit(self.scene.id, self._collect_updates())
         self.accept()
 
-    def _on_regen(self) -> None:
+    def _on_gen_image(self) -> None:
         self.save_requested.emit(self.scene.id, self._collect_updates())
-        self.regen_requested.emit(self.scene.id)
+        self.gen_image_requested.emit(self.scene.id)
+        self.accept()
+
+    def _on_gen_animation(self) -> None:
+        self.save_requested.emit(self.scene.id, self._collect_updates())
+        self.gen_animation_requested.emit(self.scene.id)
         self.accept()
 
     def _open_folder(self) -> None:
@@ -256,9 +291,10 @@ class PreviewDialog(QDialog):
                 pass
 
     def closeEvent(self, event) -> None:
-        if self._vlc_player is not None:
+        if self._media_player is not None:
             try:
-                self._vlc_player.stop()
+                self._media_player.stop()
+                self._media_player.setSource(QUrl())
             except Exception:
                 pass
         super().closeEvent(event)

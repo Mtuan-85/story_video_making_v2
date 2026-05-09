@@ -3,8 +3,10 @@
 v2 layout:
     [☐] [thumb 60x60] SCENE-XX [▾ visual] [▾ effect] {dur}s [🖼 ✓] [🎬 ✓] [🎤 ✓]  ✏
 
-Bỏ checkbox 2nd, bỏ ⚠ + 🔄 button. Edit button mở Preview Dialog.
-Click thumbnail = mở Preview Dialog luôn.
+All clickable affordances (thumbnail / 🖼 / 🎬 / ✏) open the unified Preview
+Dialog. Image and video buttons are always enabled — they show current asset
+status but acting on them lets the user edit the prompt + Gen, even when the
+asset has not been generated yet.
 """
 
 from __future__ import annotations
@@ -49,16 +51,12 @@ class SceneRow(QFrame):
 
     Signals:
         edit_clicked(scene_id)
-        preview_image_clicked(scene_id)
-        preview_video_clicked(scene_id)
         batch_selection_changed(scene_id, bool)
         visual_type_changed(scene_id, str)
         effect_changed(scene_id, str)
     """
 
     edit_clicked = pyqtSignal(str)
-    preview_image_clicked = pyqtSignal(str)
-    preview_video_clicked = pyqtSignal(str)
     batch_selection_changed = pyqtSignal(str, bool)
     visual_type_changed = pyqtSignal(str, str)
     effect_changed = pyqtSignal(str, str)
@@ -141,17 +139,18 @@ class SceneRow(QFrame):
 
         row.addWidget(self._sep())
 
-        # 7. Per-asset status icons (clickable for image/video preview)
-        self.image_btn = self._mk_status_btn("🖼", "Ảnh: pending")
-        self.image_btn.clicked.connect(lambda: self.preview_image_clicked.emit(self.scene_id))
+        # 7. Per-asset status icons. Image/Video buttons open the Preview
+        # Dialog (edit prompt + Gen) — always enabled, even before first gen.
+        # Voice stays disabled until a per-scene voice flow exists.
+        self.image_btn = self._mk_status_btn("🖼", "Ảnh — click để edit prompt / Gen", enabled=True)
+        self.image_btn.clicked.connect(lambda: self.edit_clicked.emit(self.scene_id))
         row.addWidget(self.image_btn)
 
-        self.video_btn = self._mk_status_btn("🎬", "Video: pending")
-        self.video_btn.clicked.connect(lambda: self.preview_video_clicked.emit(self.scene_id))
+        self.video_btn = self._mk_status_btn("🎬", "Video — click để edit prompt / Gen", enabled=True)
+        self.video_btn.clicked.connect(lambda: self.edit_clicked.emit(self.scene_id))
         row.addWidget(self.video_btn)
 
-        self.voice_btn = self._mk_status_btn("🎤", "Voice: pending")
-        self.voice_btn.setEnabled(False)
+        self.voice_btn = self._mk_status_btn("🎤", "Voice: pending", enabled=False)
         row.addWidget(self.voice_btn)
 
         row.addStretch()
@@ -170,11 +169,11 @@ class SceneRow(QFrame):
         return s
 
     @staticmethod
-    def _mk_status_btn(icon: str, tip: str) -> QPushButton:
+    def _mk_status_btn(icon: str, tip: str, enabled: bool = False) -> QPushButton:
         b = QPushButton(f"{icon} ⏳")
         b.setMinimumWidth(46)
         b.setToolTip(tip)
-        b.setEnabled(False)
+        b.setEnabled(enabled)
         return b
 
     # --- Initial values + signal-aware updates --------------------------------
@@ -234,13 +233,19 @@ class SceneRow(QFrame):
         status = asset_state.get("status", "pending")
         path = asset_state.get("path")
         btn.setText(f"{icon} {STATUS_ICON.get(status, STATUS_ICON['pending'])}")
-        btn.setEnabled(status == "ready" and bool(path))
-        if status == "ready" and path:
-            btn.setToolTip(f"{label}: {path}\n(click để xem preview)")
-        elif status == "failed":
-            btn.setToolTip(f"{label} fail: {asset_state.get('fail_reason') or '(unknown)'}")
+        # Image/Video buttons stay enabled regardless of status so the user
+        # can always open the Preview Dialog to edit prompt and Gen. Voice
+        # button keeps the disabled state set at construction time.
+        if btn is self.voice_btn:
+            btn.setEnabled(False)
         else:
-            btn.setToolTip(f"{label}: {status}")
+            btn.setEnabled(True)
+        if status == "ready" and path:
+            btn.setToolTip(f"{label}: {path}\n(click để mở edit + Gen)")
+        elif status == "failed":
+            btn.setToolTip(f"{label} fail: {asset_state.get('fail_reason') or '(unknown)'}\n(click để edit + Gen lại)")
+        else:
+            btn.setToolTip(f"{label}: {status}\n(click để edit prompt / Gen)")
 
     # --- Internal signal handlers ---------------------------------------------
 

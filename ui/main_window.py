@@ -31,8 +31,6 @@ from runtime.estimator import Estimator
 from ui.connection_panel import ConnectionPanel
 from ui.refs_panel import RefImagesPanel
 from ui.dialogs.preview_dialog import PreviewDialog
-from ui.dialogs.preview_image import PreviewImageDialog
-from ui.dialogs.preview_video import PreviewVideoDialog
 from ui.dialogs.voice_align_review import VoiceAlignReviewDialog
 from ui.scene_list import SceneList
 from workers._async_thread import AsyncQThread
@@ -144,7 +142,15 @@ class MainWindow(QMainWindow):
         self.btn_process_voice.setEnabled(False)
         action_row.addWidget(self.btn_process_voice)
 
-        self.btn_reset_design = QPushButton("🔄 Reset to design")
+        self.btn_reload = QPushButton("🔄 Reload")
+        self.btn_reload.setToolTip(
+            "Re-read scenes_edited.json + scan sources/ (auto-pattern match)"
+        )
+        self.btn_reload.clicked.connect(self._on_reload_project)
+        self.btn_reload.setEnabled(False)
+        action_row.addWidget(self.btn_reload)
+
+        self.btn_reset_design = QPushButton("↶ Reset to design")
         self.btn_reset_design.setToolTip(
             "Restore scenes from scenes.json (lose all edits in scenes_edited.json)"
         )
@@ -209,8 +215,6 @@ class MainWindow(QMainWindow):
         self.connection_panel.page_ready.connect(self._on_page_ready)
         self.connection_panel.disconnected.connect(self._on_disconnected)
 
-        self.scene_list.preview_image_clicked.connect(self._show_preview_image)
-        self.scene_list.preview_video_clicked.connect(self._show_preview_video)
         self.scene_list.edit_clicked.connect(self._show_preview_dialog)
         self.scene_list.visual_type_changed.connect(self._on_visual_type_changed)
         self.scene_list.effect_changed.connect(self._on_effect_changed)
@@ -236,13 +240,13 @@ class MainWindow(QMainWindow):
 
     def _load_project(self) -> None:
         path_str, _ = QFileDialog.getOpenFileName(
-            self, "Chọn scenes.json", "", "JSON Files (*.json)"
+            self, "Chọn file project (.json)", "", "JSON Files (*.json)"
         )
         if not path_str:
             return
         scenes_path = Path(path_str)
         try:
-            self.project = Project.load(scenes_path.parent)
+            self.project = Project.load(scenes_path)
         except Exception as e:
             QMessageBox.critical(self, "Lỗi load dự án", str(e))
             self._append_log(f"❌ Load dự án fail: {e}")
@@ -255,6 +259,7 @@ class MainWindow(QMainWindow):
         )
         self.scene_list.bind_project(self.project)  # emits batch_selection_changed
         self.btn_process_voice.setEnabled(True)
+        self.btn_reload.setEnabled(True)
         self.btn_reset_design.setEnabled(True)
         self.btn_render.setEnabled(self.project.voice_mapping is not None)
         self.btn_export_kdenlive.setEnabled(True)
@@ -683,32 +688,12 @@ class MainWindow(QMainWindow):
             p = self.project.paths.root / p
         return p if p.exists() else p  # caller decides on missing-file UX
 
-    def _show_preview_image(self, scene_id: str) -> None:
-        if self.project is None:
-            return
-        st = self.project.get_scene_state(scene_id).get("image", {})
-        path = self._resolve_asset_path(st.get("path"))
-        if path is None or not path.exists():
-            QMessageBox.information(self, "Không có ảnh", f"Scene {scene_id} chưa có ảnh để xem")
-            return
-        dlg = PreviewImageDialog(scene_id, path, parent=self)
-        dlg.regen_requested.connect(self._regen_one)
-        dlg.exec()
-
-    def _show_preview_video(self, scene_id: str) -> None:
-        if self.project is None:
-            return
-        st = self.project.get_scene_state(scene_id).get("video", {})
-        path = self._resolve_asset_path(st.get("path"))
-        if path is None or not path.exists():
-            QMessageBox.information(self, "Không có video", f"Scene {scene_id} chưa có video để xem")
-            return
-        dlg = PreviewVideoDialog(scene_id, path, parent=self)
-        dlg.regen_requested.connect(self._regen_one_video)
-        dlg.exec()
-
     def _show_preview_dialog(self, scene_id: str) -> None:
-        """Unified preview + edit (thumbnail / ✏ click). Save → atomic write scenes.json."""
+        """Unified preview + edit. Entry point for thumbnail, 🖼/🎬, and ✏ clicks.
+
+        Save → atomic write scenes_edited.json.
+        Gen Image / Gen Animation → save first, then dispatch the right worker.
+        """
         if self.project is None:
             return
         scene = self.project.scene(scene_id)
@@ -720,7 +705,8 @@ class MainWindow(QMainWindow):
             parent=self,
         )
         dlg.save_requested.connect(self._on_preview_save)
-        dlg.regen_requested.connect(self._on_preview_regen)
+        dlg.gen_image_requested.connect(self._regen_one)
+        dlg.gen_animation_requested.connect(self._regen_one_video)
         dlg.exec()
 
     def _on_preview_save(self, scene_id: str, updates: dict) -> None:
@@ -733,15 +719,6 @@ class MainWindow(QMainWindow):
             return
         self.scene_list.refresh_row(scene_id)
         self._append_log(f"✓ Đã lưu prompts cho {scene_id}")
-
-    def _on_preview_regen(self, scene_id: str) -> None:
-        if self.project is None:
-            return
-        new_vtype = self.project.scene(scene_id).visual_type
-        if new_vtype == "image_grok":
-            self._regen_one(scene_id)
-        else:
-            self._regen_one_video(scene_id)
 
     # ------------------------------------------------------------------
     # Voice alignment (Plan D — auto-trigger, no wizard)
@@ -829,6 +806,75 @@ class MainWindow(QMainWindow):
             return
         self.scene_list.bind_project(self.project)
         self._append_log("✓ Reset: scenes_edited.json restored from scenes.json")
+
+    def _on_reload_project(self) -> None:
+        if self.project is None:
+            QMessageBox.information(self, "Reload", "Chưa load project nào.")
+            return
+        try:
+            summary = self.project.reload()
+        except Exception as e:
+            log.error(f"Reload failed: {e}")
+            QMessageBox.critical(self, "Reload failed", str(e))
+            return
+
+        self.scene_list.refresh_all()
+        self._append_log(
+            f"🔄 Reload: {summary['images_found']}/{summary['scenes_count']} ảnh, "
+            f"{summary['videos_found']} video, "
+            f"{len(summary['missing'])} missing, "
+            f"{len(summary['orphans'])} orphan"
+        )
+        self._show_reload_summary(summary)
+
+    def _show_reload_summary(self, summary: dict) -> None:
+        scenes_count = summary["scenes_count"]
+        images_found = summary["images_found"]
+        videos_found = summary["videos_found"]
+        missing = summary["missing"]
+        orphans = summary["orphans"]
+
+        lines = [
+            "<b>Reload xong</b>",
+            "",
+            f"📋 Scenes: {scenes_count}",
+            f"🖼 Images found: {images_found}/{scenes_count}",
+            f"🎞 Videos found: {videos_found} (chỉ scenes cần video)",
+        ]
+
+        if missing:
+            lines.append("")
+            lines.append(f"<b>⚠ Missing files ({len(missing)} scenes):</b>")
+            for item in missing[:10]:
+                miss_types = ", ".join(item["missing"])
+                lines.append(f"  • {item['scene_id']}: thiếu {miss_types}")
+            if len(missing) > 10:
+                lines.append(f"  ... và {len(missing) - 10} scenes khác")
+            lines.append("")
+            lines.append(
+                "<i>Patterns chấp nhận: pic{N}.jpg, scene_{N}.jpg, "
+                "pic{N:02d}.jpg, scene_{N:02d}.jpg (.jpg/.jpeg/.png/.webp)</i>"
+            )
+
+        if orphans:
+            lines.append("")
+            lines.append(f"<b>📂 Orphan files ({len(orphans)}):</b>")
+            lines.append("<i>Files trong sources/ không match scene nào:</i>")
+            for name in orphans[:5]:
+                lines.append(f"  • {name}")
+            if len(orphans) > 5:
+                lines.append(f"  ... và {len(orphans) - 5} files khác")
+
+        if not missing and not orphans:
+            lines.append("")
+            lines.append("<b style='color:#2e7d32'>✓ All sources matched cleanly</b>")
+
+        box = QMessageBox(self)
+        box.setWindowTitle("Reload — Summary")
+        box.setTextFormat(Qt.TextFormat.RichText)
+        box.setText("<br>".join(lines))
+        box.setIcon(QMessageBox.Icon.Warning if missing else QMessageBox.Icon.Information)
+        box.exec()
 
     def _on_voice_align_done(self, mapping) -> None:
         from core.voice_mapping import VoiceMapping  # local import to keep top tidy
