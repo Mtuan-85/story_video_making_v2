@@ -218,12 +218,10 @@ class BatchImageWorker(AsyncQThread):
             self.scene_needs_user_decision.emit(scene.id, outcome.get("attempts", 3))
             decision = await self._wait_for_user_decision()
             self.emit_log(f"User decision for {scene.id}: {decision}")
-            if decision == "abort":
+            if decision == "cancel":
                 self._abort = True
-                return self._mark_failed(scene, f"user_abort (last={outcome.get('last_error')})")
-            if decision == "skip":
-                return self._mark_failed(scene, f"user_skip (last={outcome.get('last_error')})")
-            # retry → one more full pass
+                return self._mark_failed(scene, f"user_cancel (last={outcome.get('last_error')})")
+            # retry → one more full pass; nếu vẫn fail → abort cả batch
             try:
                 outcome = await run_with_retry(
                     scene_id=scene.id, gen_factory=_factory,
@@ -234,8 +232,13 @@ class BatchImageWorker(AsyncQThread):
                 )
             except asyncio.CancelledError:
                 return self._mark_failed(scene, "user_stopped")
+            if not outcome.get("ok"):
+                self._abort = True
+                self.emit_log(f"{scene.id}: retry vòng 2 fail → dừng batch")
+                return self._mark_failed(scene, f"retry_exhausted (last={outcome.get('last_error')})")
 
         if not outcome.get("ok"):
+            self._abort = True
             return self._mark_failed(scene, str(outcome.get("last_error", "unknown")))
 
         result_path = outcome["result"]

@@ -542,22 +542,23 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
 
     def _ask_user_decision(self, worker, scene_id: str, attempts: int) -> None:
-        """Modal popup → set worker.set_user_decision('retry'|'skip'|'abort')."""
+        """Modal popup → set worker.set_user_decision('retry'|'cancel').
+
+        Retry → chạy thêm 1 vòng (3 attempts). Fail tiếp → batch dừng hẳn.
+        Cancel → batch dừng ngay.
+        """
         msg = QMessageBox(self)
         msg.setIcon(QMessageBox.Icon.Warning)
         msg.setWindowTitle(f"Scene {scene_id} fail")
-        msg.setText(f"Scene {scene_id} fail {attempts} lần liên tiếp.\nBạn muốn làm gì?")
+        msg.setText(
+            f"Scene {scene_id} fail {attempts} lần liên tiếp.\n\n"
+            "Retry → thử lại thêm 1 vòng (3 attempts). Nếu vẫn fail, batch sẽ dừng hẳn.\n"
+            "Cancel → dừng cả batch ngay bây giờ."
+        )
         btn_retry = msg.addButton("Retry", QMessageBox.ButtonRole.AcceptRole)
-        btn_skip = msg.addButton("Skip", QMessageBox.ButtonRole.RejectRole)
-        btn_abort = msg.addButton("Abort batch", QMessageBox.ButtonRole.DestructiveRole)
+        msg.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
         msg.exec()
-        clicked = msg.clickedButton()
-        if clicked == btn_retry:
-            decision = "retry"
-        elif clicked == btn_abort:
-            decision = "abort"
-        else:
-            decision = "skip"
+        decision = "retry" if msg.clickedButton() == btn_retry else "cancel"
         worker.set_user_decision(decision)
 
     # ------------------------------------------------------------------
