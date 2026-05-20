@@ -20,7 +20,7 @@ from render.voice_slicer import (
 )
 
 
-_STATIC_VISUAL_TYPES = {"image_grok"}
+_STATIC_VISUAL_TYPES = {"Image"}
 _STATIC_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp"}
 
 

@@ -18,7 +18,7 @@ from workers._async_thread import AsyncTaskWorker
 
 def _visual_state_key(visual_type: str) -> str:
     """Map Scene.visual_type → key in state.scenes[id] dict."""
-    return "image" if visual_type == "image_grok" else "video"
+    return "image" if visual_type == "Image" else "video"
 
 
 def _resolve_path(project: Project, rel_or_abs: str | None) -> Path | None:

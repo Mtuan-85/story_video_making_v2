@@ -127,10 +127,14 @@ class Project:
             state = cls._build_initial_state(scenes_json)
 
         project = cls(paths, scenes_json, state)
-        # Auto-fill effect for any scene whose raw JSON didn't declare one.
-        if cls._auto_fill_effects(project, raw_scenes_data):
+        # Auto-fill effect for any scene whose raw JSON didn't declare one,
+        # and persist canonical schema values migrated during validation.
+        if (
+            cls._auto_fill_effects(project, raw_scenes_data)
+            or cls._needs_schema_normalized_save(raw_scenes_data)
+        ):
             project.save_scenes_json()
-            log.info(f"Auto-filled missing 'effect' fields → {paths.scenes_edited.name} saved")
+            log.info(f"Normalized scenes schema → {paths.scenes_edited.name} saved")
         project._save_state_atomic()
         project._load_voice_mapping_if_present()
         return project
@@ -148,7 +152,7 @@ class Project:
         log.info(f"Reload: re-reading {self.paths.scenes_edited.name}")
         scenes_json, raw = self._load_scenes_with_raw(self.paths.scenes_edited)
         self.scenes_json = scenes_json
-        if self._auto_fill_effects(self, raw):
+        if self._auto_fill_effects(self, raw) or self._needs_schema_normalized_save(raw):
             self.save_scenes_json()
 
         if self.paths.state_json.exists():
@@ -161,7 +165,7 @@ class Project:
         videos_found = 0
         missing: list[dict[str, Any]] = []
         matched: set[Path] = set()
-        video_types = {"video_grok", "slideshow", "ken_burns_self", "ken_burns_cont"}
+        video_types = {"Video", "slideshow", "ken_burns_self", "ken_burns_cont"}
         root = self.paths.root
 
         for idx, scene in enumerate(self.scenes_json.scenes, start=1):
@@ -249,7 +253,7 @@ class Project:
         log.info("Reset: scenes_edited.json restored from scenes.json")
         scenes_json, raw = self._load_scenes_with_raw(self.paths.scenes_edited)
         self.scenes_json = scenes_json
-        if self._auto_fill_effects(self, raw):
+        if self._auto_fill_effects(self, raw) or self._needs_schema_normalized_save(raw):
             self.save_scenes_json()
 
     @staticmethod
@@ -275,8 +279,8 @@ class Project:
         """Fill Scene.effect for entries whose source JSON didn't have it.
 
         Default policy:
-            visual_type == "video_grok"     → effect = "no_effect"
-            visual_type ∈ {image_grok, slideshow} → alternate zoom_in / zoom_out
+            visual_type == "Video"          → effect = "no_effect"
+            visual_type ∈ {Image, slideshow} → alternate zoom_in / zoom_out
         Returns True if any scene was changed (caller saves scenes.json).
         """
         had_effect_by_id: dict[str, bool] = {}
@@ -292,13 +296,13 @@ class Project:
                 # Source declared effect; leave it alone.
                 # Bump alternate counter only for static types so subsequent
                 # auto-fills line up with the user's chosen rhythm.
-                if scene.visual_type in ("image_grok", "slideshow"):
+                if scene.visual_type in ("Image", "slideshow"):
                     alternate_idx += 1
                 continue
 
-            if scene.visual_type == "video_grok":
+            if scene.visual_type == "Video":
                 new_effect = "no_effect"
-            elif scene.visual_type in ("image_grok", "slideshow"):
+            elif scene.visual_type in ("Image", "slideshow"):
                 new_effect = "zoom_in" if alternate_idx % 2 == 0 else "zoom_out"
                 alternate_idx += 1
             else:
@@ -308,6 +312,20 @@ class Project:
                 scene.effect = new_effect  # type: ignore[assignment]
                 changed = True
         return changed
+
+    @staticmethod
+    def _needs_schema_normalized_save(raw_scenes: list[dict]) -> bool:
+        """Return True when validation migrated author-facing scene values."""
+        for raw in raw_scenes:
+            if not isinstance(raw, dict):
+                continue
+            if "visual_type" in raw:
+                raw_visual_type = raw["visual_type"]
+                if Scene.normalize_visual_type(raw_visual_type) != raw_visual_type:
+                    return True
+            if any(key in raw for key in ("scene_id", "script", "duration_sec")):
+                return True
+        return False
 
     @staticmethod
     def _load_state(path: Path) -> dict[str, Any]:
@@ -457,7 +475,11 @@ class Project:
         target.parent.mkdir(parents=True, exist_ok=True)
         tmp = target.with_suffix(".json.tmp")
         tmp.write_text(
-            json.dumps(self.scenes_json.model_dump(), ensure_ascii=False, indent=2),
+            json.dumps(
+                self.scenes_json.model_dump(exclude_none=True),
+                ensure_ascii=False,
+                indent=2,
+            ),
             encoding="utf-8",
         )
         os.replace(tmp, target)

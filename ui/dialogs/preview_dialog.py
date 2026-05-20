@@ -8,7 +8,7 @@ story / prompts / visual_type / effect / duration, and three action buttons:
   💾 Save        — persist edits without gen.
   🖼 Gen Image   — persist edits, then run image worker (overwrites existing).
   🎞 Gen Video   — persist edits, then run video worker. Dispatches by
-                   visual_type: video_grok (I2V) or slideshow.
+                   visual_type: Video (I2V) or slideshow.
 
 Signals:
     save_requested(scene_id, updates)        — main_window persists via
@@ -41,7 +41,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-VISUAL_TYPES = ["image_grok", "video_grok", "slideshow"]
+VISUAL_TYPES = ["Image", "Video", "slideshow"]
 EFFECTS = ["zoom_in", "zoom_out", "no_effect"]
 
 

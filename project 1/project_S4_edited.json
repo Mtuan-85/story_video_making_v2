@@ -1,0 +1,695 @@
+{
+  "meta": {
+    "version": "1.0",
+    "project_id": "Naomi_01",
+    "title": "Raising a Child Who Chooses to Cooperate",
+    "aspect_ratio": "16:9",
+    "language": "en",
+    "baseStyle": "Cozy flat cartoon illustration, children's book style. No harsh outlines, soft edges. Flat shading with one soft shadow layer. Slightly chibi proportions (large head, small body). Subtle paper grain texture. Warm cozy atmosphere. GUIDELINE:Palette: soft pastel earth tones, warm yellow background. Subtle shadow under characters for grounding. Children's book illustration aesthetic.",
+    "baseNegative": "photorealistic, 3D render, harsh contrast, cluttered composition, distorted hands, extra limbs, over-detailed background, no subtitle, no unwanted text",
+    "image_quality": "quality",
+    "video_resolution": "720p",
+    "video_duration": "10s"
+  },
+  "scenes": [
+    {
+      "id": "scene-01",
+      "visual_type": "Video",
+      "effect": "no_effect",
+      "story_en": "Last Tuesday evening, Jinro left his shoes in the middle of the hallway again. One shoe was upside down. The other was somehow under Sakura's stroller.",
+      "imagePrompt": "A close-up view of a warm family hallway floor. In the foreground, a small 7-year-old boy's messy shoes block the path, one upside down and one partly hidden under a stroller. In the midground, a 1-year-old baby girl with a round face, very little hair, and an adorable expression sits softly in the stroller, while Jinro, a small boy with a round face, slightly messy hair, a loose T-shirt, soft pants, and slowly tied shoes, is only partly visible walking away. The background is a simple entryway with low-detail walls and soft household shadows. A Text that \"NO DISTURB\" on the middle of screen.",
+      "videoPrompt": "A warm family hallway floor is seen close up, with Jinro's messy shoes blocking the path, one upside down and one partly hidden under Sakura's stroller, in a soft cozy children's book style. Sakura sits gently in the stroller while Jinro is partly visible walking away, and the stroller fabric shifts slightly as the hallway shadows breathe softly. Faint household ambience.",
+      "duration": 10,
+      "scene_type": "Narrative Anchor",
+      "visual_technique": "Single Vignette",
+      "characters_in_scene": [
+        "Jinro",
+        "Sakura"
+      ],
+      "core_idea_illustration": "A warm family hallway with Jinro's abandoned shoes blocking the path and one shoe half-hidden under Sakura's stroller, showing how a tiny household object becomes the emotional trigger."
+    },
+    {
+      "id": "scene-02",
+      "visual_type": "Image",
+      "effect": "zoom_in",
+      "story_en": "I was holding a warm bottle, Hina was asking where her headphones were, and Cillian was trying to find the car keys with that very calm face that makes me less calm.",
+      "imagePrompt": "A medium-wide view of a crowded family hallway during evening rush. In the foreground, Naomi, a petite 38-year-old Japanese woman with a calm face, neat dark hair, and a pale pink kimono, holds a warm baby bottle while looking quietly overwhelmed. In the midground, Hina, a tall 15-year-old Japanese-American girl with long black hair, a hoodie, headphones missing from her head, and a phone close by, searches around with impatience. Beside her, Cillian, a tall 41-year-old Western man with a gentle bearded face, glasses, jeans, and a simple T-shirt, calmly looks for car keys. The background is a simple hallway with coats, bags, and soft clutter kept low-detail. No visible text.",
+      "videoPrompt": "",
+      "duration": 12,
+      "scene_type": "Narrative Anchor",
+      "visual_technique": "Single Vignette",
+      "characters_in_scene": [
+        "Naomi",
+        "Hina",
+        "Cillian"
+      ],
+      "core_idea_illustration": "Naomi stands in a crowded hallway holding a baby bottle while Hina searches for headphones and Cillian calmly looks for keys, showing ordinary family overload before anyone says anything wrong."
+    },
+    {
+      "id": "scene-03",
+      "visual_type": "Video",
+      "effect": "no_effect",
+      "story_en": "I looked at the shoes and felt the sentence rising in me: \"How many times do I have to tell you?\"",
+      "imagePrompt": "A tight close-up from Naomi's point of view looking down at Jinro's shoes in the hallway. Naomi, a petite Japanese mother in her late 30s with neat dark hair and a pale pink kimono, is partly visible through her tense eyes and lowered face at the top edge of the frame. Jinro, a small 7-year-old boy with messy hair and soft pants, is blurred in the background. A faint warm steam-like shape rises from the shoes to suggest an angry sentence forming. The background stays simple and softly blurred. No visible text.",
+      "videoPrompt": "A tight close-up from Naomi's point of view shows Jinro's shoes in the hallway, with Naomi's tense eyes and lowered face partly visible at the top edge, warm but strained in a soft children's book illustration style. The faint steam-like shape rises slowly from the shoes while Jinro remains softly blurred in the background, and Naomi's eyelids make one tiny blink. Quiet room tone.",
+      "duration": 8,
+      "scene_type": "Narrative Anchor",
+      "visual_technique": "B-roll / Object Focus",
+      "characters_in_scene": [
+        "Naomi",
+        "Jinro"
+      ],
+      "core_idea_illustration": "Close-up of Naomi's eyes looking down at Jinro's shoes as the angry sentence rises like steam, showing the split second before correction becomes blame."
+    },
+    {
+      "id": "scene-04",
+      "visual_type": "Image",
+      "effect": "zoom_out",
+      "story_en": "Hi! I'm Naomi, the Japanese Mom's living between two cultures. And that small hallway moment is where I want to begin — because many of us do not really want obedient children. We want children who can cooperate without disappearing.",
+      "imagePrompt": "A centered medium shot on a simple warm background with two soft doorway shapes behind the characters. In the foreground, Naomi, a petite 38-year-old Japanese woman with a calm face, neat dark hair, and a pale pink kimono, stands gently between the doorways. Beside her, Jinro, a small 7-year-old boy with a round face, slightly messy hair, loose T-shirt, soft pants, and slowly tied shoes, remains clearly visible and relaxed. The doorways suggest two cultures without labels, while Naomi's open posture shows guidance without erasing the child. Background details are minimal. No visible text.",
+      "videoPrompt": "",
+      "duration": 16,
+      "scene_type": "Payoff / Thesis",
+      "visual_technique": "Conceptual Diagram",
+      "characters_in_scene": [
+        "Naomi",
+        "Jinro"
+      ],
+      "core_idea_illustration": "Naomi stands between two soft cultural doorways while Jinro remains visible beside her, showing the thesis that cooperation should guide a child without making the child vanish."
+    },
+    {
+      "id": "scene-05",
+      "visual_type": "Image",
+      "effect": "zoom_in",
+      "story_en": "When people talk about Japanese children, they often say they are polite, patient, quiet, well-behaved. Maybe sometimes that is true. Maybe sometimes it is only what visitors notice from the outside.",
+      "imagePrompt": "A two-part image with a soft window between outside and inside. On one side, simplified visitors stand outside admiring a calm row of polite children through the glass. On the other side, a warm home interior behind a partly open curtain shows ordinary family life with scattered socks, a low table, and a child mid-motion. The foreground emphasizes the window and curtain as the barrier between surface impression and fuller reality. The background is simple and low-detail. No visible text.",
+      "videoPrompt": "",
+      "duration": 13,
+      "scene_type": "Contrast / Juxtaposition",
+      "visual_technique": "Split-Screen Comparison",
+      "characters_in_scene": [],
+      "core_idea_illustration": "One side shows visitors admiring calm children from outside a window while the other side hints at a fuller home life behind the curtain, showing that stereotypes see only the surface."
+    },
+    {
+      "id": "scene-06",
+      "visual_type": "Image",
+      "effect": "zoom_out",
+      "story_en": "But growing up in Kyoto, I did not experience cooperation as something created by fear. I experienced it more as something soaked slowly into daily life — through shoes turned neatly, voices lowered, bowls carried to the sink, and adults who tried to live the rule before asking a child to follow it.",
+      "imagePrompt": "A clean process scene on a simple warm background showing four separated Kyoto household mini-moments: a pair of shoes turned neatly at the entryway, two small figures lowering their voices near a sleeping room, bowls being carried toward a sink, and an adult quietly modeling the routine before a child follows. Each mini-moment is clearly separated with generous empty space for animation. The background is minimal with only soft home shapes. No visible text.",
+      "videoPrompt": "",
+      "duration": 21,
+      "scene_type": "Panel-Based Explainer",
+      "visual_technique": "Slideshow",
+      "characters_in_scene": [],
+      "core_idea_illustration": "A sequence of soft Kyoto household panels shows neat shoes, lowered voices, bowls going to the sink, and adults modeling routines, showing cooperation as a daily atmosphere rather than fear."
+    },
+    {
+      "id": "scene-07",
+      "visual_type": "Image",
+      "effect": "zoom_in",
+      "story_en": "If this feels useful, stay with me for a few minutes. Not for a Japanese method to copy perfectly — just for one more tool.",
+      "imagePrompt": "An overhead view of a small handmade parenting toolbox on a warm simple background. In the foreground, one gentle tool rests slightly highlighted beside other soft, ordinary tools, suggesting one useful perspective rather than a perfect formula. The objects are clearly separated with empty space around them for easy animation. The background is solid and uncluttered. No visible text.",
+      "videoPrompt": "",
+      "duration": 9,
+      "scene_type": "Payoff / Thesis",
+      "visual_technique": "Quote / Text-on-Image",
+      "characters_in_scene": [],
+      "core_idea_illustration": "A small handmade parenting toolbox rests on a warm background with one gentle tool highlighted, showing that the viewer is being offered a practical perspective, not a perfect cultural formula."
+    },
+    {
+      "id": "scene-08",
+      "visual_type": "Image",
+      "effect": "zoom_out",
+      "story_en": "The Shoe in the Hallway",
+      "imagePrompt": "A minimal warm title card with a tiny pair of shoes resting on a soft pastel floor near the lower corner. The rest of the frame has generous empty space and a simple background. Text: \"The Shoe in the Hallway\" Position: \"center-right\" Size: \"large\" Role: \"takeaway\". No other visible text.",
+      "videoPrompt": "",
+      "duration": 5,
+      "scene_type": "Bumper",
+      "visual_technique": "Quote / Text-on-Image",
+      "characters_in_scene": [],
+      "core_idea_illustration": "Minimal warm title card with the text \"The Shoe in the Hallway\" beside a tiny pair of shoes on a soft pastel floor."
+    },
+    {
+      "id": "scene-09",
+      "visual_type": "Video",
+      "effect": "no_effect",
+      "story_en": "I want to be honest with you. In that hallway, I did not want to teach responsibility. I wanted the shoes gone. There is a difference.",
+      "imagePrompt": "A close-up of Naomi's hand reaching toward messy shoes on a hallway floor. Naomi, a petite Japanese mother in her late 30s with a pale pink kimono sleeve visible, leans in from the edge with tired urgency rather than calm teaching. The shoes are the sharpest foreground subject, with a hallway mat in the midground. The background is soft, minimal, and low-detail. No visible text.",
+      "videoPrompt": "A close-up shows Naomi's hand reaching toward messy shoes on a hallway floor, her pale pink kimono sleeve visible at the edge, with the shoes sharp in the foreground and the hallway kept soft and minimal. Her fingers hover, tense slightly, and then move with tired urgency toward the shoes while the sleeve fabric shifts gently. Soft hallway ambience.",
+      "duration": 10,
+      "scene_type": "Narrative Anchor",
+      "visual_technique": "B-roll / Object Focus",
+      "characters_in_scene": [
+        "Naomi"
+      ],
+      "core_idea_illustration": "Close-up of Naomi's hand reaching toward the messy shoes, showing the difference between a teaching moment and a tired parent's urgent wish for the problem to disappear."
+    },
+    {
+      "id": "scene-10",
+      "visual_type": "Image",
+      "effect": "zoom_in",
+      "story_en": "The tired parent in me wanted fast compliance. The part of me that studied child development knew Jinro was not being morally difficult. He was seven. His attention moved like a small bird. He came home hungry, dropped his backpack, heard Sakura crying, and the shoes became invisible to him.",
+      "imagePrompt": "A symbolic medium-wide view of a family entryway. In the foreground, Jinro, a small 7-year-old boy with a round face, slightly messy hair, loose T-shirt, soft pants, and slowly tied shoes, drops his backpack while looking distracted. A tiny bird-shaped glow represents his attention, flying separately toward a snack, Sakura crying in a stroller, and the open doorway, while the shoes fade pale behind him. Naomi, a petite Japanese mother in a pale pink kimono, watches from the side with a conflicted expression, and Sakura, a round-faced baby girl with very little hair, sits in the stroller. The background is simple and uncluttered. No visible text.",
+      "videoPrompt": "",
+      "duration": 21,
+      "scene_type": "Conceptual Metaphor",
+      "visual_technique": "Conceptual Diagram",
+      "characters_in_scene": [
+        "Naomi",
+        "Jinro",
+        "Sakura"
+      ],
+      "core_idea_illustration": "Jinro's attention appears as a tiny bird flying from backpack to Sakura's crying to hunger while the shoes fade pale in the background, showing unfinished development rather than moral failure."
+    },
+    {
+      "id": "scene-11",
+      "visual_type": "Image",
+      "effect": "zoom_out",
+      "story_en": "And still — I snapped. Not loudly. My Japanese temper is usually quieter than that. I picked up the shoes myself, placed them hard on the mat, and said nothing for fifteen minutes.",
+      "imagePrompt": "A quiet medium shot in the hallway with a cooler tone in the air. In the foreground, Naomi, a petite 38-year-old Japanese woman with neat dark hair, a calm but tight face, and a pale pink kimono, places Jinro's shoes hard onto the mat with a sharp downward gesture. In the midground, Jinro, a small 7-year-old boy with messy hair, a loose T-shirt, and soft pants, stands still and notices her silence. The background is a simple hallway with soft blue shadows and low detail. No visible text.",
+      "videoPrompt": "",
+      "duration": 13,
+      "scene_type": "Narrative Anchor",
+      "visual_technique": "Single Vignette",
+      "characters_in_scene": [
+        "Naomi",
+        "Jinro"
+      ],
+      "core_idea_illustration": "Naomi silently places Jinro's shoes onto the mat with a sharp gesture while the hallway air turns cool blue, showing how quiet anger can still fill a room."
+    },
+    {
+      "id": "scene-12",
+      "visual_type": "Video",
+      "effect": "no_effect",
+      "story_en": "Jinro noticed. Of course he noticed. Children always notice the weather inside their parents. Later, he came to the kitchen and asked, \"Mama, are you still mad?\"",
+      "imagePrompt": "A side view from the kitchen doorway. In the foreground, Jinro, a small 7-year-old boy with a round face, slightly messy hair, loose T-shirt, soft pants, and slowly tied shoes, stands carefully at the edge of the kitchen with a worried posture. In the midground, Naomi, a petite Japanese mother in her late 30s with neat dark hair and a pale pink kimono, faces partly away at the counter. A small soft storm cloud hovers high in the room to show emotional weather. The kitchen background is simple and low-detail. No visible text.",
+      "videoPrompt": "A side view from the kitchen doorway shows Jinro standing carefully at the kitchen edge while Naomi faces partly away at the counter, with a small soft storm cloud hovering high in the simple low-detail room. Jinro shifts his weight slightly, Naomi's shoulders rise and fall with a quiet breath, and the little cloud drifts almost imperceptibly. Soft kitchen room tone.",
+      "duration": 12,
+      "scene_type": "Narrative Anchor",
+      "visual_technique": "Single Vignette",
+      "characters_in_scene": [
+        "Naomi",
+        "Jinro"
+      ],
+      "core_idea_illustration": "Jinro stands carefully at the kitchen edge while Naomi faces away, with a small storm cloud hovering indoors, showing that children read a parent's emotional weather."
+    },
+    {
+      "id": "scene-13",
+      "visual_type": "Video",
+      "effect": "no_effect",
+      "story_en": "I repaired it first. I knelt beside him and said, \"I was frustrated. I should not have made the room cold.\" That sentence was not magic. But it changed the lesson. Because the lesson was no longer, \"Mama is angry when shoes are wrong.\" It became, \"In this family, we repair and try again.\"",
+      "imagePrompt": "A warm medium shot at child eye level in the hallway. In the foreground, Naomi, a petite 38-year-old Japanese woman with a calm face, neat dark hair, and a pale pink kimono, kneels beside Jinro with open hands and an apologetic expression. Jinro, a small 7-year-old boy with messy hair, round cheeks, a loose T-shirt, soft pants, and slowly tied shoes, looks back at her with cautious relief. The cold blue tone fades into warm light around them. The background is simple and uncluttered. No visible text.",
+      "videoPrompt": "A warm medium shot at child eye level shows Naomi kneeling beside Jinro in the hallway, open hands and apologetic expression facing his cautious relief, with cold blue tones fading into warm light around them. Naomi breathes slowly, her sleeves sway gently, and Jinro blinks as his posture softens. Quiet warm household ambience.",
+      "duration": 22,
+      "scene_type": "Payoff / Thesis",
+      "visual_technique": "Single Vignette",
+      "characters_in_scene": [
+        "Naomi",
+        "Jinro"
+      ],
+      "core_idea_illustration": "Naomi kneels at Jinro's eye level as the cold room warms again, showing repair as the real lesson: family mistakes become chances to reconnect and try again."
+    },
+    {
+      "id": "scene-14",
+      "visual_type": "Image",
+      "effect": "zoom_in",
+      "story_en": "Obedience Is Too Small a Goal",
+      "imagePrompt": "A minimal warm title card with a tiny child-shaped paper figure stepping gently outside a small open box. The figure and box sit near the lower-left area with generous empty space around them. Text: \"Obedience Is Too Small a Goal\" Position: \"center-right\" Size: \"large\" Role: \"takeaway\". No other visible text.",
+      "videoPrompt": "",
+      "duration": 5,
+      "scene_type": "Bumper",
+      "visual_technique": "Quote / Text-on-Image",
+      "characters_in_scene": [],
+      "core_idea_illustration": "Minimal warm title card with the text \"Obedience Is Too Small a Goal\" beside a tiny child-shaped paper figure stepping outside a small box."
+    },
+    {
+      "id": "scene-15",
+      "visual_type": "Image",
+      "effect": "zoom_out",
+      "story_en": "I used to think a \"good child\" was a child who listened quickly. Maybe because in many traditional homes, including parts of Japan, quiet cooperation is praised so early that it starts to look like character.",
+      "imagePrompt": "A centered symbolic scene on a simple warm background. In the foreground, a small child silhouette stands quietly while soft praise tags float nearby like stamps, suggesting quietness, quick listening, and goodness without using readable words. The tags are separated and do not overlap the child. The background stays plain with generous empty space, making the child feel partly hidden by expectations. No visible text.",
+      "videoPrompt": "",
+      "duration": 14,
+      "scene_type": "Conceptual Metaphor",
+      "visual_technique": "Conceptual Diagram",
+      "characters_in_scene": [],
+      "core_idea_illustration": "A child silhouette is stamped with labels like quiet, quick, and good, showing how early praise for obedience can be mistaken for the child's true character."
+    },
+    {
+      "id": "scene-16",
+      "visual_type": "Image",
+      "effect": "zoom_in",
+      "story_en": "But now, raising children between Japanese and Western expectations, I feel less comfortable with that simple picture. In America and Europe, many children are encouraged to say, \"I don't want to,\" \"That's not fair,\" or \"I need space.\" I do not think this is wrong. A child needs a voice.",
+      "imagePrompt": "A balanced medium-wide scene with Naomi standing between two soft cultural expectation shapes. In the foreground, Naomi, a petite 38-year-old Japanese woman with a calm face, neat dark hair, and a pale pink kimono, looks thoughtful rather than certain. On one side stands Hina, a tall 15-year-old Japanese-American girl with long black hair, a hoodie, headphones, and a phone close by, gesturing honestly. On the other side stands Jinro, a small 7-year-old boy with messy hair, a loose T-shirt, soft pants, and slowly tied shoes, raising a small hand to speak. The background is simple with no readable posters or labels. No visible text.",
+      "videoPrompt": "",
+      "duration": 21,
+      "scene_type": "Contrast / Juxtaposition",
+      "visual_technique": "Split-Screen Comparison",
+      "characters_in_scene": [
+        "Naomi",
+        "Hina",
+        "Jinro"
+      ],
+      "core_idea_illustration": "Naomi stands between two parenting posters while Hina and Jinro have speech bubbles of honest refusal, showing that a child's voice is necessary even when cultures value cooperation differently."
+    },
+    {
+      "id": "scene-17",
+      "visual_type": "Image",
+      "effect": "zoom_out",
+      "story_en": "A child who only obeys may look peaceful from the outside while becoming very lonely inside. But a child who only expresses himself, without learning how his actions touch other people, can also become lonely — just in a different way.",
+      "imagePrompt": "A two-part symbolic image on a clean background. On the left, a small child sits quietly inside a transparent box, looking peaceful from outside but lonely within. On the right, another child stands on a small isolated island, speaking loudly into empty space while no one is close enough to connect. The two sides are separated by open space and balanced in size. The background is minimal and low-detail. No visible text.",
+      "videoPrompt": "",
+      "duration": 18,
+      "scene_type": "Contrast / Juxtaposition",
+      "visual_technique": "Split-Screen Comparison",
+      "characters_in_scene": [],
+      "core_idea_illustration": "One child sits silent inside a transparent obedience box while another stands shouting on a small island, showing that both erased voice and unconnected self-expression can become loneliness."
+    },
+    {
+      "id": "scene-18",
+      "visual_type": "Image",
+      "effect": "zoom_in",
+      "story_en": "So the question I ask myself now is not, \"How do I make my child obey?\" It is smaller and harder: \"What would help my child want to cooperate while still feeling like himself?\"",
+      "imagePrompt": "A centered medium shot of Naomi pausing in soft light. Naomi, a petite 38-year-old Japanese woman with a calm face, neat dark hair, and a pale pink kimono, stands with one hand near her chest and a thoughtful expression, as if choosing curiosity over control. Around her, faint shapes of a child, a small heart, and helping hands float softly but remain separated. The background is simple and warm. No visible text.",
+      "videoPrompt": "",
+      "duration": 13,
+      "scene_type": "Question",
+      "visual_technique": "Quote / Text-on-Image",
+      "characters_in_scene": [
+        "Naomi"
+      ],
+      "core_idea_illustration": "Naomi pauses in soft light as the harder question floats above her in gentle text, showing the shift from controlling behavior to inviting cooperation while preserving the child's selfhood."
+    },
+    {
+      "id": "scene-19",
+      "visual_type": "Image",
+      "effect": "zoom_out",
+      "story_en": "That question changes my face. It makes me less like a police officer and more like a gardener, though honestly, some mornings I still reach for the whistle.",
+      "imagePrompt": "A symbolic medium-wide scene with Naomi choosing between two parenting impulses. In the foreground, Naomi, a petite Japanese mother in her late 30s with neat dark hair and a pale pink kimono, stands between a small police whistle on one side and a tiny garden bed on the other. Near the garden, Jinro, a small 7-year-old boy with messy hair, round cheeks, a loose T-shirt, soft pants, and slowly tied shoes, stands like a growing seedling but still fully himself. The objects are clearly separated on a simple background with open space for animation. No visible text.",
+      "videoPrompt": "",
+      "duration": 11,
+      "scene_type": "Conceptual Metaphor",
+      "visual_technique": "Conceptual Diagram",
+      "characters_in_scene": [
+        "Naomi",
+        "Jinro"
+      ],
+      "core_idea_illustration": "Naomi faces two symbolic roles, a police whistle on one side and a small garden on the other where Jinro grows as himself, showing the harder work of cultivating cooperation instead of enforcing obedience."
+    },
+    {
+      "id": "scene-20",
+      "visual_type": "Image",
+      "effect": "zoom_in",
+      "story_en": "What Shitsuke Really Taught Me",
+      "imagePrompt": "A minimal warm title card with neatly placed slippers beside a soft genkan shadow. The slippers sit low in the frame with clean empty space around them. Text: \"What Shitsuke Really Taught Me\" Position: \"center-right\" Size: \"large\" Role: \"takeaway\". No other visible text.",
+      "videoPrompt": "",
+      "duration": 5,
+      "scene_type": "Bumper",
+      "visual_technique": "Quote / Text-on-Image",
+      "characters_in_scene": [],
+      "core_idea_illustration": "Minimal warm title card with the text \"What Shitsuke Really Taught Me\" beside neatly placed slippers and a soft genkan shadow."
+    },
+    {
+      "id": "scene-21",
+      "visual_type": "Image",
+      "effect": "zoom_out",
+      "story_en": "There is a Japanese word, shitsuke, often translated as discipline. But discipline is a little too sharp in English. Shitsuke feels closer to shaping the way life is lived. Not one lecture. Not one punishment. A repeated pattern.",
+      "imagePrompt": "A clean symbolic overhead view of a gentle repeated path winding through a simple home shape. Along the path are clearly separated objects: slippers at an entryway, a cup near a table, a bowl near a sink, and a folded cloth. A sharp ruler rests far to the side, smaller and less inviting. The layout has generous empty space between objects for animation. Text: \"shitsuke\" Position: \"small sign near the gentle path\" Size: \"small\" Role: \"label\". No other visible text.",
+      "videoPrompt": "",
+      "duration": 16,
+      "scene_type": "Conceptual Metaphor",
+      "visual_technique": "Conceptual Diagram",
+      "characters_in_scene": [],
+      "core_idea_illustration": "The word shitsuke is shown as a gentle repeated path through a home instead of a sharp ruler, showing discipline as life-shaping rhythm rather than punishment."
+    },
+    {
+      "id": "scene-22",
+      "visual_type": "Video",
+      "effect": "no_effect",
+      "story_en": "My mother Kimiko did not say many beautiful things about parenting. She folded cloth. She swept the genkan. She placed slippers straight without announcing that she was teaching me order.",
+      "imagePrompt": "A quiet medium shot inside a calm Japanese home entryway. In the foreground, Kimiko, an elderly Japanese woman with a small frame, slightly bent back, silver hair tied neatly in a bun, and a dark-colored kimono, folds cloth with precise hands. In the midground, a broom rests near the swept genkan and slippers are aligned straight. Her expression is composed and practical, with no speech or announcement. The background is simple and low-detail. No visible text.",
+      "videoPrompt": "A quiet medium shot inside a calm Japanese home entryway shows Kimiko folding cloth with precise hands, a broom resting near the swept genkan and slippers aligned straight in the midground. Her hands fold the cloth slowly and neatly, her shoulders remain composed, and the slippers stay still in the soft warm room. Faint cloth rustle.",
+      "duration": 12,
+      "scene_type": "Narrative Anchor",
+      "visual_technique": "Single Vignette",
+      "characters_in_scene": [
+        "Kimiko"
+      ],
+      "core_idea_illustration": "Kimiko quietly folds cloth, sweeps the genkan, and aligns slippers in a calm home, showing that her teaching came through repeated embodied order, not speeches."
+    },
+    {
+      "id": "scene-23",
+      "visual_type": "Video",
+      "effect": "no_effect",
+      "story_en": "When I was small and left my cup on the table, she would sometimes stand beside it and ask, \"Where does this live?\" That was all. Not \"You are careless.\" Not \"Good girls clean up.\" Just, \"Where does this live?\"",
+      "imagePrompt": "A close-up object-focused view of a small cup left alone on a low table. In the midground, Kimiko, an elderly Japanese woman with a small frame, slightly bent back, silver hair in a neat bun, and a dark kimono, stands calmly beside it with a composed face and relaxed hands. The cup is the sharpest foreground subject, suggesting a gentle question about where it belongs. The background is minimal and softly blurred. No visible text.",
+      "videoPrompt": "A close-up object-focused view shows a small cup left alone on a low table, with Kimiko standing calmly beside it in the softly blurred midground, composed and gentle in a cozy children's book style. The cup gives a tiny settling wobble, Kimiko's hands relax at her sides, and the room remains quiet and still. Soft room ambience.",
+      "duration": 17,
+      "scene_type": "Narrative Anchor",
+      "visual_technique": "B-roll / Object Focus",
+      "characters_in_scene": [
+        "Kimiko"
+      ],
+      "core_idea_illustration": "Close-up of a small cup left on a table with Kimiko standing calmly beside it, showing correction as a question about belonging rather than an accusation."
+    },
+    {
+      "id": "scene-24",
+      "visual_type": "Image",
+      "effect": "zoom_in",
+      "story_en": "I understand now that she was not trying to make me afraid of mistakes. She was helping me feel that objects, people, and routines had a place in the family.",
+      "imagePrompt": "A warm symbolic view of a family home drawn like a gentle map. Kimiko, an elderly Japanese woman with a small frame, silver hair tied in a bun, and a dark kimono, stands calmly at the edge of the map. Clearly separated places hold a cup, slippers, a folded cloth, and small family figures, each with its own warm spot. The background is simple and clean, with enough empty space between each object for animation. No visible text.",
+      "videoPrompt": "",
+      "duration": 12,
+      "scene_type": "Payoff / Thesis",
+      "visual_technique": "Conceptual Diagram",
+      "characters_in_scene": [
+        "Kimiko"
+      ],
+      "core_idea_illustration": "A family home is drawn like a gentle map where cups, slippers, people, and routines each have a warm place, showing that order can create belonging instead of fear."
+    },
+    {
+      "id": "scene-25",
+      "visual_type": "Image",
+      "effect": "zoom_out",
+      "story_en": "In the West, you might call this habit formation, or environmental scaffolding. A child learns better when the desired behavior is visible, repeatable, and shared. But I must say this carefully: Japanese homes are not magical. Japanese parents lose patience. Japanese children throw socks. Culture gives us tools, not perfection.",
+      "imagePrompt": "A clean four-part process scene on a simple warm background. Four separated mini-moments show a visible routine cue, a child repeating a small action, a family sharing the same habit, and a sock flying across a normal room to show imperfection. Each mini-moment is spaced apart with generous empty space and no overlapping important objects. The background remains plain and low-detail. No visible text.",
+      "videoPrompt": "",
+      "duration": 23,
+      "scene_type": "Panel-Based Explainer",
+      "visual_technique": "Slideshow",
+      "characters_in_scene": [],
+      "core_idea_illustration": "Panels show visible routines, repeated cues, shared family habits, and then a sock flying across a normal home, showing that culture offers tools and patterns, not perfect families."
+    },
+    {
+      "id": "scene-26",
+      "visual_type": "Image",
+      "effect": "zoom_in",
+      "story_en": "The Child Learns the Room Before the Rule",
+      "imagePrompt": "A minimal warm title card with a small glowing outline of a room near the bottom of the frame. The room shape is simple and softly lit with wide empty space around it. Text: \"The Child Learns the Room Before the Rule\" Position: \"center-right\" Size: \"large\" Role: \"takeaway\". No other visible text.",
+      "videoPrompt": "",
+      "duration": 5,
+      "scene_type": "Bumper",
+      "visual_technique": "Quote / Text-on-Image",
+      "characters_in_scene": [],
+      "core_idea_illustration": "Minimal warm title card with the text \"The Child Learns the Room Before the Rule\" beside a small room outline glowing softly."
+    },
+    {
+      "id": "scene-27",
+      "visual_type": "Image",
+      "effect": "zoom_out",
+      "story_en": "Watanabe-sensei once told us, during a school parents' meeting in Kyoto, \"A rule spoken by an adult who does not live it becomes noise.\" At the time, I thought he was talking about children. Now I think he was also warning the parents.",
+      "imagePrompt": "A medium-wide view of a Kyoto school parents' meeting. In the foreground, Watanabe-sensei, an elderly Japanese man with a slender build, silver hair, thin glasses, a fedora, and a simple cardigan, stands calmly beside a small meeting table with a quiet old-school teacher presence. Parents sit softly in the midground as simplified figures. The background is a low-detail classroom wall with open space for the quote. Text: \"Live the rule.\" Position: \"right side, centered vertically\" Size: \"medium\" Role: \"quote\". No other visible text.",
+      "videoPrompt": "",
+      "duration": 17,
+      "scene_type": "Narrative Anchor",
+      "visual_technique": "Quote / Text-on-Image",
+      "characters_in_scene": [
+        "Watanabe-sensei"
+      ],
+      "core_idea_illustration": "Watanabe-sensei stands calmly at a Kyoto parents' meeting beside the quote about rules becoming noise, showing that adult example gives rules their meaning."
+    },
+    {
+      "id": "scene-28",
+      "visual_type": "Image",
+      "effect": "zoom_in",
+      "story_en": "I tell Jinro to speak gently to Sakura, then he hears me use a sharp voice when I am late. I tell Hina to put her phone away, then she sees my thumb moving across my own screen while the rice cooker is beeping.",
+      "imagePrompt": "A two-part family scene showing children noticing adult mismatch. On one side, Naomi, a petite 38-year-old Japanese woman with neat dark hair and a pale pink kimono, gestures for Jinro, a small 7-year-old boy with messy hair and soft pants, to be gentle near Sakura, a round-faced baby girl with very little hair, while Naomi's own face is tense. On the other side, Hina, a tall 15-year-old Japanese-American girl with long black hair, a hoodie, headphones, and phone nearby, notices Naomi scrolling her own phone beside a beeping rice cooker. The background is simple with both halves clearly separated. No visible text.",
+      "videoPrompt": "",
+      "duration": 18,
+      "scene_type": "Contrast / Juxtaposition",
+      "visual_technique": "Split-Screen Comparison",
+      "characters_in_scene": [
+        "Naomi",
+        "Jinro",
+        "Sakura",
+        "Hina"
+      ],
+      "core_idea_illustration": "Split-screen shows Naomi asking for gentleness and phone limits while her own sharp voice and scrolling thumb contradict her words, showing how children notice the mismatch."
+    },
+    {
+      "id": "scene-29",
+      "visual_type": "Image",
+      "effect": "zoom_out",
+      "story_en": "Children are not only listening to rules. They are studying the room. They are asking, without words, \"Is this how our family moves?\"",
+      "imagePrompt": "A wide view of a warm family room from a child's observing height. In the foreground, Hina, a tall 15-year-old Japanese-American girl with long black hair, a hoodie, headphones, and phone close by, stands beside Jinro, a small 7-year-old boy with messy hair and soft pants, while Sakura, a 1-year-old baby girl with a round face and very little hair, sits nearby. Their eyes follow faint invisible movement paths around the room, shown as soft curved shapes. The background is a simple home interior with low-detail furniture. No visible text.",
+      "videoPrompt": "",
+      "duration": 10,
+      "scene_type": "Conceptual Metaphor",
+      "visual_technique": "Conceptual Diagram",
+      "characters_in_scene": [
+        "Hina",
+        "Jinro",
+        "Sakura"
+      ],
+      "core_idea_illustration": "Hina, Jinro, and Sakura quietly observe invisible arrows of movement around the family room, showing that children learn the household pattern before the spoken rule."
+    },
+    {
+      "id": "scene-30",
+      "visual_type": "Image",
+      "effect": "zoom_in",
+      "story_en": "Developmental psychology would describe part of this as modeling and co-regulation. A young child borrows the nervous system of the adult nearby. If I want cooperation, my own body becomes part of the lesson.",
+      "imagePrompt": "A gentle mechanism-style scene in a simple family room. In the foreground, Naomi, a petite 38-year-old Japanese woman with neat dark hair, a calm face, and a pale pink kimono, sits breathing slowly with relaxed shoulders. Soft glowing lines connect her calm body to Jinro, a small 7-year-old boy with messy hair, round cheeks, a loose T-shirt, and soft pants, and Sakura, a round-faced baby girl with very little hair. The children appear soothed by her steadiness. The background is minimal and uncluttered. No visible text.",
+      "videoPrompt": "",
+      "duration": 14,
+      "scene_type": "Mechanism",
+      "visual_technique": "Educational / Cross-Section",
+      "characters_in_scene": [
+        "Naomi",
+        "Jinro",
+        "Sakura"
+      ],
+      "core_idea_illustration": "Soft glowing lines connect Naomi's calm breathing to Jinro and Sakura, showing co-regulation as children borrowing the adult's nervous system before they can manage their own."
+    },
+    {
+      "id": "scene-31",
+      "visual_type": "Image",
+      "effect": "zoom_out",
+      "story_en": "This is inconvenient. I would prefer a method that lets me stay exactly as I am and makes my children more organized. I have not found one.",
+      "imagePrompt": "A character-centered medium shot of Naomi in a lived-in family room. Naomi, a petite Japanese mother in her late 30s with neat dark hair, a calm but weary face, and a pale pink kimono, looks at an empty shelf as if hoping for an easy solution. In the foreground and midground, a few shoes, a bag, and small household clutter remain nearby. The shelf is plain and empty, and the background is simple and low-detail. No visible text.",
+      "videoPrompt": "",
+      "duration": 10,
+      "scene_type": "Payoff / Thesis",
+      "visual_technique": "Single Vignette",
+      "characters_in_scene": [
+        "Naomi"
+      ],
+      "core_idea_illustration": "Naomi looks at an empty shelf labeled easy method while family clutter remains nearby, showing the honest inconvenience that parenting change begins with the adult too."
+    },
+    {
+      "id": "scene-32",
+      "visual_type": "Image",
+      "effect": "zoom_in",
+      "story_en": "One Breath Before Correction",
+      "imagePrompt": "A minimal warm title card with a small breath cloud floating above a pair of hallway shoes. The shoes sit low in the frame on a simple mat, leaving broad empty space. Text: \"One Breath Before Correction\" Position: \"center-right\" Size: \"large\" Role: \"takeaway\". No other visible text.",
+      "videoPrompt": "",
+      "duration": 5,
+      "scene_type": "Bumper",
+      "visual_technique": "Quote / Text-on-Image",
+      "characters_in_scene": [],
+      "core_idea_illustration": "Minimal warm title card with the text \"One Breath Before Correction\" beside a small breath cloud above hallway shoes."
+    },
+    {
+      "id": "scene-33",
+      "visual_type": "Image",
+      "effect": "zoom_out",
+      "story_en": "So what can we actually do tonight, when the shoes are on the floor and dinner is cooling? I am trying something very small. Before correcting, I take one breath and ask, \"Is this disobedience, or is this an unfinished skill?\"",
+      "imagePrompt": "A medium shot of Naomi pausing between two ordinary pressures. In the foreground, Naomi, a petite 38-year-old Japanese woman with neat dark hair, a calm face, and a pale pink kimono, takes one visible breath beside shoes on the hallway floor. In the midground, Jinro, a small 7-year-old boy with messy hair, a loose T-shirt, soft pants, and slowly tied shoes, stands nearby without being blamed. A cooling dinner bowl sits farther back, softly steaming less. The background is simple and warm. No visible text.",
+      "videoPrompt": "",
+      "duration": 18,
+      "scene_type": "Question",
+      "visual_technique": "Quote / Text-on-Image",
+      "characters_in_scene": [
+        "Naomi",
+        "Jinro"
+      ],
+      "core_idea_illustration": "Naomi pauses between the hallway shoes and cooling dinner with the question floating gently above her, showing the breath that turns correction into curiosity."
+    },
+    {
+      "id": "scene-34",
+      "visual_type": "Image",
+      "effect": "zoom_in",
+      "story_en": "If Sakura throws food, the skill may be impulse control. If Jinro leaves shoes out, the skill may be remembering the next step after transition. If Hina rolls her eyes, the skill may be disagreement without contempt — and my skill may be not taking a teenager's face personally.",
+      "imagePrompt": "A clean four-part scene on a simple warm background, with each mini-moment clearly separated for animation. One area shows Sakura, a 1-year-old baby girl with a round face and very little hair, with food scattered near her tray. Another shows Jinro, a small 7-year-old boy with messy hair and soft pants, beside shoes at the doorway. Another shows Hina, a tall 15-year-old Japanese-American girl with long black hair, a hoodie, headphones, and phone nearby, rolling her eyes. The final area shows Naomi, a petite Japanese mother in a pale pink kimono, steadying herself with one calm hand. No visible text.",
+      "videoPrompt": "",
+      "duration": 20,
+      "scene_type": "Panel-Based Explainer",
+      "visual_technique": "Slideshow",
+      "characters_in_scene": [
+        "Naomi",
+        "Sakura",
+        "Jinro",
+        "Hina"
+      ],
+      "core_idea_illustration": "Four gentle panels show Sakura with thrown food, Jinro at the shoes, Hina rolling her eyes, and Naomi steadying herself, showing misbehavior as unfinished skills for both child and parent."
+    },
+    {
+      "id": "scene-35",
+      "visual_type": "Image",
+      "effect": "zoom_out",
+      "story_en": "Then I try to make cooperation visible. Instead of \"Clean this up,\" I might say, \"Shoes live on the mat. I'll do one, you do one.\" Instead of \"Stop being loud,\" I might lower my own voice and say, \"Small voice. Sakura is almost asleep.\"",
+      "imagePrompt": "A two-part comparison scene inside a family hallway and nearby sleeping area. On one side, a vague harsh command is shown through a tense adult posture and messy shoes. On the other side, Naomi, a petite 38-year-old Japanese woman with neat dark hair and a pale pink kimono, kneels beside Jinro, a small 7-year-old boy with messy hair, soft pants, and slowly tied shoes, placing one shoe on the mat while inviting him to place the other. In the background, Sakura, a round-faced baby girl with very little hair, sleeps peacefully as Naomi lowers her own voice. The background is simple and low-detail. No visible text.",
+      "videoPrompt": "",
+      "duration": 19,
+      "scene_type": "Mechanism",
+      "visual_technique": "Split-Screen Comparison",
+      "characters_in_scene": [
+        "Naomi",
+        "Jinro",
+        "Sakura"
+      ],
+      "core_idea_illustration": "Split-screen compares harsh commands with Naomi modeling the next visible step beside Jinro and lowering her own voice near sleeping Sakura, showing cooperation as shared action."
+    },
+    {
+      "id": "scene-36",
+      "visual_type": "Image",
+      "effect": "zoom_in",
+      "story_en": "Instead of a long lecture after the mistake, I try to place the child back inside the family rhythm. Not shame. Rhythm. Of course, I forget. Of course, I still lecture sometimes. Last week I gave a three-minute speech about a backpack zipper. No one became wiser.",
+      "imagePrompt": "A symbolic medium-wide scene on a simple background. In the foreground, a soft winding path of family rhythm gently curves around Jinro, a small 7-year-old boy with messy hair, round cheeks, a loose T-shirt, and soft pants, guiding him back toward the family. To the side, Naomi, a petite Japanese mother in a pale pink kimono with a tired apologetic face, stands near an oversized speech bubble shape hovering over a backpack zipper. The path and speech bubble are separated with open space, making the contrast clear. No visible text.",
+      "videoPrompt": "",
+      "duration": 20,
+      "scene_type": "Contrast / Juxtaposition",
+      "visual_technique": "Conceptual Diagram",
+      "characters_in_scene": [
+        "Naomi",
+        "Jinro"
+      ],
+      "core_idea_illustration": "A winding family rhythm path gently brings Jinro back in, contrasted with Naomi accidentally creating a giant speech bubble over a backpack zipper, showing that rhythm teaches more than shameful lectures."
+    },
+    {
+      "id": "scene-37",
+      "visual_type": "Image",
+      "effect": "zoom_out",
+      "story_en": "Cooperation Without Disappearing",
+      "imagePrompt": "A minimal warm title card with overlapping family silhouettes near the lower-left area, each silhouette still individually visible. The shapes are soft, balanced, and surrounded by empty space. Text: \"Cooperation Without Disappearing\" Position: \"center-right\" Size: \"large\" Role: \"takeaway\". No other visible text.",
+      "videoPrompt": "",
+      "duration": 5,
+      "scene_type": "Bumper",
+      "visual_technique": "Quote / Text-on-Image",
+      "characters_in_scene": [],
+      "core_idea_illustration": "Minimal warm title card with the text \"Cooperation Without Disappearing\" beside overlapping family silhouettes that remain individually visible."
+    },
+    {
+      "id": "scene-38",
+      "visual_type": "Image",
+      "effect": "zoom_in",
+      "story_en": "The delicate part is that cooperation must not mean erasing the child. I do not want Hina to become pleasant at the cost of honesty. I do not want Jinro to become quiet because my mood is too heavy to disturb. And I do not want Sakura to learn that love is available only when she is convenient.",
+      "imagePrompt": "A clean portrait grid on a simple warm background with three separated child portraits and Naomi nearby. Hina, a tall 15-year-old Japanese-American girl with long black hair, a hoodie, headphones, and phone close by, looks honest and direct. Jinro, a small 7-year-old boy with a round face, messy hair, loose T-shirt, soft pants, and slowly tied shoes, holds his small voice gently. Sakura, a 1-year-old baby girl with a round face, very little hair, and an adorable expression, reaches for comfort. Naomi, a petite Japanese mother in a pale pink kimono, watches protectively from the side. Each portrait has clear empty space around it. No visible text.",
+      "videoPrompt": "",
+      "duration": 23,
+      "scene_type": "Conceptual Metaphor",
+      "visual_technique": "Collection Grid",
+      "characters_in_scene": [
+        "Naomi",
+        "Hina",
+        "Jinro",
+        "Sakura"
+      ],
+      "core_idea_illustration": "Three soft portraits show Hina's honesty, Jinro's small voice, and Sakura's need for unconditional love protected from being erased, showing that cooperation must preserve each child's self."
+    },
+    {
+      "id": "scene-39",
+      "visual_type": "Image",
+      "effect": "zoom_out",
+      "story_en": "So in our house, I am trying to hold two truths together. Your voice matters. And your behavior affects other people.",
+      "imagePrompt": "A centered symbolic scene with Naomi holding two truths together. Naomi, a petite 38-year-old Japanese woman with neat dark hair, a calm face, and a pale pink kimono, stands beside two softly overlapping glowing circles. One circle contains a small heart shape, and the other contains linked hands, showing voice and impact without labels. The circles are large, clean, and separated enough to animate. The background is simple and warm. No visible text.",
+      "videoPrompt": "",
+      "duration": 10,
+      "scene_type": "Payoff / Thesis",
+      "visual_technique": "Conceptual Diagram",
+      "characters_in_scene": [
+        "Naomi"
+      ],
+      "core_idea_illustration": "Two glowing circles overlap beside Naomi — one labeled with a small heart for voice, the other with linked hands for impact — showing that selfhood and responsibility can be held at the same time."
+    },
+    {
+      "id": "scene-40",
+      "visual_type": "Image",
+      "effect": "zoom_in",
+      "story_en": "You may say, \"I don't want to.\" And still, the bowl goes to the sink. You may feel angry. And still, your sister's body is not for hitting. You may need space. And still, we repair after we hurt someone.",
+      "imagePrompt": "A clean three-part process scene on a simple warm background. One separated mini-moment shows Hina, a tall 15-year-old Japanese-American girl with long black hair, a hoodie, headphones, and phone nearby, carrying a bowl toward the sink while still looking self-possessed. Another shows Jinro, a small 7-year-old boy with messy hair and soft pants, holding angry feelings with safe hands near Sakura, a round-faced baby girl with very little hair. The third shows a child needing space and then returning with a gentle repair gesture. Each mini-moment is clearly separated with generous empty space. No visible text.",
+      "videoPrompt": "",
+      "duration": 16,
+      "scene_type": "Panel-Based Explainer",
+      "visual_technique": "Slideshow",
+      "characters_in_scene": [
+        "Hina",
+        "Jinro",
+        "Sakura"
+      ],
+      "core_idea_illustration": "Three soft panels pair each child's feeling with a relational boundary: voice and bowl carried to the sink, anger and safe hands near a sister, space and a gentle repair gesture, showing that self-expression and responsibility belong together."
+    },
+    {
+      "id": "scene-41",
+      "visual_type": "Image",
+      "effect": "zoom_out",
+      "story_en": "This is not Japanese versus Western parenting. It is the human work of belonging without disappearing. I am still learning how to teach that. Some days I teach it with calm hands. Some days I teach it by apologizing after my hands were not calm enough.",
+      "imagePrompt": "A warm medium-wide family scene inside a simple glowing circle on the floor. Naomi, a petite 38-year-old Japanese woman with neat dark hair, a calm face, and a pale pink kimono, sits with open hands beside Hina, a tall teenage girl with long black hair, a hoodie, headphones, and phone close by; Jinro, a small 7-year-old boy with messy hair, a loose T-shirt, soft pants, and slowly tied shoes; and Sakura, a round-faced baby girl with very little hair. Each child has their own space inside the circle. The background is minimal and peaceful. No visible text.",
+      "videoPrompt": "",
+      "duration": 18,
+      "scene_type": "Payoff / Thesis",
+      "visual_technique": "Single Vignette",
+      "characters_in_scene": [
+        "Naomi",
+        "Hina",
+        "Jinro",
+        "Sakura"
+      ],
+      "core_idea_illustration": "Naomi sits with the children inside a warm family circle where every person has space, showing belonging without disappearing and the humility of teaching through apology."
+    },
+    {
+      "id": "scene-42",
+      "visual_type": "Image",
+      "effect": "zoom_in",
+      "story_en": "Tonight, maybe choose one tiny routine. Not the whole house. Not a new parenting system. Just one place where cooperation can live: shoes on the mat, cups by the sink, tablet on the shelf, one gentle sentence before bedtime.",
+      "imagePrompt": "An overhead view of four tiny routine homes arranged in a clean grid on a simple warm background. One space shows shoes on a mat, another shows cups by a sink, another shows a tablet resting on a shelf, and another shows a small bedtime lamp with a gentle speech bubble shape but no words. Each object group is clearly separated, balanced, and surrounded by empty space for animation. No visible text.",
+      "videoPrompt": "",
+      "duration": 17,
+      "scene_type": "Mechanism",
+      "visual_technique": "Collection Grid",
+      "characters_in_scene": [],
+      "core_idea_illustration": "A small grid of tiny routine homes shows shoes on the mat, cups by the sink, a tablet on the shelf, and a bedtime sentence, showing that cooperation starts in one visible place."
+    },
+    {
+      "id": "scene-43",
+      "visual_type": "Image",
+      "effect": "zoom_out",
+      "story_en": "Make it visible. Do it with them. And when you fail, repair it in front of them.",
+      "imagePrompt": "A medium-wide view of a small family routine happening together in a warm room. Naomi, a petite 38-year-old Japanese woman with neat dark hair, a calm face, and a pale pink kimono, practices placing items away with Jinro, a small 7-year-old boy with messy hair and soft pants; Hina, a tall teenage girl with long black hair, a hoodie, headphones, and phone nearby; and Sakura, a round-faced baby girl with very little hair. Naomi's open, apologetic gesture suggests repairing a mistake in front of them. The foreground shows the shared routine, the midground shows the children watching and joining, and the background is simple and low-detail. No visible text.",
+      "videoPrompt": "",
+      "duration": 7,
+      "scene_type": "Payoff / Thesis",
+      "visual_technique": "Single Vignette",
+      "characters_in_scene": [
+        "Naomi",
+        "Jinro",
+        "Hina",
+        "Sakura"
+      ],
+      "core_idea_illustration": "Naomi practices a small routine together with the children and then openly repairs a mistake, showing that the parent's visible process is part of the teaching."
+    },
+    {
+      "id": "scene-44",
+      "visual_type": "Image",
+      "effect": "zoom_in",
+      "story_en": "Maybe that is also part of shitsuke — not perfect discipline, but a family learning its shape again and again. I'm Naomi. I'm still learning this with you. Otsukaresama deshita — thank you for the quiet work you do every day as a parent.",
+      "imagePrompt": "A calm closing scene on a simple warm background. Naomi, a petite 38-year-old Japanese woman with a calm face, neat dark hair, and a pale pink kimono, stands beside a softly redrawn family outline that loops gently around her, suggesting a family learning its shape again and again. Her posture is humble and grateful, with one hand resting near her heart. The looped outline is clear, simple, and surrounded by generous empty space. No visible text.",
+      "videoPrompt": "",
+      "duration": 20,
+      "scene_type": "Payoff / Thesis",
+      "visual_technique": "Conceptual Diagram",
+      "characters_in_scene": [
+        "Naomi"
+      ],
+      "core_idea_illustration": "Naomi stands beside a gently redrawn family outline that loops again and again, showing shitsuke as imperfect repeated shaping and honoring the quiet daily work of parents."
+    }
+  ],
+  "character": {
+    "Naomi": "A 38-year-old Japanese woman with a petite, pretty appearance and a calm face. She wears a pale pink kimono.",
+    "Kimiko": "An elderly Japanese woman with a small frame and slightly bent back. Her silver hair is neatly tied in a bun. She wears a dark-colored kimono and looks clean, precise, and composed.",
+    "Watanabe-sensei": "An elderly Japanese man with a slender build who often wears a fedora. He has silver hair, thin glasses, and wears a shirt or cardigan, with the quiet presence of an old-school teacher.",
+    "Cillian": "A 41-year-old Western man, tall with moderately broad shoulders, a gentle face, a beard, and glasses. He wears jeans or a simple T-shirt.",
+    "Hina": "A 15-year-old Japanese-American teenage girl with a tall build and long or shoulder-length black hair. She has a modern style, often wearing a hoodie, headphones, and keeping her phone close.",
+    "Jinro": "A 7-year-old boy with a small frame, round face, and slightly messy hair. He usually wears a T-shirt, soft pants, and slowly tied shoes.",
+    "Sakura": "A 1-year-old baby girl with a round face, very little hair, and an adorable expression."
+  }
+}

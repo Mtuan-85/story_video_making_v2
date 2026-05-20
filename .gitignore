@@ -83,9 +83,10 @@ gen_video_grok/
 *.zip
 *.7z
 
-# Brave profile (never commit)
+# Browser CDP profiles (never commit)
 brave-grok-profile/
 *-profile/
+CDP_Browser/
 
 # Whisper model cache
 .cache/
@@ -93,3 +94,14 @@ brave-grok-profile/
 # Runtime stats (per-install data)
 runtime/timing_history.jsonl
 
+# Project runtime state/backups (regenerated from sources on reload)
+*_state.json
+*_state.json.bak.*
+project */sources/
+project */voice/
+project */bgm/
+project */renders/
+project */temp/
+project */thumbnails/
+project */final.mp4
+project */final.ass

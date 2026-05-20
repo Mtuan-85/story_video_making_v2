@@ -11,8 +11,8 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 VisualType = Literal[
-    "image_grok",
-    "video_grok",
+    "Image",
+    "Video",
     "slideshow",
 ]
 
@@ -32,10 +32,21 @@ VideoDuration = Literal["6s", "10s"]
 class Meta(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    version: str | None = None
     project_id: str = Field(min_length=1)
     title: str = Field(min_length=1)
     aspect_ratio: AspectRatio
     language: Language
+    baseStyle: str = ""
+    baseNegative: str = ""
+    image_quality: ImageQuality = "quality"
+    video_resolution: VideoResolution = "720p"
+    video_duration: VideoDuration = "10s"
+    source_citations: str | None = None
+    topic: str | None = None
+    voice_model_id: str | None = None
+    voice_speed: float | None = Field(default=None, ge=0.5, le=2.0)
+    voice_volume: int | None = Field(default=None, ge=-20, le=20)
 
 
 class Settings(BaseModel):
@@ -64,6 +75,43 @@ class Scene(BaseModel):
     videoPrompt: str | None = None
     duration: int = Field(ge=1, le=60)
     emotion: str | None = None
+    scene_type: str | None = None
+    visual_technique: str | None = None
+    characters_in_scene: list[str] = Field(default_factory=list)
+    core_idea_illustration: str | None = None
+
+    @staticmethod
+    def normalize_visual_type(value: str) -> str:
+        key = str(value).strip().lower()
+        if key in {"image", "image_grok"}:
+            return "Image"
+        if key in {"video", "video_grok"}:
+            return "Video"
+        if key == "slideshow":
+            return "slideshow"
+        return str(value)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_ai_scene_keys(cls, data):
+        if not isinstance(data, dict):
+            return data
+        data = dict(data)
+        if "scene_id" in data and "id" not in data:
+            data["id"] = data.pop("scene_id")
+        else:
+            data.pop("scene_id", None)
+        if "script" in data and not data.get("story_en") and not data.get("story_vi"):
+            data["story_en"] = data.pop("script")
+        else:
+            data.pop("script", None)
+        if "duration_sec" in data and "duration" not in data:
+            data["duration"] = data.pop("duration_sec")
+        else:
+            data.pop("duration_sec", None)
+        if "visual_type" in data:
+            data["visual_type"] = cls.normalize_visual_type(data["visual_type"])
+        return data
 
     @model_validator(mode="after")
     def _at_least_one_story(self) -> "Scene":
@@ -81,10 +129,46 @@ class Scene(BaseModel):
 class ScenesJson(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    version: Literal["1.0"]
     meta: Meta
-    settings: Settings
     scenes: list[Scene] = Field(min_length=1)
+    character: dict[str, str] = Field(default_factory=dict)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _migrate_root_version_and_settings(cls, data):
+        if not isinstance(data, dict):
+            return data
+        data = dict(data)
+        meta = dict(data.get("meta") or {})
+        root_version = data.pop("version", None)
+        if root_version is not None and not meta.get("version"):
+            meta["version"] = str(root_version)
+        settings = data.get("settings")
+        if isinstance(settings, dict):
+            for key in (
+                "baseStyle",
+                "baseNegative",
+                "image_quality",
+                "video_resolution",
+                "video_duration",
+                "voice_model_id",
+                "voice_speed",
+                "voice_volume",
+                "topic",
+            ):
+                value = settings.get(key)
+                if key in settings and key not in meta and value not in (None, ""):
+                    meta[key] = value
+        for key in ("source_citations", "topic", "voice_model_id"):
+            if meta.get(key) in (None, ""):
+                meta.pop(key, None)
+        if meta.get("voice_speed") == 1.0:
+            meta.pop("voice_speed", None)
+        if meta.get("voice_volume") == 0:
+            meta.pop("voice_volume", None)
+        data["meta"] = meta
+        data.pop("settings", None)
+        return data
 
     @field_validator("scenes")
     @classmethod
@@ -102,3 +186,19 @@ class ScenesJson(BaseModel):
                 return scene
         return None
 
+    def topic_for_prompt(self) -> str:
+        return self.meta.topic or self.meta.title
+
+    @property
+    def settings(self) -> Settings:
+        return Settings(
+            baseStyle=self.meta.baseStyle,
+            baseNegative=self.meta.baseNegative,
+            topic=self.topic_for_prompt(),
+            voice_model_id=self.meta.voice_model_id,
+            voice_speed=self.meta.voice_speed if self.meta.voice_speed is not None else 1.0,
+            voice_volume=self.meta.voice_volume if self.meta.voice_volume is not None else 0,
+            image_quality=self.meta.image_quality,
+            video_resolution=self.meta.video_resolution,
+            video_duration=self.meta.video_duration,
+        )

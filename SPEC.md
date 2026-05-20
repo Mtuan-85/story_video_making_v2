@@ -133,13 +133,13 @@ story_video_maker/
 ├── render/
 │   ├── __init__.py
 │   ├── ken_burns.py           # Ken Burns self + continuation
-│   ├── slideshow.py           # Wrap slideshow_v4 logic
+│   ├── slideshow.py           # Wrap offline slideshow logic
 │   ├── composite.py           # Composite 1 scene: visual + subtitle + audio
 │   ├── assemble.py            # Final concat hard-cut
 │   ├── subtitle.py            # Pillow karaoke render
 │   └── filter_complex.py      # ffmpeg filter builder helpers
 │
-├── slideshow_v4/              # ⚠️ COPY NGUYÊN từ project cũ, không sửa
+├── slideshow/                 # Offline slideshow pipeline
 │   ├── preprocess.py          # Chroma key + rembg + dilate
 │   ├── animations.py          # 6 animations
 │   ├── claude_runner.py       # Subprocess Claude Code
@@ -170,7 +170,7 @@ story_video_maker/
 │   ├── batch_video.py         # QThread gen all videos
 │   ├── single_image.py        # QThread re-gen 1 ảnh
 │   ├── single_video.py        # QThread re-gen 1 video
-│   ├── slideshow_worker.py    # Wrap slideshow_v4
+│   ├── slideshow_worker.py    # Wrap offline slideshow render
 │   ├── ken_burns_worker.py    # Ken Burns render
 │   ├── voice_worker.py        # Gen voice + split
 │   └── final_video.py         # Make full video
@@ -242,7 +242,7 @@ story_video_maker/
 {
   "id": "SCENE-01",
   "voice_batch_id": 1,
-  "visual_type": "image_grok",
+  "visual_type": "Image",
   "story_vi": "Buổi sáng. Căn bếp còn ngủ. Chỉ có tiếng nước sôi nhẹ trong ấm.",
   "imagePrompt": "...",
   "videoPrompt": "...",
@@ -263,11 +263,16 @@ story_video_maker/
 ### 4.4. visual_type enum
 
 ```
-"image_grok"      → Gen ảnh Grok, dùng trực tiếp làm visual tĩnh (Ken Burns sau)
-"video_grok"      → Gen ảnh Grok rồi Image-to-Video
-"slideshow_v4"    → Dùng module slideshow_v4 (ảnh có bg đơn + objects)
-"ken_burns_self"  → Zoom-pan ảnh chính scene đó
-"ken_burns_cont"  → Zoom-pan từ frame cuối video scene N-1
+"Image"       → Still image scene; provider/model được chọn ở project/task level
+"Video"       → Model-generated video scene; provider/model được chọn ở project/task level
+"slideshow"   → Offline slideshow/render-tool flow, không thuộc provider/model
+```
+
+Legacy aliases được accept khi load và normalize khi save:
+
+```
+"image_grok" / "image" → "Image"
+"video_grok" / "video" → "Video"
 ```
 
 ### 4.5. Validation (Pydantic schema)
@@ -297,7 +302,7 @@ class Settings(BaseModel):
 class Scene(BaseModel):
     id: str
     voice_batch_id: int = Field(ge=1)
-    visual_type: Literal["image_grok", "video_grok", "slideshow_v4", "ken_burns_self", "ken_burns_cont"]
+    visual_type: Literal["Image", "Video", "slideshow"]
     story_vi: str | None = None
     story_en: str | None = None
     imagePrompt: str
@@ -375,10 +380,8 @@ class ScenesJson(BaseModel):
 ### source_type enum (cho video)
 
 ```
-"grok"            → từ video_grok
-"slideshow"       → từ slideshow_v4
-"ken_burns_self"  → Ken Burns mode self
-"ken_burns_cont"  → Ken Burns mode continuation
+"grok"            → provider source for generated Image/Video assets
+"slideshow"       → offline slideshow render source
 ```
 
 ### selected_visual enum
@@ -601,53 +604,11 @@ Implementations:
 
 | visual_type | Workflow | Output | Module |
 |---|---|---|---|
-| `image_grok` | Gen ảnh Grok → save ảnh | sources/pic{N}.jpg | engines/grok |
-| `video_grok` | Gen ảnh + I2V Grok → save video | sources/vid{N}.mp4 | engines/grok |
-| `slideshow_v4` | Slideshow_v4 full pipeline (chroma + objects + animate) | sources/vid{N}.mp4 | render/slideshow.py wrap |
-| `ken_burns_self` | ffmpeg zoom-pan ảnh chính scene N | sources/vid{N}.mp4 | render/ken_burns.py |
-| `ken_burns_cont` | ffmpeg extract last frame video N-1 + zoom-pan | sources/vid{N}.mp4 | render/ken_burns.py |
+| `Image` | Gen still image via selected provider/model → save ảnh | sources/pic{N}.jpg | provider worker |
+| `Video` | Gen video via selected provider/model → save video | sources/vid{N}.mp4 | provider worker |
+| `slideshow` | Offline slideshow/render-tool flow | sources/vid{N}.mp4 | render/slideshow.py wrap |
 
-### 8.2. `render/ken_burns.py`
-
-**Self mode**:
-```python
-async def ken_burns_self(
-    image_path: Path,
-    output_path: Path,
-    duration_sec: float,
-    aspect_ratio: str,
-    zoom_rate: float = 0.04,  # 4% per second
-    direction: str = "in"      # in | out | random_pan
-) -> Path:
-    """
-    ffmpeg zoompan filter:
-      zoompan=z='min(zoom+0.0008,1.5)':d={frames}:s={W}x{H}
-    """
-    canvas = {"16:9": (1920, 1080), "9:16": (1080, 1920)}[aspect_ratio]
-    fps = 30
-    frames = int(duration_sec * fps)
-    # ... build ffmpeg cmd ...
-```
-
-**Continuation mode**:
-```python
-async def ken_burns_continuation(
-    prev_video_path: Path,
-    output_path: Path,
-    duration_sec: float,
-    aspect_ratio: str,
-    zoom_rate: float = 0.04
-) -> Path:
-    """
-    1. Extract last frame của prev_video → temp/last_frame.jpg
-    2. Apply ken_burns_self trên frame đó
-    """
-    # Extract last frame:
-    # ffmpeg -sseof -0.1 -i {prev_video} -vsync 0 -update 1 last_frame.jpg
-    ...
-```
-
-### 8.3. `render/slideshow.py` — Wrap slideshow_v4
+### 8.2. `render/slideshow.py` — Wrap offline slideshow
 
 ```python
 async def render_slideshow(
@@ -657,8 +618,8 @@ async def render_slideshow(
     aspect_ratio: str,
     hint: str = ""
 ) -> Path:
-    """Wrap slideshow_v4 main pipeline."""
-    # Call slideshow_v4 với image_path, duration, preset
+    """Wrap slideshow main pipeline."""
+    # Call slideshow với image_path, duration, preset
     # Return output_path
 ```
 
@@ -922,9 +883,9 @@ Optional flag `--xfade` cho user thử nghiệm (đánh dấu experimental).
 │  ┌─ Scenes (6) ───────────────────────────────────────────┐ │
 │  │ [+ Batch Image] [+ Batch Video] [+ Voice] [+ Make Full]│ │
 │  ├─────────────────────────────────────────────────────────┤ │
-│  │ ☐ SCENE-01 ⏳ image_grok | 🖼️ ✓ | 🎬 ⏳ | 🎤 ⏳ |⚠ |🔍|✏ │ │
-│  │ ☐ SCENE-02 ⏳ video_grok | 🖼️ ✓ | 🎬 ✓ | 🎤 ⏳ |  |🔍|✏ │ │
-│  │ ☑ SCENE-03 ✓  ken_burns  | 🖼️ ✓ | 🎬 ✓ | 🎤 ✓ |  |🔍|✏ │ │
+│  │ ☐ SCENE-01 ⏳ Image | 🖼️ ✓ | 🎬 ⏳ | 🎤 ⏳ |⚠ |🔍|✏ │ │
+│  │ ☐ SCENE-02 ⏳ Video | 🖼️ ✓ | 🎬 ✓ | 🎤 ⏳ |  |🔍|✏ │ │
+│  │ ☑ SCENE-03 ✓  slideshow | 🖼️ ✓ | 🎬 ✓ | 🎤 ✓ |  |🔍|✏ │ │
 │  │ ...                                                      │ │
 │  └─────────────────────────────────────────────────────────┘ │
 │                                                                │
@@ -939,7 +900,7 @@ Optional flag `--xfade` cho user thử nghiệm (đánh dấu experimental).
 
 ```
 ┌────────────────────────────────────────────────────────────────────┐
-│ ☐ SCENE-01 ⏳ image_grok | 🖼️ ✓ | 🎬 ⏳ | 🎤 ⏳ | ⚠ | 🔍 | ✏️ │
+│ ☐ SCENE-01 ⏳ Image | 🖼️ ✓ | 🎬 ⏳ | 🎤 ⏳ | ⚠ | 🔍 | ✏️ │
 └────────────────────────────────────────────────────────────────────┘
    │     │       │           │      │       │      │   │    │
    │     │       │           │      │       │      │   │    └─ Edit prompt button (modal)
@@ -959,7 +920,7 @@ Status icons:
    ❌ failed
 
 Visual type labels:
-   image_grok | video_grok | slideshow | kb_self | kb_cont
+   Image | Video | slideshow
 ```
 
 **Click actions**:
@@ -992,7 +953,7 @@ Visual type labels:
 │ │ (disabled)                                  │  │
 │ └────────────────────────────────────────────┘  │
 │                                                   │
-│ Visual Type: [▾ image_grok]                       │
+│ Visual Type: [▾ Image]                            │
 │ Voice Batch: [1]                                  │
 │ Duration: [10]                                    │
 │                                                   │
@@ -1161,7 +1122,7 @@ def run(self):
 | `voice_split_failed` | Silence detection không khớp boundaries | Medium | Suggest manual boundary picker |
 | `speed_stretch_high` | Clip ratio out [0.7, 1.4] | Medium | Show ratio + recommend re-gen |
 | `voice_missing` | Scene không có voice file | Low | Final video sẽ silent cho scene đó |
-| `slideshow_no_objects` | slideshow_v4 không tách được object | High | Suggest switch sang ken_burns_self |
+| `slideshow_no_objects` | slideshow không tách được object | High | Suggest switch sang `Image` |
 
 ### 14.2. UI
 
@@ -1260,8 +1221,8 @@ async def safe_action(action_name, page, fn):
 - `core/project.py`, `core/schema.py`
 - `engines/base.py`, `engines/grok/*` (full implementation từ MASTER_grok_automation.md)
 - `render/ken_burns.py`
-- `render/slideshow.py` (wrap slideshow_v4)
-- `slideshow_v4/` copy từ project cũ
+- `render/slideshow.py` (wrap offline slideshow)
+- `slideshow/` external pipeline
 - `workers/batch_image.py`, `single_image.py`, `batch_video.py`, `single_video.py`, `slideshow_worker.py`, `ken_burns_worker.py`
 - `ui/main_window.py`, `scene_list.py`, `scene_row.py`, `connection_panel.py`, `dialogs/*`
 - `runtime/estimator.py`
@@ -1270,8 +1231,7 @@ async def safe_action(action_name, page, fn):
 - Load scenes_template_simple.json → UI hiện 6 dòng scene
 - Click "Batch Image" → 6 ảnh gen xong, status icon đổi đúng
 - Re-gen 1 scene → ảnh đó update, các scene khác không động
-- Switch visual_type SCENE-03 sang `slideshow_v4` → render slideshow ra vid3.mp4
-- Switch SCENE-04 sang `ken_burns_self` → Ken Burns ra vid4.mp4
+- Switch visual_type SCENE-03 sang `slideshow` → render slideshow ra vid3.mp4
 - Đóng app, mở lại → status đúng như lúc đóng
 - Warning hiển thị khi 1 scene fail
 
@@ -1392,7 +1352,7 @@ Khi Claude Code build app, thứ tự đề xuất:
 7. runtime/estimator.py
 8. workers/batch_video.py + single_video.py
 9. render/ken_burns.py
-10. slideshow_v4/ (copy nguyên) + render/slideshow.py wrap
+10. slideshow/ + render/slideshow.py wrap
 11. workers/slideshow_worker.py + ken_burns_worker.py
 12. ── SPRINT 1 DONE ──
 13. voice/voice_split.py
@@ -1410,8 +1370,8 @@ Khi Claude Code build app, thứ tự đề xuất:
 | File | Vai trò |
 |---|---|
 | `MASTER_grok_automation.md` | Spec Grok automation chi tiết (selectors, actions, flows, quirks) |
-| `Slide_show.md` | Spec slideshow_v4 |
-| `slideshow_v4/` source code | Copy nguyên vào folder mới |
+| `Slide_show.md` | Spec slideshow |
+| `slideshow/` source code | Offline slideshow pipeline |
 | `voice/fish_tts.py` | Module 1 voice pipeline (đã có) |
 | `examples/scenes_voice_test.json` | Test file 6 scenes 1 batch |
 | `examples/scenes_template_simple.json` | Template chuẩn 6 scenes 2 batches |

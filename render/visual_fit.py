@@ -1,7 +1,7 @@
 """Visual fit-to-duration: extend or speedup based on visual_type.
 
-For image_grok / slideshow: zoompan duration = duration_adjusted (auto fit).
-For video_grok:
+For Image / slideshow: zoompan duration = duration_adjusted (auto fit).
+For Video:
   - duration_adjusted < duration_design: setpts speedup
   - duration_adjusted > duration_design: tpad freeze last frame
 
@@ -123,7 +123,7 @@ def build_video_filter(
     height: int,
     fps: int = FPS,
 ) -> str:
-    """Filter chain for a video-source visual (video_grok / slideshow .mp4).
+    """Filter chain for a video-source visual (Video / slideshow .mp4).
 
     Pipeline:
       1. setpts speedup OR tpad freeze-extend to fit duration_adjusted.
@@ -194,7 +194,7 @@ def build_visual_filter_with_fit(
 
     Args:
         source_is_video: explicit override. If None, derived from visual_type:
-            image_grok → False, video_grok → True. `slideshow` is ambiguous
+            Image → False, Video → True. `slideshow` is ambiguous
             (the slideshow renderer can emit either an mp4 or a jpg) so
             callers MUST pass `source_is_video` for that visual_type.
 
@@ -203,9 +203,9 @@ def build_visual_filter_with_fit(
     zoompan tail).
     """
     if source_is_video is None:
-        if visual_type == "image_grok":
+        if visual_type == "Image":
             source_is_video = False
-        elif visual_type == "video_grok":
+        elif visual_type == "Video":
             source_is_video = True
         else:
             log.warning(

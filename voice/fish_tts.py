@@ -44,6 +44,7 @@ import os
 import sys
 from pathlib import Path
 from datetime import datetime
+from typing import Any
 
 
 # ============================================================================
@@ -73,6 +74,24 @@ def load_scenes(json_path: Path) -> dict:
             raise ValueError(f"Scene {scene.get('id', '?')} thieu story (story_{lang}/story_vi/story_en)")
 
     return data
+
+
+def voice_settings_from_project_data(data: dict[str, Any]) -> dict[str, Any]:
+    """Read voice config from new meta schema, falling back to legacy settings."""
+    meta = data.get("meta") if isinstance(data.get("meta"), dict) else {}
+    legacy = data.get("settings") if isinstance(data.get("settings"), dict) else {}
+    merged: dict[str, Any] = {}
+    for key in (
+        "voice_model_id",
+        "voice_speed",
+        "voice_volume",
+        "voice_emotion_syntax",
+    ):
+        if key in meta and meta[key] is not None:
+            merged[key] = meta[key]
+        elif key in legacy:
+            merged[key] = legacy[key]
+    return merged
 
 
 # ============================================================================
@@ -131,7 +150,7 @@ def generate_tts(
     print(f"Load: {scenes_json}")
     data = load_scenes(scenes_json)
     scenes = data["scenes"]
-    settings = data.get("settings", {})
+    settings = voice_settings_from_project_data(data)
 
     # Detect language tu meta
     lang = data.get("meta", {}).get("language", "vi")

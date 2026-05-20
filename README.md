@@ -2,34 +2,35 @@
 
 Desktop PyQt6 app tự động hóa pipeline tạo video story từ `scenes.json` → `final.mp4`:
 
-- **Gen ảnh/video** qua Grok Imagine (browser automation Brave + CDP + Patchright)
-- **Animation** offline cho slideshow / Ken Burns (ffmpeg + rembg + Claude director)
+- **Gen ảnh** qua Grok Imagine bằng worker process riêng (Brave + CDP + Patchright nằm ngoài GUI)
+- **Gen video Grok** đang deferred tới worker process phase sau
+- **Animation** offline cho slideshow (ffmpeg + rembg + Claude director)
 - **Voice-first alignment** với Whisper + Claude Code CLI (user cung cấp file voice, app align scene timing)
 - **Render** ghép visual + voice + subtitle + BGM + fade transitions
 
 ## Stack
 
-- Python 3.11+ · PyQt6 + qasync · Patchright (Playwright fork) · OpenAI Whisper · Claude Code CLI · FFmpeg · uv
+- Python 3.11+ · PyQt6 + qasync · QProcess workers · Patchright (Playwright fork) · OpenAI Whisper · Claude Code CLI · FFmpeg · uv
 
 ## Cấu trúc
 
 ```
 core/          # Schema, project state, paths, voice_mapping, config loader
-engines/       # Browser automation Grok
+engines/       # Provider/browser automation implementations
   grok/        # Selectors, atomic actions, declarative flows, FlowRunner, engine adapters
 render/        # FFmpeg composition + assembly + transitions
 runtime/       # Estimator với rolling history (time prediction per action)
 slideshow/     # External slideshow pipeline (preprocess + Claude director + ffmpeg overlay)
 ui/            # MainWindow, ConnectionPanel, SceneList, dialogs (preview + prompt + voice)
 voice/         # Whisper transcription + Claude alignment + subtitle builder + Fish TTS (legacy CLI)
-workers/       # Async task workers chạy trên qasync loop chính
+workers/       # QProcess task contract/launcher + legacy/offline workers
 test_run/      # Working example project (scenes.json + state)
 ```
 
 ### File roles (key modules)
 
 **core/**
-- `schema.py` — Pydantic v2 schema cho `scenes.json` (`Scene`, `Settings`, `Meta`, `VisualType` Literal)
+- `schema.py` — Pydantic v2 schema cho `scenes.json` (`Scene`, `Meta`, `VisualType` Literal); generation config lives under `meta`
 - `project.py` — `Project.load()` đọc scenes.json + state.json, tracking per-scene status, atomic backup
 - `paths.py` — `ProjectPaths`: `image_path(N)`, `video_path(N)`, `voice_dir`, `renders_dir`, etc.
 - `voice_mapping.py` — Schema `VoiceMapping` (voice_files + per-scene voice_in/out + subtitle_phrases)
@@ -44,28 +45,33 @@ test_run/      # Working example project (scenes.json + state)
 - `engine.py` — `GrokImageEngine`, `GrokVideoEngine` (masonry + Claude pick)
 - `image_ref_engine.py` — `GrokImageRefEngine`: linear flow for image-with-refs (upload → set_aspect → prompt → submit → 30s fixed wait → poll overlay+download → save). 11 stop checkpoints.
 - `claude_picker.py` — Claude CLI vision-pick best image candidate
+- `cdp_worker.py` — worker-local CDP attach, stale Patchright/Playwright `node.exe` cleanup for the configured port, tab reuse/open helper
+- `image_worker_flow.py` — Grok batch/single image flow used by `workers.generate_worker`
 
 **render/**
-- `ken_burns.py` — Zoompan filter (`ZOOM_RANGE_DEFAULT=0.2`, total over duration), `ken_burns_self` + `ken_burns_continuation`
 - `slideshow.py` — Async wrapper + sys.path injection cho `slideshow/` external pipeline
 - `composite.py` — `composite_scene()`: visual + voice slice + subtitle drawtext + fade-in/out 0.25s mỗi side
 - `subtitle_filter.py` — Build drawtext chain per phrase (yellow + black border, scene-relative timestamps)
 - `bgm_mixer.py` — `pick_bgm_files` + `build_bgm_filter` (aloop + atrim + volume -15dB + afade)
 - `assemble.py` — Hard-cut concat via `filter_complex concat=` + optional BGM mix
 
-**workers/** (subclass `AsyncTaskWorker` → qasync main loop)
+**workers/**
+- `task_contract.py` — typed task JSON, worker events, exit codes; default CDP URL `http://127.0.0.1:9222`
+- `process_launcher.py` — PyQt `QProcess` wrapper; parses `TASK START` / `EVENT` / `TASK DONE` / `TASK FAILED`
+- `generate_worker.py` — CLI entrypoint for batch/single image tasks; Grok image implemented, ChatGPT/Gemini deferred
+
+Legacy/offline workers:
 - `_async_thread.py` — `AsyncTaskWorker` base (start, request_stop, run_with_stop)
-- `_retry.py` — `run_with_retry()`: 3 attempts, kill+relaunch Brave between fails, exhaust → `needs_user_decision`
-- `batch_image.py` — `BatchImageWorker`: gen ảnh per selected scene, retry+kill+relaunch
-- `batch_video.py` — `BatchVideoWorker`: dispatcher theo `visual_type` (Grok / slideshow / ken_burns offline)
-- `single_image.py` / `single_video.py` — Re-gen 1 scene
-- `slideshow_worker.py` / `ken_burns_worker.py` — Single-scene slideshow / KB render
+- `_retry.py` — legacy in-process retry helper for old workers; not used by the new QProcess image path
+- `batch_image.py` / `single_image.py` — legacy in-process image workers kept temporarily; GUI image path now uses `GenerateProcess`
+- `batch_video.py` / `single_video.py` — legacy Grok video workers; GUI Grok video is deferred until process-worker phase
+- `slideshow_worker.py` — Single-scene slideshow render
 - `voice_align_worker.py` — Whisper + Claude align (blocking, wrapped trong `asyncio.to_thread`)
 - `render_worker.py` — Composite all scenes → assemble final.mp4
 
 **ui/**
-- `main_window.py` — Wires connection + project + scene list + buttons + dialogs + workers; Stop All button + worker registry
-- `connection_panel.py` — CDP URL + connect/disconnect + tab dropdown
+- `main_window.py` — Wires provider config + project + scene list + QProcess image generation + offline workers; Stop All button + worker registry
+- `connection_panel.py` — Provider/model/CDP URL health panel; does not own Patchright, browser, page, or tab state
 - `refs_panel.py` — `RefImagesPanel`: multi-ref upload (max 5) for image-with-refs flow, persisted to state.json
 - `scene_list.py` + `scene_row.py` — Per-scene row (status icons, regen/edit, batch checkbox)
 - `dialogs/` — `preview_image`, `preview_video`, `prompt_editor`, `voice_import`, `voice_align_review`
@@ -112,40 +118,44 @@ uv pip install -r requirements.txt
 ## Flow đầy đủ (input → output)
 
 ### 1. Chuẩn bị `scenes.json`
-Mỗi scene declare: `id`, `visual_type` (`image_grok` | `video_grok` | `slideshow` | `ken_burns_self` | `ken_burns_cont`), `imagePrompt`, `videoPrompt` (optional), `story_en`/`story_vi`, `duration`. Xem `test_run/scenes.json` mẫu.
+Mỗi scene declare: `id`, `visual_type` (`Image` | `Video` | `slideshow`), `imagePrompt`, `videoPrompt` (optional), `story_en`/`story_vi`, `duration`. `image_grok` / `video_grok` vẫn được nhận khi load file cũ nhưng sẽ được normalize về `Image` / `Video` khi app save lại.
 
-### 2. Mở app + kết nối Brave
+### 2. Mở app + chuẩn bị Brave/CDP
 ```bash
 launch_brave.bat       # mở Brave với CDP port 9222 + Grok logged in
 python main.py         # mở app
 ```
-Click 🔌 **Kết nối** → chọn Grok tab → app sẵn sàng.
+Trong app, panel Provider dùng mặc định `http://127.0.0.1:9222`. Nút **Check CDP** chỉ kiểm tra health; GUI không connect Patchright và không chọn tab. Worker image sẽ tự attach CDP, mở/reuse Grok tab, rồi chạy flow.
 
 ### 3. Load project
 📂 **Mở scenes.json** → app đọc + tạo `state.json` + render scene rows.
 
 ### 4. Gen ảnh
-Tick scenes → ➕ **Batch ảnh** → confirm estimate → `BatchImageWorker` chạy.
+Tick scenes → ➕ **Batch ảnh** → confirm estimate → GUI tạo `GenerateTask` và chạy `workers.generate_worker` qua `GenerateProcess`.
 
 Two engines depending on the **Reference Images panel**:
 - ☐ Use refs OFF → `GrokImageEngine` (4-candidate masonry + Claude pick)
 - ☑ Use refs ON (1-5 ref images uploaded) → `GrokImageRefEngine` (linear single-result flow). Aspect auto-resets to "Original" on Grok after upload — engine re-applies project aspect.
 
 Per scene:
-- `gen_image()` → ảnh download về `sources/picN.jpg`
-- Fail → `run_with_retry`: kill brave + `launch_brave.bat` + wait CDP + reconnect → retry (max 3)
-- Exhaust → popup `[Retry / Skip / Abort]`
-- 🛑 **Stop All** button signals `request_stop` to every active worker (batch image/video, single image/video, voice, render, export)
+- Worker emits `scene_started`, `scene_done`, `scene_failed`.
+- GUI owns state updates and thumbnails from those events.
+- Output downloads to `sources/picN.jpg`.
+- Stop kills the image `QProcess`; browser process is not killed by the GUI.
+- Provider/model is project-level for now: Grok / `grok-auto`.
+- ChatGPT/Gemini providers are schema/UI-ready concepts only; implementation deferred.
 
 ### 5. Gen animation (ai cần)
-Tick scenes → 🎞 **Batch animation** → `BatchVideoWorker` dispatch theo `visual_type`:
+Slideshow is an offline render/tool flow, not a Grok/ChatGPT/Gemini provider flow. Single-scene slideshow remains available from the preview dialog.
+
+Batch Grok video and single Grok video are deferred until the video process-worker phase. The old in-process Patchright video path is not used by the GUI after the image worker refactor.
+
+Current status:
 | visual_type | Path | Output |
 |---|---|---|
-| `image_grok` | skip (still image) | – |
-| `video_grok` | Grok I2V (cần Brave + retry) | `sources/vidN.mp4` |
-| `slideshow` | `render_slideshow` (offline) | `sources/vidN.mp4` |
-| `ken_burns_self` | zoompan filter (offline) | `sources/vidN.mp4` |
-| `ken_burns_cont` | extract last frame prev video → zoompan | `sources/vidN.mp4` |
+| `Image` | skip (still image) | – |
+| `Video` | deferred | – |
+| `slideshow` | `SlideshowWorker` / `render_slideshow` (offline, single scene) | `sources/vidN.mp4` |
 
 ### 6. Import voice + align
 🎤 **Import voice** → wizard chọn voice files + assign scene → `VoiceAlignWorker`:
@@ -159,14 +169,15 @@ Tick scenes → 🎞 **Batch animation** → `BatchVideoWorker` dispatch theo `v
 - Per scene: `composite_scene()` → ffmpeg dựng `renders/{id}.mp4` (visual + voice slice + drawtext subtitles + fade-in/out 0.25s)
 - `assemble_final()` → hard-cut concat (KHÔNG xfade) + optional BGM mix → `final.mp4`
 
-## Smart retry behavior
+## CDP / Worker behavior
 
-Bất kỳ exception nào trong worker (Grok image/video):
-1. `kill brave.exe` → `launch_brave.bat` → poll `localhost:9222/json/version` (max 30s) → `reconnect_cdp` + select grok tab → refresh `engine.page`
-2. Retry lần kế tiếp
-3. Sau 3 fail liên tiếp → emit `scene_needs_user_decision` → MainWindow popup `[Retry / Skip / Abort batch]`
+- GUI does not import `patchright` and does not own `GrokConnection`, `Browser`, `Context`, or `Page`.
+- Each image batch/single regen is one worker process and one provider flow.
+- Worker connects to `http://127.0.0.1:9222` by default.
+- CDP stale `node.exe` cleanup is opt-in via `STORY_VIDEO_KILL_STALE_CDP=1`; by default the worker does not kill browser or driver processes.
+- GUI parses worker stdout markers and updates `state.json` itself.
 
-Single-scene re-gen retry silent (không popup) — user tự click re-gen lại nếu cần.
+Reload remains GUI-owned: app reload scans `sources/` and reconciles state after crash/restart.
 
 ## License
 

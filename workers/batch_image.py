@@ -44,16 +44,19 @@ def _is_page_closed_err(msg: str) -> bool:
 
 
 def _build_image_settings(project: Project, scene: Scene, output_path: Path) -> dict[str, Any]:
-    s = project.scenes_json.settings
     meta = project.scenes_json.meta
-    full_prompt = f"{scene.imagePrompt}\n\nStyle: {s.baseStyle}\n\nNegative: {s.baseNegative}"
+    full_prompt = (
+        f"{scene.imagePrompt or ''}\n\n"
+        f"Style: {meta.baseStyle}\n\n"
+        f"Negative: {meta.baseNegative}"
+    )
     return {
         "prompt": full_prompt,
         "aspect": meta.aspect_ratio,
-        "quality": s.image_quality,
+        "quality": meta.image_quality,
         "output_path": output_path,
-        "topic": s.topic,
-        "style": s.baseStyle,
+        "topic": project.scenes_json.topic_for_prompt(),
+        "style": meta.baseStyle,
         "debug_dir": project.paths.temp_dir / "candidates",
     }
 

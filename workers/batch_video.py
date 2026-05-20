@@ -1,12 +1,12 @@
 """Batch animation worker — dispatches by Scene.visual_type.
 
 Per-scene routing:
-  - video_grok    → Grok image-to-video (uses connection + retry+kill+relaunch)
+  - Video         → Grok image-to-video (uses connection + retry+kill+relaunch)
   - slideshow     → render/slideshow.render_slideshow (offline)
-  - image_grok    → SKIP (still image IS the asset; zoom motion is added at
+  - Image         → SKIP (still image IS the asset; zoom motion is added at
                     final render via Scene.effect, no separate video file needed)
 
-Scenes whose pre-conditions aren't met (e.g. video_grok without ref image,
+Scenes whose pre-conditions aren't met (e.g. Video without ref image,
 slideshow without source image) are skipped with a Vietnamese reason.
 """
 
@@ -50,12 +50,11 @@ def _is_page_closed_err(msg: str) -> bool:
 
 
 def _build_video_settings(project: Project, output_path: Path) -> dict[str, Any]:
-    s = project.scenes_json.settings
     meta = project.scenes_json.meta
     return {
         "aspect": meta.aspect_ratio,
-        "resolution": s.video_resolution,
-        "duration": s.video_duration,
+        "resolution": meta.video_resolution,
+        "duration": meta.video_duration,
         "output_path": output_path,
     }
 
@@ -63,17 +62,17 @@ def _build_video_settings(project: Project, output_path: Path) -> dict[str, Any]
 def is_eligible(project: Project, scene: Scene) -> tuple[bool, str]:
     """Per-visual_type eligibility for batch animation render.
 
-    image_grok    → not animated (skip silently)
-    video_grok    → requires videoPrompt + ready ref image
+    Image         → not animated (skip silently)
+    Video         → requires videoPrompt + ready ref image
     slideshow     → requires ready source image
     """
     vt = scene.visual_type
-    if vt == "image_grok":
-        return False, "image_grok — không cần animation"
+    if vt == "Image":
+        return False, "Image — không cần animation"
     img = project.get_scene_state(scene.id).get("image", {})
     img_ready = img.get("status") == "ready" and bool(img.get("path"))
 
-    if vt == "video_grok":
+    if vt == "Video":
         if not img_ready:
             return False, "chưa có ảnh ready để làm I2V"
         return True, ""
@@ -209,7 +208,7 @@ class BatchVideoWorker(AsyncQThread):
         )
         self.scene_started.emit(scene.id)
 
-        if vt == "video_grok":
+        if vt == "Video":
             return await self._gen_one_grok(scene, total, idx, output_path)
         if vt == "slideshow":
             return await self._gen_one_slideshow(scene, total, idx, output_path, aspect)

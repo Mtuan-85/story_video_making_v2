@@ -34,7 +34,7 @@ STATUS_ICON = {
     "failed": "❌",
 }
 
-VISUAL_TYPE_OPTIONS = ["image_grok", "video_grok", "slideshow"]
+VISUAL_TYPE_OPTIONS = ["Image", "Video", "slideshow"]
 EFFECT_OPTIONS = ["zoom_in", "zoom_out", "no_effect"]
 THUMB_SIZE = 60
 

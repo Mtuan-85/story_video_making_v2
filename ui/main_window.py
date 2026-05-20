@@ -6,6 +6,7 @@ state in the main thread.
 
 from __future__ import annotations
 
+from datetime import datetime
 import sys
 from pathlib import Path
 
@@ -25,8 +26,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from core.thumbnail import regenerate_thumbnail
 from core.project import Project
-from engines.grok import GrokImageEngine, GrokVideoEngine
 from runtime.estimator import Estimator
 from ui.connection_panel import ConnectionPanel
 from ui.refs_panel import RefImagesPanel
@@ -37,11 +38,9 @@ from workers._async_thread import AsyncQThread
 from workers.export_worker import ExportKdenliveWorker
 from workers.render_worker import RenderWorker
 from workers.voice_align_worker import VoiceAlignWorker
-from workers.batch_image import BatchImageWorker
-from workers.batch_video import BatchVideoWorker, is_eligible as is_video_eligible
-from workers.single_image import SingleImageWorker
-from workers.single_video import SingleVideoWorker
+from workers.process_launcher import GenerateProcess
 from workers.slideshow_worker import SlideshowWorker, is_slideshow_eligible
+from workers.task_contract import CdpConfig, GenerateTask, TaskOptions, WorkerEvent
 
 
 class MainWindow(QMainWindow):
@@ -51,12 +50,9 @@ class MainWindow(QMainWindow):
         self.resize(1400, 850)
 
         self.project: Project | None = None
-        self.image_engine: GrokImageEngine | None = None
-        self.video_engine: GrokVideoEngine | None = None
         self.estimator = Estimator()
-        self._batch_worker: BatchImageWorker | None = None
-        self._batch_video_worker: BatchVideoWorker | None = None
-        self._single_workers: dict[str, SingleImageWorker] = {}
+        self._generate_proc: GenerateProcess | None = None
+        self._generate_active_scene_ids: set[str] = set()
         self._single_video_workers: dict[str, AsyncQThread] = {}
         self._voice_align_worker: VoiceAlignWorker | None = None
         self._render_worker: RenderWorker | None = None
@@ -282,30 +278,16 @@ class MainWindow(QMainWindow):
     # Connection callbacks
     # ------------------------------------------------------------------
 
-    def _on_page_ready(self, page) -> None:
-        self.image_engine = GrokImageEngine(page)
-        self.video_engine = GrokVideoEngine(page)
-        self._append_log("✓ Engine sẵn sàng (image + video)")
+    def _on_page_ready(self, _page) -> None:
+        self._append_log("ℹ Browser pages are owned by worker processes.")
         self._refresh_batch_buttons()
 
     def _on_disconnected(self) -> None:
-        self.image_engine = None
-        self.video_engine = None
         self._refresh_batch_buttons()
 
     def _on_browser_disconnected(self) -> None:
-        """Worker phát hiện page Grok đã closed → reset engine refs.
-
-        User phải click 🔌 Kết nối lại trên ConnectionPanel để select tab mới.
-        """
-        if self.image_engine is None and self.video_engine is None:
-            return
-        self.image_engine = None
-        self.video_engine = None
         self._refresh_batch_buttons()
-        self._append_log(
-            "ℹ Engine đã reset. Click 🔌 trên ConnectionPanel để chọn lại tab Grok."
-        )
+        self._append_log("ℹ Worker reported browser/CDP disconnect.")
 
     def _refresh_batch_buttons(self) -> None:
         self._on_batch_selection_changed(
@@ -316,8 +298,164 @@ class MainWindow(QMainWindow):
     # Batch image
     # ------------------------------------------------------------------
 
+    def _build_generate_task(
+        self,
+        task_type: str,
+        scene_ids: list[str],
+        fast_mode: bool = False,
+    ) -> GenerateTask:
+        if self.project is None:
+            raise RuntimeError("Project is not loaded")
+
+        refs = [str(p) for p in self.project.get_image_refs()]
+        task_id = f"{task_type}_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
+        return GenerateTask(
+            task_id=task_id,
+            project_file=str(self.project.paths.scenes_original),
+            project_root=str(self.project.paths.root),
+            task_type=task_type,
+            scene_ids=scene_ids,
+            provider=self.connection_panel.selected_provider(),
+            model=self.connection_panel.selected_model(),
+            cdp=CdpConfig(
+                url=self.connection_panel.cdp_url(),
+                base_url="https://grok.com/imagine",
+            ),
+            options=TaskOptions(
+                fast_mode=fast_mode,
+                use_refs_for_image=self.project.get_use_refs_for_image(),
+                image_refs=refs,
+            ),
+        )
+
+    def _start_generate_process(self, task: GenerateTask) -> None:
+        if self.project is None:
+            return
+        if self._generate_proc is not None and self._generate_proc.is_running():
+            QMessageBox.information(self, "Đang chạy", "Image generation đang chạy.")
+            return
+        other_running = any(self._is_worker_running(w) for w in self._active_workers)
+        if other_running:
+            QMessageBox.information(
+                self,
+                "Đang chạy",
+                "Đợi worker hiện tại xong trước khi bắt đầu image generation.",
+            )
+            return
+
+        task_path = self.project.paths.temp_dir / "tasks" / f"{task.task_id}.json"
+        proc = GenerateProcess(task, task_path, parent=self)
+        proc.log_line.connect(self._append_log)
+        proc.event.connect(self._on_generate_event)
+        proc.finished.connect(self._on_generate_finished)
+        self._generate_proc = proc
+        self._register_worker(proc)
+        self.btn_stop.setEnabled(True)
+        self._append_log(f"▶ Bắt đầu {task.task_type}: {len(task.scene_ids)} scene(s)")
+        proc.start()
+        self._refresh_batch_buttons()
+
+    def _on_generate_event(self, event: WorkerEvent) -> None:
+        if self.project is None:
+            return
+
+        payload = event.payload
+        scene_id = payload.get("scene_id")
+        asset = payload.get("asset", "image")
+        if asset != "image":
+            return
+
+        if event.type == "scene_started" and isinstance(scene_id, str):
+            self._generate_active_scene_ids.add(scene_id)
+            self.project.update_scene_state(
+                scene_id,
+                "image",
+                {"status": "generating", "fail_reason": None},
+            )
+            self.scene_list.refresh_row(scene_id)
+            return
+
+        if event.type == "scene_done" and isinstance(scene_id, str):
+            raw_path = payload.get("path")
+            if not isinstance(raw_path, str) or not raw_path.strip():
+                self._mark_generate_event_failed(scene_id, "worker returned empty image path")
+                return
+            path = raw_path.strip()
+            visual_path = Path(path)
+            if not visual_path.is_absolute():
+                visual_path = self.project.paths.root / visual_path
+            if not visual_path.exists():
+                self._mark_generate_event_failed(
+                    scene_id, f"worker image path does not exist: {path}"
+                )
+                return
+            self.project.update_scene_state(
+                scene_id,
+                "image",
+                {
+                    "status": "ready",
+                    "path": path,
+                    "fail_reason": None,
+                    "last_gen_at": datetime.now().isoformat(timespec="seconds"),
+                },
+            )
+            self.project.clear_warnings(scene_id, code="grok_no_image")
+            regenerate_thumbnail(
+                project_root=self.project.paths.root,
+                scene_id=scene_id,
+                visual_path=visual_path,
+                visual_kind="image",
+            )
+            self._generate_active_scene_ids.discard(scene_id)
+            self.scene_list.refresh_row(scene_id)
+            return
+
+        if event.type == "scene_failed" and isinstance(scene_id, str):
+            reason = str(payload.get("reason") or "unknown")
+            self._mark_generate_event_failed(scene_id, reason)
+            return
+
+        if event.type == "task_start":
+            self._append_log(f"▶ Task started: {payload}")
+        elif event.type == "task_done":
+            self._on_progress(int(payload.get("success", 0)), int(payload.get("total", 0)))
+            self._append_log(f"✓ Task done: {payload}")
+        elif event.type == "task_failed":
+            self._append_log(f"❌ Task failed: {payload}")
+
+    def _on_generate_finished(self, exit_code: int) -> None:
+        proc = self._generate_proc
+        self._generate_proc = None
+        if proc is not None:
+            self._unregister_worker(proc)
+            proc.deleteLater()
+        if self._generate_active_scene_ids:
+            reason = f"worker exited before scene_done (exit_code={exit_code})"
+            for scene_id in list(self._generate_active_scene_ids):
+                self._mark_generate_event_failed(scene_id, reason)
+            self._generate_active_scene_ids.clear()
+        self._refresh_stop_button()
+        self._refresh_batch_buttons()
+        self._append_log(f"■ Image generation process exited: {exit_code}")
+
+    def _mark_generate_event_failed(self, scene_id: str, reason: str) -> None:
+        if self.project is None:
+            return
+        self.project.update_scene_state(
+            scene_id,
+            "image",
+            {"status": "failed", "fail_reason": reason},
+        )
+        self.project.add_warning(scene_id, "grok_no_image", reason)
+        self._generate_active_scene_ids.discard(scene_id)
+        self.scene_list.refresh_row(scene_id)
+        self._append_log(f"❌ {scene_id}: {reason}")
+
+    def _refresh_stop_button(self) -> None:
+        self.btn_stop.setEnabled(any(self._is_worker_running(w) for w in self._active_workers))
+
     def _start_batch_image(self) -> None:
-        if self.project is None or self.image_engine is None:
+        if self.project is None:
             return
 
         # Count scenes that actually need work (filter by batch selection)
@@ -347,35 +485,13 @@ class MainWindow(QMainWindow):
         if confirm != QMessageBox.StandardButton.Yes:
             return
 
-        self._batch_worker = BatchImageWorker(
-            self.project, self.image_engine, estimator=self.estimator,
-            scene_ids=list(selected_ids),
-            connection=self.connection_panel.connection,
-        )
-        self._batch_worker.scene_started.connect(self._on_scene_started)
-        self._batch_worker.scene_finished.connect(self._on_scene_finished)
-        self._batch_worker.scene_failed.connect(self._on_scene_failed)
-        self._batch_worker.batch_progress.connect(self._on_progress)
-        self._batch_worker.batch_done.connect(self._on_batch_done)
-        self._batch_worker.log_message.connect(self._append_log)
-        self._batch_worker.browser_disconnected.connect(self._on_browser_disconnected)
-        self._batch_worker.scene_needs_user_decision.connect(
-            lambda sid, n: self._ask_user_decision(self._batch_worker, sid, n)
-        )
-        self._batch_worker.finished.connect(self._batch_worker.deleteLater)
-        self.btn_batch_image.setEnabled(False)
-        self.btn_stop.setEnabled(True)
-        self._append_log("▶ Bắt đầu batch ảnh...")
-        self._batch_worker.start()
-        self._register_worker(self._batch_worker)
+        task = self._build_generate_task("batch_image", [s.id for s in pending])
+        self._start_generate_process(task)
 
     def _stop_batch(self) -> None:
-        if self._batch_worker is not None:
-            self._batch_worker.request_stop()
-            self._append_log("⏸ Đang dừng batch ảnh...")
-        if self._batch_video_worker is not None:
-            self._batch_video_worker.request_stop()
-            self._append_log("⏸ Đang dừng batch video...")
+        if self._generate_proc is not None and self._generate_proc.is_running():
+            self._generate_proc.kill()
+            self._append_log("⏸ Đang dừng image generation...")
         if self._render_worker is not None and self._render_worker.isRunning():
             self._render_worker.request_stop()
             self._append_log("⏸ Đang dừng render...")
@@ -407,6 +523,8 @@ class MainWindow(QMainWindow):
                     worker.request_stop()
                 elif hasattr(worker, "stop"):
                     worker.stop()
+                elif hasattr(worker, "kill"):
+                    worker.kill()
                 log.info(f"Sent stop to: {worker.__class__.__name__}")
             except Exception as e:
                 log.error(f"Failed to stop {worker.__class__.__name__}: {e}")
@@ -415,6 +533,8 @@ class MainWindow(QMainWindow):
     @staticmethod
     def _is_worker_running(worker) -> bool:
         try:
+            if hasattr(worker, "is_running"):
+                return bool(worker.is_running())
             if hasattr(worker, "isRunning"):
                 return bool(worker.isRunning())
         except Exception:
@@ -434,7 +554,7 @@ class MainWindow(QMainWindow):
         self.progress_label.setText(f"{done}/{total}")
 
     def _on_batch_done(self, success: int, total: int) -> None:
-        self.btn_stop.setEnabled(False)
+        self._refresh_stop_button()
         self._refresh_batch_buttons()
         self._append_log(f"✓ Batch ảnh xong: {success}/{total}")
 
@@ -443,97 +563,17 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
 
     def _start_batch_video(self) -> None:
-        if self.project is None or self.video_engine is None:
+        if self.project is None:
             return
-
-        selected_ids = set(self.scene_list.selected_scene_ids())
-        eligible = []
-        skipped = []
-        already_ready = []
-        no_prompt_warn: list[str] = []
-        for s in self.project.scenes:
-            if s.id not in selected_ids:
-                continue
-            ok, reason = is_video_eligible(self.project, s)
-            if not ok:
-                skipped.append((s.id, reason))
-                continue
-            if self.project.get_scene_state(s.id)["video"]["status"] == "ready":
-                already_ready.append(s.id)
-                continue
-            eligible.append(s)
-            if s.visual_type == "video_grok" and not s.videoPrompt:
-                no_prompt_warn.append(s.id)
-
-        if not eligible:
-            msg = "Không có scene nào đủ điều kiện gen video."
-            if skipped:
-                msg += "\n\nLý do bỏ qua:\n" + "\n".join(f"  • {sid}: {r}" for sid, r in skipped[:5])
-            if already_ready:
-                msg += f"\n\nĐã có video sẵn ({len(already_ready)}): " + ", ".join(already_ready[:5])
-            QMessageBox.information(self, "Không có gì để làm", msg)
-            return
-
-        info = self.estimator.estimate_batch("gen_video", n=len(eligible))
-
-        n_video_grok = sum(1 for s in eligible if s.visual_type == "video_grok")
-        n_slideshow = sum(1 for s in eligible if s.visual_type == "slideshow")
-        breakdown = []
-        if n_video_grok:
-            breakdown.append(f"{n_video_grok} video_grok (I2V)")
-        if n_slideshow:
-            breakdown.append(f"{n_slideshow} slideshow")
-        breakdown_str = " + ".join(breakdown) if breakdown else "—"
-
-        body = [f"Sắp gen {len(eligible)} animation ({breakdown_str})."]
-        if no_prompt_warn:
-            body.append(
-                f"\n⚠ {len(no_prompt_warn)} scene video_grok không có videoPrompt "
-                f"(Grok sẽ suy luận từ ref image): {', '.join(no_prompt_warn[:5])}"
-            )
-        if skipped:
-            body.append("\nBỏ qua:\n" + "\n".join(f"  • {sid}: {r}" for sid, r in skipped[:5]))
-        if already_ready:
-            body.append(f"\nĐã có video sẵn ({len(already_ready)}): " + ", ".join(already_ready[:5]))
-        body.append(f"\nƯớc tính: {info['formatted_avg']}\n{info['formatted_p90']}\n\nBắt đầu?")
-
-        confirm = QMessageBox.question(
+        QMessageBox.information(
             self,
-            "Xác nhận batch animation",
-            "\n".join(body),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            "Batch animation deferred",
+            "Batch Grok video generation is deferred until the video worker "
+            "is moved to the process launcher. Single-scene slideshow remains available.",
         )
-        if confirm != QMessageBox.StandardButton.Yes:
-            return
-
-        self._batch_video_worker = BatchVideoWorker(
-            self.project, self.video_engine, estimator=self.estimator,
-            scene_ids=list(selected_ids),
-            connection=self.connection_panel.connection,
-        )
-        self._batch_video_worker.scene_started.connect(self._on_scene_started)
-        self._batch_video_worker.scene_finished.connect(self._on_scene_finished)
-        self._batch_video_worker.scene_failed.connect(self._on_scene_failed)
-        self._batch_video_worker.scene_skipped.connect(
-            lambda sid, r: self._append_log(f"⊘ {sid}: bỏ qua ({r})")
-        )
-        self._batch_video_worker.batch_progress.connect(self._on_progress)
-        self._batch_video_worker.batch_done.connect(self._on_batch_video_done)
-        self._batch_video_worker.log_message.connect(self._append_log)
-        self._batch_video_worker.browser_disconnected.connect(self._on_browser_disconnected)
-        self._batch_video_worker.scene_needs_user_decision.connect(
-            lambda sid, n: self._ask_user_decision(self._batch_video_worker, sid, n)
-        )
-        self._batch_video_worker.finished.connect(self._batch_video_worker.deleteLater)
-        self.btn_batch_image.setEnabled(False)
-        self.btn_batch_video.setEnabled(False)
-        self.btn_stop.setEnabled(True)
-        self._append_log("▶ Bắt đầu batch video (I2V)...")
-        self._batch_video_worker.start()
-        self._register_worker(self._batch_video_worker)
 
     def _on_batch_video_done(self, success: int, total: int) -> None:
-        self.btn_stop.setEnabled(False)
+        self._refresh_stop_button()
         self._refresh_batch_buttons()
         self._append_log(f"✓ Batch video xong: {success}/{total}")
 
@@ -566,39 +606,31 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
 
     def _regen_one(self, scene_id: str, fast_mode: bool = False) -> None:
-        if self.project is None or self.image_engine is None:
-            QMessageBox.information(self, "Chưa sẵn sàng", "Cần kết nối browser + load dự án trước")
+        if self.project is None:
+            QMessageBox.information(self, "Chưa sẵn sàng", "Load dự án trước")
             return
-        if scene_id in self._single_workers and self._single_workers[scene_id].isRunning():
+        if self._generate_proc is not None and self._generate_proc.is_running():
+            QMessageBox.information(self, "Đang chạy", "Image generation đang chạy.")
             return
-        worker = SingleImageWorker(
-            self.project, self.image_engine, scene_id,
-            connection=self.connection_panel.connection,
-            fast_mode=fast_mode,
-        )
-        worker.scene_started.connect(self._on_scene_started)
-        worker.scene_finished.connect(self._on_scene_finished)
-        worker.scene_failed.connect(self._on_scene_failed)
-        worker.log_message.connect(self._append_log)
-        worker.finished.connect(lambda sid=scene_id: self._cleanup_single(sid))
-        self._single_workers[scene_id] = worker
-        worker.start()
-        self._register_worker(worker)
-
-    def _cleanup_single(self, scene_id: str) -> None:
-        w = self._single_workers.pop(scene_id, None)
-        if w is not None:
-            w.deleteLater()
+        task = self._build_generate_task("single_image", [scene_id], fast_mode=fast_mode)
+        self._start_generate_process(task)
 
     def _regen_one_video(self, scene_id: str, fast_mode: bool = False) -> None:
         """Dispatch a one-scene video re-gen by visual_type.
 
-        video_grok    → SingleVideoWorker (Grok I2V, needs browser)
+        Video         → deferred until video process worker refactor
         slideshow     → SlideshowWorker (offline, needs ready image)
-        image_grok    → not animated; effect-driven motion is added at final render only.
+        Image         → not animated; effect-driven motion is added at final render only.
         """
         if self.project is None:
             QMessageBox.information(self, "Chưa sẵn sàng", "Load dự án trước")
+            return
+        if any(self._is_worker_running(w) for w in self._active_workers):
+            QMessageBox.information(
+                self,
+                "Đang chạy",
+                "Đợi worker hiện tại xong trước khi bắt đầu animation.",
+            )
             return
         if scene_id in self._single_video_workers and self._single_video_workers[scene_id].isRunning():
             return
@@ -606,21 +638,16 @@ class MainWindow(QMainWindow):
         scene = self.project.scene(scene_id)
         vtype = scene.visual_type
 
-        if vtype == "video_grok":
-            if self.video_engine is None:
-                QMessageBox.information(self, "Chưa sẵn sàng", "Kết nối Grok trước (cần browser cho I2V)")
-                return
-            ok, reason = is_video_eligible(self.project, scene)
-            if not ok:
-                QMessageBox.warning(self, f"Không đủ điều kiện — {scene_id}", reason)
-                return
-            worker: AsyncQThread = SingleVideoWorker(
-                self.project, self.video_engine, scene_id, estimator=self.estimator,
-                connection=self.connection_panel.connection,
-                fast_mode=fast_mode,
+        if vtype == "Video":
+            QMessageBox.information(
+                self,
+                "Grok video deferred",
+                "Grok video generation is deferred until the video worker "
+                "is moved to the process launcher.",
             )
+            return
 
-        elif vtype == "slideshow":
+        if vtype == "slideshow":
             ok, reason = is_slideshow_eligible(self.project, scene_id)
             if not ok:
                 QMessageBox.warning(self, f"Không đủ điều kiện — {scene_id}", reason)
@@ -655,14 +682,18 @@ class MainWindow(QMainWindow):
 
     def _on_batch_selection_changed(self, selected: int, total: int) -> None:
         self.selection_label.setText(f"Đã chọn: {selected}/{total}")
-        engines_ready_image = self.image_engine is not None and self.project is not None
-        engines_ready_video = self.video_engine is not None and self.project is not None
-        batch_running = (
-            (self._batch_worker is not None and self._batch_worker.isRunning())
-            or (self._batch_video_worker is not None and self._batch_video_worker.isRunning())
+        image_running = self._generate_proc is not None and self._generate_proc.is_running()
+        other_running = any(
+            self._is_worker_running(w)
+            for w in self._active_workers
+            if w is not self._generate_proc
         )
-        self.btn_batch_image.setEnabled(engines_ready_image and selected > 0 and not batch_running)
-        self.btn_batch_video.setEnabled(engines_ready_video and selected > 0 and not batch_running)
+        self.btn_batch_image.setEnabled(
+            self.project is not None and selected > 0 and not image_running and not other_running
+        )
+        self.btn_batch_video.setEnabled(
+            self.project is not None and selected > 0 and not image_running and not other_running
+        )
 
     def _on_visual_type_changed(self, scene_id: str, new_value: str) -> None:
         if self.project is None:
@@ -998,7 +1029,7 @@ class MainWindow(QMainWindow):
         self.btn_render.setEnabled(
             self.project is not None and self.project.voice_mapping is not None
         )
-        self.btn_stop.setEnabled(False)
+        self._refresh_stop_button()
 
     # ------------------------------------------------------------------
     # Kdenlive XML export (Sprint 2 Phase 3)

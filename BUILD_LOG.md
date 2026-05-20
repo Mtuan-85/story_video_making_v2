@@ -5,6 +5,108 @@
 
 ---
 
+## Session 2026-05-20 — CDP provider worker refactor, image vertical slice
+
+Status: uncommitted. Implemented by task slices with spec + quality review checkpoints. No git commit was made in this session.
+
+### Update before commit prep
+
+1. **Canonical app-level `visual_type`**
+   - `core/schema.py`
+     - Canonical values are now `Image`, `Video`, `slideshow`.
+     - Legacy aliases `image_grok`, `image`, `video_grok`, `video` are accepted at load time and normalized.
+     - Scene check-back metadata is preserved: `scene_type`, `visual_technique`, `characters_in_scene`, `core_idea_illustration`.
+   - `core/project.py`
+     - `Project.load()`, `reload()`, and `reset_to_design()` persist normalized scene schema back to `<stem>_edited.json` when aliases or AI keys are migrated.
+   - Runtime/GUI/process paths now branch on `Image` / `Video` instead of provider-specific `image_grok` / `video_grok`.
+   - `slideshow` remains unchanged and stays outside provider/model selection.
+
+2. **Project data normalized**
+   - `project 1/project_S4.json` and `project 1/project_S4_edited.json` now use the canonical schema:
+     - `meta.version`, no root `version`.
+     - no root `settings`.
+     - root `character`.
+     - `visual_type` values are `Image` / `Video`.
+
+### What changed
+
+1. **Project schema moved generation config into `meta`**
+   - `core/schema.py`
+     - Root `version` migrates into `meta.version`.
+     - Legacy root `settings` is accepted as input and migrated into `meta`, but is not dumped.
+     - Root `character` is supported.
+     - Voice settings now live in `meta` with legacy fallback.
+     - Scene `visual_type` is app-level (`Image`, `Video`, `slideshow`), with legacy alias migration.
+   - `voice/fish_tts.py`
+     - Reads voice config from `meta` first, then legacy `settings`.
+
+2. **Worker task contract + QProcess launcher**
+   - `workers/task_contract.py`
+     - Typed `GenerateTask`, `CdpConfig`, `TaskOptions`, `WorkerEvent`.
+     - Default CDP URL is `http://127.0.0.1:9222`.
+     - Stable worker markers: `TASK START`, `EVENT`, `TASK DONE`, `TASK FAILED`.
+   - `workers/process_launcher.py`
+     - `GenerateProcess` wraps `QProcess`, streams stdout, parses worker markers, handles partial lines.
+   - `workers/generate_worker.py`
+     - CLI entrypoint with dry-run path and real Grok image routing.
+
+3. **Grok worker-local CDP/image flow**
+   - `engines/grok/cdp_worker.py`
+     - Worker process owns Patchright/CDP.
+     - Stale Patchright/Playwright `node.exe` cleanup is opt-in via `STORY_VIDEO_KILL_STALE_CDP=1`.
+     - Default behavior does not kill Brave or driver processes.
+     - Reuses existing Grok tab or opens `https://grok.com/imagine`.
+   - `engines/grok/image_worker_flow.py`
+     - Runs `batch_image` and `single_image` in one worker process per task.
+     - Loads project JSON readonly and emits events only; GUI owns project state and thumbnail updates.
+     - Supports text-to-image and image-with-refs paths.
+
+4. **GUI/CDP separation**
+   - `ui/connection_panel.py`
+     - No `engines.grok`, no Patchright, no tab/page ownership.
+     - Provider/model/CDP health panel only.
+     - Default CDP URL: `http://127.0.0.1:9222`.
+   - `ui/main_window.py`
+     - Batch image and single image regen now create `GenerateTask` and run `GenerateProcess`.
+     - GUI updates `state.json`, warnings, thumbnails from worker events.
+     - Stop kills the image worker process; GUI marks any active scene as failed if the worker exits before terminal scene events.
+     - Image generation is blocked while other active workers run to avoid state races.
+     - Grok video generation is deferred until video worker refactor.
+     - Single-scene slideshow remains available as an offline render/tool flow.
+
+5. **Prompt settings call sites**
+   - `workers/batch_image.py` and `workers/batch_video.py`
+     - Read generation defaults directly from `scenes_json.meta`, not `scenes_json.settings`.
+
+### Static verification run
+
+- `.venv\Scripts\python.exe -m pytest tests/test_schema_meta.py tests/test_fish_tts_config.py -v` → 6 passed.
+- `.venv\Scripts\python.exe -m pytest tests/test_task_contract.py tests/test_worker_cli_noop.py tests/test_process_event_parser.py -v` → 20 passed.
+- `.venv\Scripts\python.exe -m pytest tests/test_worker_settings_meta.py -v` → 2 passed.
+- `.venv\Scripts\python.exe -m pytest tests/test_grok_cdp_worker.py -v` → 3 passed.
+- `.venv\Scripts\python.exe -m pytest tests/test_worker_cli_noop.py tests/test_generate_worker_routing.py tests/test_image_worker_flow_paths.py -v` → 9 passed.
+- `.venv\Scripts\python.exe -m pytest tests/test_process_event_parser.py tests/test_task_contract.py -v` → 16 passed.
+- `.venv\Scripts\python.exe -m py_compile ui\main_window.py ui\connection_panel.py` → passed.
+- `rg -n "GrokImageEngine|GrokVideoEngine|GrokConnection|engines\.grok|patchright|image_engine|video_engine|connection_panel\.connection" ui` → no matches.
+- `.venv\Scripts\python.exe -m pytest tests -v` → 40 passed.
+- `.venv\Scripts\python.exe -m py_compile core\schema.py core\project.py render\visual_fit.py render\composite.py workers\batch_video.py workers\render_worker.py workers\single_video.py ui\scene_row.py ui\dialogs\preview_dialog.py ui\main_window.py` → passed.
+- `rg -n "visual_type.*(image_grok|video_grok)" "project 1" core workers engines ui render tests` → only alias compatibility tests remain.
+
+### Live test checklist for this refactor
+
+- [ ] Open Brave with CDP `9222`, logged into Grok.
+- [ ] Run the app and load a project using the new `meta` schema.
+- [ ] Click **Check CDP**; confirm health log, without GUI tab selection.
+- [ ] Batch image 2 scenes; confirm one worker process starts, Grok tab opens/reuses, files appear in `sources/picN.jpg`, rows become ready, thumbnails refresh.
+- [ ] Preview dialog → Gen Image for one scene; confirm `single_image` task runs as a new process and updates only that scene.
+- [ ] Use reference images with image gen; confirm refs upload flow still works.
+- [ ] Kill/stop image process mid-run; confirm GUI remains responsive and Stop state resets.
+- [ ] Reload project; confirm `sources/` scan reconciles generated files.
+- [ ] Try Grok video; confirm it is clearly deferred.
+- [ ] Try single-scene slideshow; confirm offline render still works.
+
+---
+
 ## Session 2026-05-03
 
 ### Commits landed on `main` (in order)
