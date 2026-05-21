@@ -150,8 +150,9 @@ class SceneRow(QFrame):
         self.video_btn.clicked.connect(lambda: self.edit_clicked.emit(self.scene_id))
         row.addWidget(self.video_btn)
 
-        self.voice_btn = self._mk_status_btn("🎤", "Voice: pending", enabled=False)
-        row.addWidget(self.voice_btn)
+        self.edit_asset_btn = self._mk_status_btn("🛠", "Edit — click để edit prompt / Run Edit", enabled=True)
+        self.edit_asset_btn.clicked.connect(lambda: self.edit_clicked.emit(self.scene_id))
+        row.addWidget(self.edit_asset_btn)
 
         row.addStretch()
 
@@ -218,28 +219,26 @@ class SceneRow(QFrame):
     def update_duration(self, duration: int) -> None:
         self.duration_label.setText(f"{duration}s")
 
+    def set_batch_selected(self, checked: bool) -> None:
+        self.batch_tick.setChecked(bool(checked))
+
     # --- State application ----------------------------------------------------
 
     def apply_state(self, scene_state: dict[str, Any]) -> None:
         img = scene_state.get("image", {})
         vid = scene_state.get("video", {})
-        voi = scene_state.get("voice", {})
 
         self._apply_asset(self.image_btn, "🖼", img, label="Ảnh")
         self._apply_asset(self.video_btn, "🎬", vid, label="Video")
-        self._apply_asset(self.voice_btn, "🎤", voi, label="Voice")
+        self._apply_asset(self.edit_asset_btn, "🛠", vid, label="Edit")
 
     def _apply_asset(self, btn: QPushButton, icon: str, asset_state: dict, label: str) -> None:
         status = asset_state.get("status", "pending")
         path = asset_state.get("path")
         btn.setText(f"{icon} {STATUS_ICON.get(status, STATUS_ICON['pending'])}")
-        # Image/Video buttons stay enabled regardless of status so the user
-        # can always open the Preview Dialog to edit prompt and Gen. Voice
-        # button keeps the disabled state set at construction time.
-        if btn is self.voice_btn:
-            btn.setEnabled(False)
-        else:
-            btn.setEnabled(True)
+        # Image/Video/Edit buttons stay enabled regardless of status so the user
+        # can always open the Preview Dialog to edit prompt and run the action.
+        btn.setEnabled(True)
         if status == "ready" and path:
             btn.setToolTip(f"{label}: {path}\n(click để mở edit + Gen)")
         elif status == "failed":

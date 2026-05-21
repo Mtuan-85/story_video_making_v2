@@ -7,14 +7,15 @@ story / prompts / visual_type / effect / duration, and three action buttons:
 
   💾 Save        — persist edits without gen.
   🖼 Gen Image   — persist edits, then run image worker (overwrites existing).
-  🎞 Gen Video   — persist edits, then run video worker. Dispatches by
-                   visual_type: Video (I2V) or slideshow.
+  🎞 Gen Video   — persist edits, then run provider video worker.
+  🛠 Gen Edit    — persist edits, then run edit/render tool (currently slideshow).
 
 Signals:
     save_requested(scene_id, updates)        — main_window persists via
                                                 Project.update_scene_fields.
     gen_image_requested(scene_id)            — main_window dispatches image gen.
-    gen_animation_requested(scene_id)        — main_window dispatches video gen.
+    gen_animation_requested(scene_id)        — main_window dispatches provider video gen.
+    gen_edit_requested(scene_id)             — main_window dispatches edit/render tool.
 """
 
 from __future__ import annotations
@@ -58,6 +59,7 @@ class PreviewDialog(QDialog):
     save_requested = pyqtSignal(str, dict)  # scene_id, updates
     gen_image_requested = pyqtSignal(str, bool)  # scene_id, fast_mode
     gen_animation_requested = pyqtSignal(str, bool)  # scene_id, fast_mode
+    gen_edit_requested = pyqtSignal(str, bool)  # scene_id, fast_mode
 
     def __init__(self, scene, scene_state: dict, project_root: Path, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -144,9 +146,14 @@ class PreviewDialog(QDialog):
         btns.addWidget(b_gen_image)
 
         b_gen_anim = QPushButton("🎞 Gen Video")
-        b_gen_anim.setToolTip("Save prompt + Generate video (requires existing image for I2V)")
+        b_gen_anim.setToolTip("Save prompt + Generate provider/model video")
         b_gen_anim.clicked.connect(self._on_gen_animation)
         btns.addWidget(b_gen_anim)
+
+        b_gen_edit = QPushButton("🛠 Gen Edit")
+        b_gen_edit.setToolTip("Save prompt + Run edit tool (currently slideshow; requires ready image)")
+        b_gen_edit.clicked.connect(self._on_gen_edit)
+        btns.addWidget(b_gen_edit)
 
         self.fast_check = QCheckBox("⚡ Fast")
         self.fast_check.setToolTip(
@@ -288,6 +295,11 @@ class PreviewDialog(QDialog):
     def _on_gen_animation(self) -> None:
         self.save_requested.emit(self.scene.id, self._collect_updates())
         self.gen_animation_requested.emit(self.scene.id, self.fast_check.isChecked())
+        self.accept()
+
+    def _on_gen_edit(self) -> None:
+        self.save_requested.emit(self.scene.id, self._collect_updates())
+        self.gen_edit_requested.emit(self.scene.id, self.fast_check.isChecked())
         self.accept()
 
     def _open_folder(self) -> None:

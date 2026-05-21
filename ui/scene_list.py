@@ -59,6 +59,17 @@ class SceneList(QScrollArea):
     def selected_scene_ids(self) -> list[str]:
         return [sid for sid, row in self.rows.items() if row.is_batch_selected()]
 
+    def select_all(self) -> None:
+        self._set_all_selected(True)
+
+    def clear_selection(self) -> None:
+        self._set_all_selected(False)
+
+    def _set_all_selected(self, checked: bool) -> None:
+        for row in self.rows.values():
+            row.set_batch_selected(checked)
+        self._emit_selection()
+
     def _on_batch_toggled(self, _scene_id: str, _checked: bool) -> None:
         self._emit_selection()
 

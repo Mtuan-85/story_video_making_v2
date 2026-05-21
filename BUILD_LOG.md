@@ -35,6 +35,15 @@ Slideshow policy:
 - Slideshow only runs when the scene has a ready source image.
 - Slideshow is packaged as the `slideshow/` tool folder and wrapped by `render/slideshow.py`; future edit tools should follow the same package-or-wrapper pattern rather than being wired directly into GUI branches.
 
+Implemented after this note:
+
+- `ui/scene_list.py`: added `select_all()` and `clear_selection()`.
+- `ui/main_window.py`: top action row now has `Batch Image`, `Batch Video`, `Batch Edit`, `All`, `Clear`; the old main-row `Process voice` button is removed.
+- `ui/main_window.py`: `Batch Edit` runs slideshow for selected `slideshow` scenes that have ready source images.
+- `ui/dialogs/preview_dialog.py`: added `Gen Edit` and `gen_edit_requested`.
+- `ui/scene_row.py`: replaced the disabled Voice asset button with an Edit asset button.
+- `tests/test_ui_batch_edit_structure.py`: added UI smoke coverage for selection helpers and button structure.
+
 ### Update before commit prep
 
 1. **Canonical app-level `visual_type`**

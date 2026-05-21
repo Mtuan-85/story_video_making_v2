@@ -167,6 +167,12 @@ Single-scene actions mirror the same split:
 
 Slideshow is an offline edit/render tool flow, not a Grok/ChatGPT/Gemini provider flow. It is packaged as the `slideshow/` tool folder and called through `render/slideshow.py`; it is not a single loose Python file. Slideshow requires a ready source image and writes a video output.
 
+Current implementation:
+- Top action row exposes `Batch Image`, `Batch Video`, `Batch Edit`, `All`, and `Clear`.
+- `Batch Edit` currently runs slideshow for selected `slideshow` scenes with ready images.
+- Preview dialog exposes `Gen Image`, `Gen Video`, and `Gen Edit`.
+- Scene rows use the third asset button for Edit instead of the old disabled Voice button.
+
 Batch Grok video and single Grok video are deferred until the video process-worker phase. The old in-process Patchright video path is not used by the GUI after the image worker refactor.
 
 Current status:

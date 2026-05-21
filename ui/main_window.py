@@ -112,10 +112,15 @@ class MainWindow(QMainWindow):
         self.btn_batch_image.setEnabled(False)
         action_row.addWidget(self.btn_batch_image)
 
-        self.btn_batch_video = QPushButton("🎞 Batch animation")
+        self.btn_batch_video = QPushButton("🎞 Batch video")
         self.btn_batch_video.clicked.connect(self._start_batch_video)
         self.btn_batch_video.setEnabled(False)
         action_row.addWidget(self.btn_batch_video)
+
+        self.btn_batch_edit = QPushButton("🛠 Batch edit")
+        self.btn_batch_edit.clicked.connect(self._start_batch_edit)
+        self.btn_batch_edit.setEnabled(False)
+        action_row.addWidget(self.btn_batch_edit)
 
         self.btn_stop = QPushButton("■ Dừng")
         self.btn_stop.clicked.connect(self._stop_batch)
@@ -132,11 +137,17 @@ class MainWindow(QMainWindow):
         action_row.addWidget(self.btn_stop_all)
 
         action_row.addSpacing(12)
-        self.btn_process_voice = QPushButton("🎤 Process voice")
-        self.btn_process_voice.setToolTip("Auto-align voice files in voice/ → scenes (Plan D)")
-        self.btn_process_voice.clicked.connect(self._on_process_voice)
-        self.btn_process_voice.setEnabled(False)
-        action_row.addWidget(self.btn_process_voice)
+        self.btn_select_all = QPushButton("☑ All")
+        self.btn_select_all.setToolTip("Chọn tất cả scenes cho batch")
+        self.btn_select_all.clicked.connect(self._select_all_scenes)
+        self.btn_select_all.setEnabled(False)
+        action_row.addWidget(self.btn_select_all)
+
+        self.btn_clear_selection = QPushButton("☐ Clear")
+        self.btn_clear_selection.setToolTip("Bỏ chọn tất cả scenes")
+        self.btn_clear_selection.clicked.connect(self._clear_scene_selection)
+        self.btn_clear_selection.setEnabled(False)
+        action_row.addWidget(self.btn_clear_selection)
 
         self.btn_reload = QPushButton("🔄 Reload")
         self.btn_reload.setToolTip(
@@ -254,7 +265,6 @@ class MainWindow(QMainWindow):
             f"{len(self.project.scenes)} scenes — <span style='color:#666'>{self.project.paths.root}</span>"
         )
         self.scene_list.bind_project(self.project)  # emits batch_selection_changed
-        self.btn_process_voice.setEnabled(True)
         self.btn_reload.setEnabled(True)
         self.btn_reset_design.setEnabled(True)
         self.btn_render.setEnabled(self.project.voice_mapping is not None)
@@ -567,9 +577,64 @@ class MainWindow(QMainWindow):
             return
         QMessageBox.information(
             self,
-            "Batch animation deferred",
+            "Batch video deferred",
             "Batch Grok video generation is deferred until the video worker "
-            "is moved to the process launcher. Single-scene slideshow remains available.",
+            "is moved to the process launcher. Use Batch Edit for slideshow/edit tools.",
+        )
+
+    def _start_batch_edit(self) -> None:
+        if self.project is None:
+            return
+        if any(self._is_worker_running(w) for w in self._active_workers):
+            QMessageBox.information(
+                self,
+                "Đang chạy",
+                "Đợi worker hiện tại xong trước khi bắt đầu batch edit.",
+            )
+            return
+
+        selected_ids = set(self.scene_list.selected_scene_ids())
+        eligible: list[str] = []
+        skipped: list[tuple[str, str]] = []
+        for scene in self.project.scenes:
+            if scene.id not in selected_ids:
+                continue
+            if scene.visual_type != "slideshow":
+                skipped.append((scene.id, f"visual_type={scene.visual_type}, không phải slideshow"))
+                continue
+            ok, reason = is_slideshow_eligible(self.project, scene.id)
+            if ok:
+                eligible.append(scene.id)
+            else:
+                skipped.append((scene.id, reason))
+
+        if not eligible:
+            msg = "Không có scene nào đủ điều kiện Batch Edit (slideshow)."
+            if skipped:
+                msg += "\n\nLý do bỏ qua:\n" + "\n".join(
+                    f"  • {sid}: {reason}" for sid, reason in skipped[:8]
+                )
+            QMessageBox.information(self, "Không có gì để làm", msg)
+            return
+
+        if skipped:
+            self._append_log(
+                "Batch Edit sẽ bỏ qua: "
+                + "; ".join(f"{sid} ({reason})" for sid, reason in skipped[:8])
+            )
+
+        self._start_next_edit(eligible)
+
+    def _start_next_edit(self, scene_ids: list[str]) -> None:
+        if not scene_ids:
+            self._append_log("✓ Batch edit xong")
+            self._refresh_batch_buttons()
+            return
+        scene_id = scene_ids[0]
+        rest = scene_ids[1:]
+        self._start_single_edit_worker(
+            scene_id,
+            on_finished=lambda remaining=rest: self._start_next_edit(remaining),
         )
 
     def _on_batch_video_done(self, success: int, total: int) -> None:
@@ -616,11 +681,10 @@ class MainWindow(QMainWindow):
         self._start_generate_process(task)
 
     def _regen_one_video(self, scene_id: str, fast_mode: bool = False) -> None:
-        """Dispatch a one-scene video re-gen by visual_type.
+        """Dispatch a one-scene provider video re-gen by visual_type.
 
         Video         → deferred until video process worker refactor
-        slideshow     → SlideshowWorker (offline, needs ready image)
-        Image         → not animated; effect-driven motion is added at final render only.
+        Image/slideshow → not provider video
         """
         if self.project is None:
             QMessageBox.information(self, "Chưa sẵn sàng", "Load dự án trước")
@@ -629,7 +693,7 @@ class MainWindow(QMainWindow):
             QMessageBox.information(
                 self,
                 "Đang chạy",
-                "Đợi worker hiện tại xong trước khi bắt đầu animation.",
+                "Đợi worker hiện tại xong trước khi bắt đầu video.",
             )
             return
         if scene_id in self._single_video_workers and self._single_video_workers[scene_id].isRunning():
@@ -647,26 +711,52 @@ class MainWindow(QMainWindow):
             )
             return
 
-        if vtype == "slideshow":
-            ok, reason = is_slideshow_eligible(self.project, scene_id)
-            if not ok:
-                QMessageBox.warning(self, f"Không đủ điều kiện — {scene_id}", reason)
-                return
-            worker = SlideshowWorker(self.project, scene_id, estimator=self.estimator)
+        QMessageBox.information(
+            self, "Không phải provider video",
+            f"Scene {scene_id} có visual_type={vtype}. "
+            "Dùng Single Edit để chạy slideshow/edit tool.",
+        )
 
-        else:
+    def _regen_one_edit(self, scene_id: str, _fast_mode: bool = False) -> None:
+        if self.project is None:
+            QMessageBox.information(self, "Chưa sẵn sàng", "Load dự án trước")
+            return
+        if any(self._is_worker_running(w) for w in self._active_workers):
             QMessageBox.information(
-                self, "Không phải video",
-                f"Scene {scene_id} có visual_type={vtype} — không tạo video. "
-                "Hiệu ứng zoom được áp dụng lúc render final.",
+                self,
+                "Đang chạy",
+                "Đợi worker hiện tại xong trước khi bắt đầu edit.",
             )
             return
+        scene = self.project.scene(scene_id)
+        if scene.visual_type != "slideshow":
+            QMessageBox.information(
+                self,
+                "Không phải edit tool",
+                f"Scene {scene_id} có visual_type={scene.visual_type}. "
+                "Đổi visual_type sang slideshow để chạy Single Edit.",
+            )
+            return
+        ok, reason = is_slideshow_eligible(self.project, scene_id)
+        if not ok:
+            QMessageBox.warning(self, f"Không đủ điều kiện — {scene_id}", reason)
+            return
+        self._start_single_edit_worker(scene_id)
 
+    def _start_single_edit_worker(self, scene_id: str, on_finished=None) -> None:
+        if self.project is None:
+            return
+        if scene_id in self._single_video_workers and self._single_video_workers[scene_id].isRunning():
+            return
+
+        worker = SlideshowWorker(self.project, scene_id, estimator=self.estimator)
         worker.scene_started.connect(self._on_scene_started)
         worker.scene_finished.connect(self._on_scene_finished)
         worker.scene_failed.connect(self._on_scene_failed)
         worker.log_message.connect(self._append_log)
         worker.finished.connect(lambda sid=scene_id: self._cleanup_single_video(sid))
+        if on_finished is not None:
+            worker.finished.connect(on_finished)
         self._single_video_workers[scene_id] = worker
         worker.start()
         self._register_worker(worker)
@@ -694,6 +784,17 @@ class MainWindow(QMainWindow):
         self.btn_batch_video.setEnabled(
             self.project is not None and selected > 0 and not image_running and not other_running
         )
+        self.btn_batch_edit.setEnabled(
+            self.project is not None and selected > 0 and not image_running and not other_running
+        )
+        self.btn_select_all.setEnabled(self.project is not None and total > 0)
+        self.btn_clear_selection.setEnabled(self.project is not None and total > 0)
+
+    def _select_all_scenes(self) -> None:
+        self.scene_list.select_all()
+
+    def _clear_scene_selection(self) -> None:
+        self.scene_list.clear_selection()
 
     def _on_visual_type_changed(self, scene_id: str, new_value: str) -> None:
         if self.project is None:
@@ -741,6 +842,7 @@ class MainWindow(QMainWindow):
         dlg.save_requested.connect(self._on_preview_save)
         dlg.gen_image_requested.connect(self._regen_one)
         dlg.gen_animation_requested.connect(self._regen_one_video)
+        dlg.gen_edit_requested.connect(self._regen_one_edit)
         dlg.exec()
 
     def _on_preview_save(self, scene_id: str, updates: dict) -> None:
@@ -816,8 +918,6 @@ class MainWindow(QMainWindow):
         worker.all_done.connect(self._on_voice_align_done)
         worker.finished.connect(self._cleanup_voice_align)
         self._voice_align_worker = worker
-        self.btn_process_voice.setEnabled(False)
-        self.btn_process_voice.setText("🎤 Processing...")
         worker.start()
         self._register_worker(worker)
 
@@ -970,8 +1070,6 @@ class MainWindow(QMainWindow):
         if worker is not None:
             worker.deleteLater()
         self._voice_align_worker = None
-        self.btn_process_voice.setEnabled(self.project is not None)
-        self.btn_process_voice.setText("🎤 Process voice")
         if self.project is not None and self.project.voice_mapping is not None:
             self.btn_render.setEnabled(True)
 
