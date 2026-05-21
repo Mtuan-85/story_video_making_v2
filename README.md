@@ -4,7 +4,7 @@ Desktop PyQt6 app tự động hóa pipeline tạo video story từ `scenes.json
 
 - **Gen ảnh** qua Grok Imagine bằng worker process riêng (Brave + CDP + Patchright nằm ngoài GUI)
 - **Gen video Grok** đang deferred tới worker process phase sau
-- **Animation** offline cho slideshow (ffmpeg + rembg + Claude director)
+- **Batch Edit** offline cho slideshow/edit tools (ffmpeg + rembg + Claude director)
 - **Voice-first alignment** với Whisper + Claude Code CLI (user cung cấp file voice, app align scene timing)
 - **Render** ghép visual + voice + subtitle + BGM + fade transitions
 
@@ -20,7 +20,7 @@ engines/       # Provider/browser automation implementations
   grok/        # Selectors, atomic actions, declarative flows, FlowRunner, engine adapters
 render/        # FFmpeg composition + assembly + transitions
 runtime/       # Estimator với rolling history (time prediction per action)
-slideshow/     # External slideshow pipeline (preprocess + Claude director + ffmpeg overlay)
+slideshow/     # External edit-tool package: slideshow pipeline (preprocess + Claude director + ffmpeg overlay)
 ui/            # MainWindow, ConnectionPanel, SceneList, dialogs (preview + prompt + voice)
 voice/         # Whisper transcription + Claude alignment + subtitle builder + Fish TTS (legacy CLI)
 workers/       # QProcess task contract/launcher + legacy/offline workers
@@ -49,7 +49,7 @@ test_run/      # Working example project (scenes.json + state)
 - `image_worker_flow.py` — Grok batch/single image flow used by `workers.generate_worker`
 
 **render/**
-- `slideshow.py` — Async wrapper + sys.path injection cho `slideshow/` external pipeline
+- `slideshow.py` — Async wrapper + sys.path injection cho `slideshow/` edit-tool package
 - `composite.py` — `composite_scene()`: visual + voice slice + subtitle drawtext + fade-in/out 0.25s mỗi side
 - `subtitle_filter.py` — Build drawtext chain per phrase (yellow + black border, scene-relative timestamps)
 - `bgm_mixer.py` — `pick_bgm_files` + `build_bgm_filter` (aloop + atrim + volume -15dB + afade)
@@ -65,7 +65,7 @@ Legacy/offline workers:
 - `_retry.py` — legacy in-process retry helper for old workers; not used by the new QProcess image path
 - `batch_image.py` / `single_image.py` — legacy in-process image workers kept temporarily; GUI image path now uses `GenerateProcess`
 - `batch_video.py` / `single_video.py` — legacy Grok video workers; GUI Grok video is deferred until process-worker phase
-- `slideshow_worker.py` — Single-scene slideshow render
+- `slideshow_worker.py` — Single-scene slideshow edit/render worker
 - `voice_align_worker.py` — Whisper + Claude align (blocking, wrapped trong `asyncio.to_thread`)
 - `render_worker.py` — Composite all scenes → assemble final.mp4
 
@@ -145,8 +145,27 @@ Per scene:
 - Provider/model is project-level for now: Grok / `grok-auto`.
 - ChatGPT/Gemini providers are schema/UI-ready concepts only; implementation deferred.
 
-### 5. Gen animation (ai cần)
-Slideshow is an offline render/tool flow, not a Grok/ChatGPT/Gemini provider flow. Single-scene slideshow remains available from the preview dialog.
+### 5. Batch Video / Batch Edit
+
+The UI should keep three batch lanes separate:
+
+| Lane | Meaning | Provider/model? |
+|---|---|---|
+| `Batch Image` | Generate still images for selected scenes | yes |
+| `Batch Video` | Generate model video for selected `Video` scenes | yes |
+| `Batch Edit` | Run offline edit/render tools for selected scenes | no |
+
+Single-scene actions mirror the same split:
+
+| Single action | Meaning |
+|---|---|
+| `Single Image` | Re-gen one still image |
+| `Single Video` | Re-gen one provider/model video |
+| `Single Edit` | Run one offline edit tool, currently slideshow |
+
+`Batch Edit` / `Single Edit` replaces the old ambiguous "Batch animation" concept. It is the right home for slideshow and future edit tools because these tools operate on generated assets, not on Grok/ChatGPT/Gemini model sessions.
+
+Slideshow is an offline edit/render tool flow, not a Grok/ChatGPT/Gemini provider flow. It is packaged as the `slideshow/` tool folder and called through `render/slideshow.py`; it is not a single loose Python file. Slideshow requires a ready source image and writes a video output.
 
 Batch Grok video and single Grok video are deferred until the video process-worker phase. The old in-process Patchright video path is not used by the GUI after the image worker refactor.
 

@@ -9,6 +9,32 @@
 
 Status: uncommitted. Implemented by task slices with spec + quality review checkpoints. No git commit was made in this session.
 
+### Follow-up design note — Batch Image / Video / Edit
+
+User clarified the next UI structure:
+
+- Keep provider/model generation separate from offline edit tools.
+- Batch lanes should be:
+  - `Batch Image`: selected scenes -> provider/model image generation.
+  - `Batch Video`: selected `Video` scenes -> provider/model video generation.
+  - `Batch Edit`: selected scenes -> offline edit/render tools.
+- Single-scene actions should mirror the same split:
+  - `Single Image`
+  - `Single Video`
+  - `Single Edit`
+- The old `Batch animation` wording is too broad and should be replaced.
+- The current `Voice` button can be removed from the main action row and replaced with a single/batch edit entry point because voice is not the active workflow now.
+- Selection helpers are needed because manual ticking is slow:
+  - `Select All`
+  - `Clear`
+  - optionally later: select by visual type/status.
+
+Slideshow policy:
+
+- Slideshow belongs under `Batch Edit` / `Single Edit`, not `Batch Video`.
+- Slideshow only runs when the scene has a ready source image.
+- Slideshow is packaged as the `slideshow/` tool folder and wrapped by `render/slideshow.py`; future edit tools should follow the same package-or-wrapper pattern rather than being wired directly into GUI branches.
+
 ### Update before commit prep
 
 1. **Canonical app-level `visual_type`**
