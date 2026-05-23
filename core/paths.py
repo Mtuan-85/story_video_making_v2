@@ -150,6 +150,27 @@ class ProjectPaths:
     def thumbnail_path(self, scene_id: str) -> Path:
         return self.thumbnails_dir / f"{scene_id}.jpg"
 
+    # ------------------------------------------------------------------
+    # Edit (slideshow) artefacts — under sources/edit/
+    # ------------------------------------------------------------------
+
+    @property
+    def edit_dir(self) -> Path:
+        """sources/edit/ — slideshow zones + thumbs + ephemeral cache."""
+        return self.sources_dir / "edit"
+
+    def edit_zones_json(self, scene_id: str) -> Path:
+        """Persistent zones state for re-edit. e.g. sources/edit/SCENE-03-zones.json"""
+        return self.edit_dir / f"{scene_id}-zones.json"
+
+    def edit_thumb(self, scene_id: str) -> Path:
+        """Polygon overlay preview. e.g. sources/edit/SCENE-03-thumb.png"""
+        return self.edit_dir / f"{scene_id}-thumb.png"
+
+    def edit_cache_dir(self, scene_id: str) -> Path:
+        """Ephemeral cache (Claude logs, frames). Deleted after successful render."""
+        return self.edit_dir / ".cache" / scene_id
+
     def subtitle_dir(self, scene_id: str) -> Path:
         return self.temp_dir / f"subtitle_{scene_id}"
 

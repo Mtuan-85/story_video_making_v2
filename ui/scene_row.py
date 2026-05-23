@@ -1,12 +1,15 @@
-"""One scene row: thumbnail, dropdowns (visual_type + effect), status icons, edit.
+"""One scene row: thumbnail, dropdowns (visual_type + effect), status icons.
 
-v2 layout:
-    [☐] [thumb 60x60] SCENE-XX [▾ visual] [▾ effect] {dur}s [🖼 ✓] [🎬 ✓] [🎤 ✓]  ✏
+v3 layout:
+    [☐] [thumb 60x60] SCENE-XX [▾ visual] [▾ effect] {dur}s [🖼 status] [🎬 status] [🛠 status]
 
-All clickable affordances (thumbnail / 🖼 / 🎬 / ✏) open the unified Preview
-Dialog. Image and video buttons are always enabled — they show current asset
-status but acting on them lets the user edit the prompt + Gen, even when the
-asset has not been generated yet.
+Each asset button is state-aware:
+  - status=pending/failed: clicking triggers first-gen directly (no dialog)
+  - status=ready: clicking opens asset-specific preview/edit dialog
+  - status=generating: clicking is ignored (worker still running)
+
+Thumbnail is preview-only (no click action). The ✏ generic edit button
+is removed in v3.
 """
 
 from __future__ import annotations
@@ -50,12 +53,21 @@ class SceneRow(QFrame):
     """Single scene row.
 
     Signals:
-        edit_clicked(scene_id)
+        image_clicked(scene_id)    — 🖼 clicked
+        video_clicked(scene_id)    — 🎬 clicked
+        edit_clicked(scene_id)     — 🛠 clicked (slideshow edit)
         batch_selection_changed(scene_id, bool)
         visual_type_changed(scene_id, str)
         effect_changed(scene_id, str)
+
+    main_window routes each signal based on current asset state:
+      - pending/failed → direct first-gen (no dialog)
+      - ready → open asset-specific dialog
+      - generating → ignored
     """
 
+    image_clicked = pyqtSignal(str)
+    video_clicked = pyqtSignal(str)
     edit_clicked = pyqtSignal(str)
     batch_selection_changed = pyqtSignal(str, bool)
     visual_type_changed = pyqtSignal(str, str)
@@ -101,16 +113,14 @@ class SceneRow(QFrame):
         )
         row.addWidget(self.batch_tick)
 
-        # 2. Thumbnail (click → open preview)
+        # 2. Thumbnail (preview only — no click action in v3)
         self.thumb_label = QLabel()
         self.thumb_label.setFixedSize(THUMB_SIZE, THUMB_SIZE)
         self.thumb_label.setStyleSheet(
             "border:1px solid #bbb; background:#222; color:#888; font-size:18px;"
         )
         self.thumb_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.thumb_label.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.thumb_label.setToolTip("Click để mở preview / edit")
-        self.thumb_label.mousePressEvent = self._on_thumb_clicked  # type: ignore[assignment]
+        self.thumb_label.setToolTip("Thumbnail (preview only)")
         row.addWidget(self.thumb_label)
 
         # 3. Scene id
@@ -139,29 +149,28 @@ class SceneRow(QFrame):
 
         row.addWidget(self._sep())
 
-        # 7. Per-asset status icons. Image/Video buttons open the Preview
-        # Dialog (edit prompt + Gen) — always enabled, even before first gen.
-        # Voice stays disabled until a per-scene voice flow exists.
-        self.image_btn = self._mk_status_btn("🖼", "Ảnh — click để edit prompt / Gen", enabled=True)
-        self.image_btn.clicked.connect(lambda: self.edit_clicked.emit(self.scene_id))
+        # 7. Per-asset status buttons (state-aware).
+        # First click on pending → first-gen (main_window decides).
+        # Second+ click on ready → opens asset-specific dialog.
+        self.image_btn = self._mk_status_btn(
+            "🖼", "Ảnh — click để Gen (lần đầu) hoặc Edit (sau đó)", enabled=True
+        )
+        self.image_btn.clicked.connect(lambda: self.image_clicked.emit(self.scene_id))
         row.addWidget(self.image_btn)
 
-        self.video_btn = self._mk_status_btn("🎬", "Video — click để edit prompt / Gen", enabled=True)
-        self.video_btn.clicked.connect(lambda: self.edit_clicked.emit(self.scene_id))
+        self.video_btn = self._mk_status_btn(
+            "🎬", "Video — click để Gen (lần đầu) hoặc Edit (sau đó)", enabled=True
+        )
+        self.video_btn.clicked.connect(lambda: self.video_clicked.emit(self.scene_id))
         row.addWidget(self.video_btn)
 
-        self.edit_asset_btn = self._mk_status_btn("🛠", "Edit — click để edit prompt / Run Edit", enabled=True)
+        self.edit_asset_btn = self._mk_status_btn(
+            "🛠", "Edit slideshow — click để Gen (lần đầu) hoặc Edit zones (sau đó)", enabled=True
+        )
         self.edit_asset_btn.clicked.connect(lambda: self.edit_clicked.emit(self.scene_id))
         row.addWidget(self.edit_asset_btn)
 
         row.addStretch()
-
-        # 8. Edit button (✏)
-        self.edit_btn = QPushButton("✏")
-        self.edit_btn.setFixedWidth(28)
-        self.edit_btn.setToolTip("Open preview / edit dialog")
-        self.edit_btn.clicked.connect(lambda: self.edit_clicked.emit(self.scene_id))
-        row.addWidget(self.edit_btn)
 
     @staticmethod
     def _sep() -> QLabel:
@@ -227,24 +236,27 @@ class SceneRow(QFrame):
     def apply_state(self, scene_state: dict[str, Any]) -> None:
         img = scene_state.get("image", {})
         vid = scene_state.get("video", {})
+        edit = scene_state.get("edit", {})
 
         self._apply_asset(self.image_btn, "🖼", img, label="Ảnh")
         self._apply_asset(self.video_btn, "🎬", vid, label="Video")
-        self._apply_asset(self.edit_asset_btn, "🛠", vid, label="Edit")
+        self._apply_asset(self.edit_asset_btn, "🛠", edit, label="Edit")
 
     def _apply_asset(self, btn: QPushButton, icon: str, asset_state: dict, label: str) -> None:
         status = asset_state.get("status", "pending")
-        path = asset_state.get("path")
+        path = asset_state.get("path") or asset_state.get("zones_json")
         btn.setText(f"{icon} {STATUS_ICON.get(status, STATUS_ICON['pending'])}")
-        # Image/Video/Edit buttons stay enabled regardless of status so the user
-        # can always open the Preview Dialog to edit prompt and run the action.
-        btn.setEnabled(True)
+        # Disable button only while a worker is actively running for THIS asset.
+        # Otherwise enabled — first click = gen, subsequent click = edit.
+        btn.setEnabled(status != "generating")
         if status == "ready" and path:
-            btn.setToolTip(f"{label}: {path}\n(click để mở edit + Gen)")
+            btn.setToolTip(f"{label}: {path}\n(click để mở edit/preview)")
         elif status == "failed":
-            btn.setToolTip(f"{label} fail: {asset_state.get('fail_reason') or '(unknown)'}\n(click để edit + Gen lại)")
+            btn.setToolTip(f"{label} fail: {asset_state.get('fail_reason') or '(unknown)'}\n(click để Gen lại)")
+        elif status == "generating":
+            btn.setToolTip(f"{label}: đang chạy...")
         else:
-            btn.setToolTip(f"{label}: {status}\n(click để edit prompt / Gen)")
+            btn.setToolTip(f"{label}: chưa có\n(click để Gen lần đầu)")
 
     # --- Internal signal handlers ---------------------------------------------
 
@@ -257,9 +269,6 @@ class SceneRow(QFrame):
         if self._suppress:
             return
         self.effect_changed.emit(self.scene_id, value)
-
-    def _on_thumb_clicked(self, _event) -> None:
-        self.edit_clicked.emit(self.scene_id)
 
     def is_batch_selected(self) -> bool:
         return self.batch_tick.isChecked()

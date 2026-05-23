@@ -5,6 +5,251 @@
 
 ---
 
+## Session 2026-05-23 — Slideshow v2 engine (zone-animate) + state-aware UI
+
+Status: ready to commit. End-to-end tested (Edit single, re-render, multi-scene).
+
+### Overview
+
+Replaced the legacy `slideshow/` engine (rembg + object cropping + ffmpeg overlay)
+with **slideshow v2** — a zone-based reveal-animation engine ported from
+`D:/Projects/zone_show_automation`. Slideshow v2 is standalone (no zone_animate
+runtime dependency), runs synchronously in a fresh QThread per call, and produces
+re-editable output (zones JSON + polygon thumbnail) so the user can refine zones
+without re-calling Claude.
+
+### Engine — `slideshow/` (rewritten)
+
+New modules:
+
+- `slideshow/__init__.py` — package entry; exports `render_slideshow_v2`, `rerender_slideshow_v2`
+- `slideshow/orchestrator.py` — 6-step pipeline (BG detect → Claude vision → polygon refine → overlap → render → save zones+thumb)
+- `slideshow/bg_detect.py` — median border-pixel BG color detection (PIL only)
+- `slideshow/claude_runner.py` — Claude CLI subprocess + vision prompt builder
+  - `cwd=image_path.parent` (NOT temp dir) so Claude Read tool resolves the image
+  - Pops `ANTHROPIC_API_KEY`/`ANTHROPIC_AUTH_TOKEN` → forces subscription billing
+- `slideshow/zone_refiner.py` — bbox → tight polygon (chroma + connected components + dilate + Douglas-Peucker)
+- `slideshow/renderer.py` — M1 frame composition (PIL) + ffmpeg encode
+- `slideshow/animations.py` — 7 animations (fade_in, scale_pop, slide_in_{l,r,t,b}, drop_in, pulse, glow, shake)
+- `slideshow/easing.py` — ease_out_cubic/back/bounce + triangle_wave
+- `slideshow/README_V2.md` — engine doc
+
+Removed: `slideshow/preprocess.py` (legacy rembg pipeline).
+
+### Pipeline (sync, per call)
+
+```
+input: image_path, duration, hint, output_path, zones_json_path, thumb_path, cache_dir
+[1] BG detect             — median border pixels                                ~50ms
+[2] Claude vision         — pick zones (bboxes + animation + sound + timing)    ~30-60s
+[3] Polygon refine        — per zone: chroma → cc filter → dilate → contour     ~50ms × N
+[4] Overlap resolution    — nearest-centroid pixel reassignment                 ~200ms
+[5] Render video          — extract stickers + frame composition + ffmpeg       ~15-30s
+[6] Save zones JSON + thumb — persistent for re-edit                            ~50ms
+total: ~1-2 min/scene (Claude dominates)
+```
+
+Re-render path (`rerender_slideshow_v2`) skips steps 1-4, loads saved zones,
+re-runs only step 5 — ~20-30s instead of 1-2 min.
+
+### State model — `edit` field (independent from `video`)
+
+`scene_state` gains a new top-level key:
+
+```python
+"edit": {
+    "status": "pending|generating|ready|failed",
+    "zones_json": "sources/edit/SCENE-XX-zones.json",
+    "thumb_path":  "sources/edit/SCENE-XX-thumb.png",
+    "last_render_at": "...",
+    "fail_reason": null,
+}
+```
+
+Rationale: `video.path` holds the final MP4 regardless of source (provider or
+slideshow). `edit.zones_json` survives a Gen Video overwrite so the user can
+reopen the zone editor later. Provider video and slideshow render are now
+fully independent.
+
+`core/project.py::_reconcile` was updated to:
+1. Forward-migrate older state.json (add missing top-level keys per scene).
+2. **Reset stuck `status="generating"` → `"failed"` on load** — recovers from
+   prior crashes (e.g. the cv2 heap-corruption issue described below) that
+   left state mid-flight.
+
+`core/paths.py` adds: `edit_dir`, `edit_zones_json(sid)`, `edit_thumb(sid)`,
+`edit_cache_dir(sid)`. Everything lives under `sources/edit/`.
+
+### File organization
+
+```
+sources/
+├── picN.jpg                    # image
+├── vidN.mp4                    # final video (overwrite-OK; provider OR slideshow)
+└── edit/
+    ├── SCENE-XX-zones.json     # PERSISTENT — re-render input
+    ├── SCENE-XX-thumb.png      # polygon overlay preview
+    └── .cache/SCENE-XX/        # EPHEMERAL — Claude logs + frames; deleted on success
+```
+
+Previously the slideshow workspace lived in `tempfile.gettempdir()`. Moved to
+project-local for debug visibility + per-project isolation.
+
+### Worker — fresh QThread per call (was AsyncQThread)
+
+`workers/slideshow_worker.py` rewritten:
+
+- Base: `QThread` (Qt native), no qasync/`asyncio.to_thread`
+- `run()` is sync, calls `slideshow.render_slideshow_v2` directly
+- Two modes: full pipeline (Claude) vs `rerender_only=True` (skip Claude)
+- Imports happen INSIDE `run()` so heavy modules (cv2, PIL) load in the worker thread
+- Signals: `scene_started`, `scene_finished`, `scene_failed`, `log_message`
+
+Why QThread instead of AsyncQThread:
+
+- `asyncio.to_thread` reuses threads from a shared `ThreadPoolExecutor`.
+- After ~20 slideshow renders we hit **Windows heap corruption (0xc0000374)**
+  inside `cv2.morphologyEx`, traced to BLAS/OpenCV/asyncio pool interaction
+  accumulating state across calls.
+- QThread spawns a fresh OS thread per worker. Thread dies after `run()`
+  returns → BLAS pool, cv2 TBB pool, Python module-level caches all cleaned up.
+- Mirrors `zone_show_automation`'s proven pattern.
+
+### Algorithm defenses (zone_refiner + renderer)
+
+To prevent native crashes when cv2 / numpy slices interact across threads:
+
+1. `np.ascontiguousarray(..., dtype=np.uint8)` before every cv2 call.
+2. Chroma mask uses **int32 squared-distance** (not `np.linalg.norm` → no BLAS sub-pool).
+3. `cv2.connectedComponentsWithStats` returns areas vectorized (was O(N×pixels)
+   loop with `np.sum(labels == i)` that hung pipelines on pathological inputs).
+4. Safety caps: `MAX_BBOX_PIXELS = 30M`, `MAX_COMPONENTS = 5000`, `MAX_DILATION_PX = 25`.
+5. Granular per-step timing logs in `refine_polygon_from_bbox` so a stuck step
+   identifies itself in the log.
+
+### Algorithm fixes (P0)
+
+- **Dilation kernel was half intended size.** `(dilation, dilation)` →
+  `(dilation*2+1, dilation*2+1)`. Polygon now expands by the configured radius;
+  prior bug clipped character/shadow edges.
+- **Chroma threshold mismatch fixed.** Sticker extractor was using `threshold=25`
+  while refiner used `15` — created a permanent halo of bg_color around faint
+  edges. Sticker now imports `CHROMA_THRESHOLD` from `zone_refiner`.
+
+### Performance (P1)
+
+- **Glow layer cached per sticker.** Was rebuilding GaussianBlur(25px) every
+  frame; now built once on first frame, reused for the rest of the emphasis
+  cycle. ~30-50ms × 18 frames saved per glow zone.
+- **Animation instances cached per scene.** `build_animation()` was called
+  every frame; now built once in `_build_render_plan` and stashed under
+  `scene["_entry_anim"]` / `scene["_emphasis_anim"]`.
+- **Opacity uses 256-entry LUT** instead of Python lambda per pixel.
+- **Z-order sort once** before the frame loop (was per-frame).
+- **ffmpeg pad color** uses detected `bg_color` (was hardcoded white).
+- **`with Image.open()`** in renderer (was leaking file handle to GC).
+- **uint8 overflow guard** in `resolve_overlaps` (sum across n zones).
+- **Edge-expansion early break** when bbox can't expand further (at image boundary).
+- **Bbox validation** rejects `x2 <= x1 or y2 <= y1` with clear error.
+
+### UI — state-aware buttons + 3 dialogs
+
+`ui/scene_row.py`:
+
+- Removed the generic `✏` edit button (redundant).
+- Thumbnail is preview-only (no click action).
+- Three asset buttons emit dedicated signals: `image_clicked`, `video_clicked`, `edit_clicked`.
+- Button enabled state: `setEnabled(status != "generating")`.
+
+`ui/main_window.py`:
+
+- New routers `_on_image_btn_clicked` / `_on_video_btn_clicked` / `_on_edit_btn_clicked`.
+- `pending`/`failed` → direct first-gen (no dialog).
+- `ready` → opens dedicated dialog.
+- Edit requires `image.status == "ready"` (warning otherwise).
+- **Loguru sink hop via Qt signal** (`_log_sink_signal`) — `_sink` callback fires
+  on any thread (worker, loguru queue) but emits a queued signal so the
+  `log_view.append` always runs on the main thread. Previously caused a segfault
+  via Qt thread affinity violation when the worker thread called `log.info()`.
+
+New dialogs under `ui/dialogs/`:
+
+- `image_preview_dialog.py` — image display + script + image prompt + Gen Image (+ Fast).
+- `video_preview_dialog.py` — video player + script + image prompt (readonly) +
+  video prompt + Gen Video. **Codec fallback**: on `QMediaPlayer.errorOccurred`
+  the video widget is replaced with a "📺 Mở bằng player hệ thống" button that
+  calls `os.startfile()` so users without H.264 codec can still preview.
+- `slideshow_canvas.py` — `QGraphicsView` polygon editor (IDLE/SELECTED/EDITING_VERTEX
+  state machine, drag handles, right-click insert/delete vertex, QUndoStack).
+- `slideshow_edit_dialog.py` — modal combining canvas + per-zone table
+  (animation/emphasis/sound/in-out timing) + Re-render (skip Claude) +
+  preview-in-system-player + folder open.
+
+`ui/scene_list.py` re-emits per-asset signals from `SceneRow` (was a single
+generic `edit_clicked`).
+
+### `render/slideshow.py` (legacy wrapper)
+
+Kept as a deprecation shim for `workers/batch_video.py` which still imports
+`render_slideshow` (async wrapper). Newly-flagged ⚠️ DEPRECATED in the docstring —
+new callers should go through `SlideshowWorker` (fresh QThread + sync orchestrator)
+to avoid the shared-pool heap corruption.
+
+### Known limitation deferred
+
+Claude occasionally returns **nested zones** (e.g. `"Turn-taking label"` whose
+bbox sits inside `"Turn-taking scene"`). Current pipeline paints both polygons
+on the base canvas, so the inner zone's content is masked out of the outer
+sticker — user sees the outer zone animate first, then the inner zone
+"reveal" on top. Documented in user testing on Scene 13. Algorithmic fix
+(detect nested → subtract inner from outer mask, or enforce strict z-order)
+is **not** implemented in this session.
+
+### Files changed in this session
+
+```
+core/paths.py                         + edit_dir paths
+core/project.py                       + 'edit' field, _reconcile recovery
+render/slideshow.py                   deprecated wrappers, kept for batch_video
+slideshow/__init__.py                 (new)
+slideshow/orchestrator.py             (new) 6-step pipeline + rerender path
+slideshow/bg_detect.py                (new)
+slideshow/claude_runner.py            (rewritten) cwd fix + new vision prompt
+slideshow/zone_refiner.py             (new) refine + resolve_overlaps + defenses
+slideshow/renderer.py                 (rewritten) M1 logic + animation cache + LUT
+slideshow/animations.py               (rewritten) 7 animations + Glow cache
+slideshow/easing.py                   (new)
+slideshow/preprocess.py               DELETED (legacy rembg pipeline)
+slideshow/README_V2.md                (new)
+workers/slideshow_worker.py           AsyncQThread → fresh QThread, two modes
+ui/scene_row.py                       state-aware 3 buttons, removed ✏
+ui/scene_list.py                      forward image_clicked / video_clicked
+ui/main_window.py                     3 routers + edit state wiring + log signal
+ui/dialogs/image_preview_dialog.py    (new)
+ui/dialogs/video_preview_dialog.py    (new) + codec fallback
+ui/dialogs/slideshow_canvas.py        (new) polygon editor
+ui/dialogs/slideshow_edit_dialog.py   (new) V3 zone editor
+```
+
+### Verification
+
+- All imports resolve cleanly (`python -c "from slideshow import render_slideshow_v2, rerender_slideshow_v2"`).
+- MainWindow loads with new signal/handler wiring.
+- SlideshowWorker base class is `QThread` (verified by `__mro__`).
+- End-to-end live test: Scene 23 first-gen (Claude → render → zones JSON saved)
+  then re-render (skip Claude, ~36s). Both completed successfully.
+- Loguru cross-thread sink no longer crashes — `_log_sink_signal` routes appends
+  to the main thread via `Qt.QueuedConnection`.
+- SCENE-06 stuck "generating" state recovered on next load.
+
+### Learning doc
+
+A separate post-mortem covering the threading evolution, OpenCV/numpy defenses,
+Qt thread-affinity rules, and design rules-of-thumb lives at
+`D:/Projects/99_learning_vibe_code/story_video_v2_va_slideshow_v2_kien_truc.md`.
+
+---
+
 ## Session 2026-05-20 — CDP provider worker refactor, image vertical slice
 
 Status: uncommitted. Implemented by task slices with spec + quality review checkpoints. No git commit was made in this session.

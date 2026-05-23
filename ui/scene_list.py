@@ -15,6 +15,8 @@ class SceneList(QScrollArea):
     Re-emits row signals as (scene_id, ...) for the main window to handle.
     """
 
+    image_clicked = pyqtSignal(str)
+    video_clicked = pyqtSignal(str)
     edit_clicked = pyqtSignal(str)
     visual_type_changed = pyqtSignal(str, str)  # scene_id, new_type
     effect_changed = pyqtSignal(str, str)  # scene_id, new_effect
@@ -46,6 +48,8 @@ class SceneList(QScrollArea):
                 duration=int(scene.duration),
                 thumbnail_path=thumb,
             )
+            row.image_clicked.connect(self.image_clicked)
+            row.video_clicked.connect(self.video_clicked)
             row.edit_clicked.connect(self.edit_clicked)
             row.visual_type_changed.connect(self.visual_type_changed)
             row.effect_changed.connect(self.effect_changed)

@@ -1,294 +1,294 @@
-"""
-Claude Code subprocess runner v3.
-
-Philosophy: Claude is the animation director, not pixel technician.
-- CV already did: detect all objects, crop, give positions
-- Claude decides: semantic grouping, pacing, animation choice
-- Scenes can contain multiple objects (group with same animation + appear_at)
-"""
+"""Claude Code runner for auto-pick zones (vision-based)."""
 
 import json
 import os
-import re
 import shutil
 import subprocess
 from pathlib import Path
+from typing import Optional
 
 
 def find_claude_executable() -> str:
+    """Locate Claude CLI in PATH."""
     for name in ("claude", "claude.exe", "claude.cmd"):
         path = shutil.which(name)
         if path:
             return path
     raise RuntimeError(
-        "Không tìm thấy Claude Code CLI. Cài từ https://claude.com/download"
+        "Không tìm thấy Claude Code CLI. Cài từ https://claude.com/download "
+        "và đảm bảo `claude` có trong PATH."
     )
 
 
-def build_prompt(scene_path: Path, processed_dir: Path, metadata_path: Path,
-                 plan_path: Path, duration: int, canvas_w: int, canvas_h: int,
-                 hint: str = "") -> str:
-    """Build prompt cho Claude - role: animation director."""
+def call_claude(
+    prompt: str,
+    timeout: int = 300,
+    log_dir: Optional[Path] = None,
+    cwd: Optional[Path] = None,
+) -> str:
+    """Call Claude CLI via subprocess. Returns raw stdout text.
 
-    hint_section = ""
-    if isinstance(hint, str) and hint.strip():
-        hint_section = f"\nUSER ADJUSTMENT (follow this carefully):\n{hint.strip()}\n"
-
-    # Forward slashes for Windows paths
-    scene_p = str(scene_path).replace("\\", "/")
-    proc_p = str(processed_dir).replace("\\", "/")
-    meta_p = str(metadata_path).replace("\\", "/")
-    plan_p = str(plan_path).replace("\\", "/")
-
-    prompt = f"""You are an animation director designing a cinematic slideshow. Execute immediately, do not ask questions.
-
-YOUR CREATIVE ROLE:
-- Watch the original scene as a narrative composition
-- Examine each pre-cropped object
-- Think: "If I were telling this story, what appears first? Together? Last?"
-- Group objects that BELONG together semantically (not by position)
-- Design a beautiful reveal sequence with variety in animation
-
-EXECUTION STEPS:
-1. Read tool: {scene_p}  (the full original scene)
-2. Read tool: {meta_p}   (metadata with all objects)
-3. Read tool: each PNG in folder {proc_p}
-4. Write tool: create JSON file at {plan_p}
-5. Respond with only: "Done"
-
-CONTEXT:
-- Canvas: {canvas_w}x{canvas_h}, duration {duration}s
-- Objects are pre-cropped, pre-positioned by computer vision
-- You do NOT decide position or scale - already fixed
-- You DO decide: grouping, ordering, pacing, animation choice
-{hint_section}
-
-GROUPING RULES (critical):
-- Group objects that share semantic meaning:
-  * "These 3 arrows are pointing at the same thing" → group
-  * "These 2 eyes belong to same face" → group
-  * "These bullet points are siblings in a list" → group
-  * "Title + subtitle" → group (or separate for dramatic reveal)
-  * "These icons form a row/category" → group
-- Objects in SAME group:
-  * Appear at SAME appear_at time
-  * Use SAME animation type
-  * Feel like "one unit" in the reveal
-- Solo objects get their own scene
-- EVERY object from metadata MUST appear in exactly one scene (no duplicates, no skips)
-
-PACING RULES:
-- MINIMUM 3 scenes (3 distinct reveal moments) - reject designs with fewer
-- First scene at 0.0-0.5s, last scene around {max(0.5, duration - 1)}s
-- Space scenes naturally based on narrative weight - important reveals deserve breathing room
-- Avoid clustering scenes too close (< 0.3s apart is usually bad)
-
-ANIMATION CHOICE:
-Available: fade_pop, slide_left, slide_right, slide_top, slide_bottom, zoom_in
-
-Pick based on:
-- Position of the group in source (objects on left half → slide_left makes sense)
-- Narrative role (hero reveals → zoom_in; details → fade_pop; directional elements → slide matching direction)
-- Variety: DON'T use same animation for every scene - mix at least 2-3 different types
-
-EXACT JSON TO WRITE at {plan_p}:
-
-{{
-  "duration": {duration},
-  "scenes": [
-    {{
-      "objects": ["01_obj.png", "02_obj.png"],
-      "appear_at": 0.0,
-      "animation": "fade_pop",
-      "rationale": "Title group — centerpiece, appears together for impact"
-    }},
-    {{
-      "objects": ["03_obj.png"],
-      "appear_at": 1.8,
-      "animation": "slide_right",
-      "rationale": "Main subject emerges, drawing eye to the right"
-    }},
-    {{
-      "objects": ["04_obj.png", "05_obj.png", "06_obj.png"],
-      "appear_at": 3.5,
-      "animation": "zoom_in",
-      "rationale": "Supporting details bloom in unison — finishes the story"
-    }}
-  ]
-}}
-
-FIELD RULES:
-- "objects": array of exact filenames from metadata. Single object = ["xxx.png"]. Group = multiple.
-- "appear_at": float in [0.0, {duration}]
-- "animation": one of the 6 values listed above
-- "rationale": 1 short sentence explaining your choice (helps user understand your reasoning)
-
-VALIDATE BEFORE WRITING:
-- At least 3 scenes? ✓
-- Every object from metadata listed exactly once? ✓
-- All appear_at values in range? ✓
-- Animations varied (not all same)? ✓
-
-EXECUTE NOW. Read. Think like a director. Write. Done.
-"""
-    return prompt
-
-
-def extract_json_from_text(text: str) -> dict:
-    text = text.strip()
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError:
-        pass
-    m = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', text, re.DOTALL)
-    if m:
-        try:
-            return json.loads(m.group(1))
-        except json.JSONDecodeError:
-            pass
-    start = text.find('{')
-    end = text.rfind('}')
-    if start >= 0 and end > start:
-        try:
-            return json.loads(text[start:end + 1])
-        except json.JSONDecodeError:
-            pass
-    raise ValueError(f"Không parse được JSON:\n{text[:1000]}")
-
-
-def run_claude_analyze(folder: Path, scene_path: Path, processed_dir: Path,
-                       duration: int, canvas_w: int, canvas_h: int,
-                       hint: str = "", timeout: int = 300) -> dict:
-    cache_dir = folder / ".cache"
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    plan_path = cache_dir / "plan.json"
-    metadata_path = processed_dir / "metadata.json"
-
-    if plan_path.exists():
-        plan_path.unlink()
-
-    prompt = build_prompt(
-        scene_path=scene_path,
-        processed_dir=processed_dir,
-        metadata_path=metadata_path,
-        plan_path=plan_path,
-        duration=duration,
-        canvas_w=canvas_w,
-        canvas_h=canvas_h,
-        hint=hint,
-    )
-
+    Args:
+        prompt: full prompt sent via stdin.
+        timeout: subprocess timeout in seconds (default 300).
+        log_dir: if provided, write claude_prompt.txt and claude_response.txt here.
+        cwd: working directory for the subprocess.
+    """
     env = os.environ.copy()
     env.pop("ANTHROPIC_API_KEY", None)
     env.pop("ANTHROPIC_AUTH_TOKEN", None)
+    env["PYTHONIOENCODING"] = "utf-8"
 
     claude_exe = find_claude_executable()
     cmd = [claude_exe, "--print", "--dangerously-skip-permissions"]
+
+    if log_dir is not None:
+        log_dir.mkdir(parents=True, exist_ok=True)
+        (log_dir / "claude_prompt.txt").write_text(prompt, encoding="utf-8")
 
     try:
         result = subprocess.run(
             cmd,
             input=prompt,
+            env=env,
+            cwd=str(cwd) if cwd else None,
             capture_output=True,
             text=True,
-            env=env,
-            cwd=str(folder),
+            encoding="utf-8",
+            errors="replace",
             timeout=timeout,
-            encoding='utf-8',
-            errors='replace',
         )
-    except subprocess.TimeoutExpired:
-        raise RuntimeError(f"Claude Code timeout sau {timeout}s")
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(f"Claude CLI timeout sau {timeout}s") from exc
+
+    if log_dir is not None:
+        (log_dir / "claude_response.txt").write_text(
+            f"=== EXIT {result.returncode} ===\n"
+            f"=== STDOUT ===\n{result.stdout}\n"
+            f"=== STDERR ===\n{result.stderr}\n",
+            encoding="utf-8",
+        )
 
     if result.returncode != 0:
+        stderr_tail = (result.stderr or "")[-1500:]
         raise RuntimeError(
-            f"Claude Code lỗi (exit {result.returncode}):\n"
-            f"STDERR: {result.stderr[:1500]}\n"
-            f"STDOUT: {result.stdout[:800]}"
+            f"Claude CLI lỗi (exit {result.returncode}). "
+            f"Stderr:\n{stderr_tail}"
         )
 
+    return result.stdout
+
+
+def build_auto_prompt(
+    image_path: Path,
+    image_size: tuple,
+    bg_color: tuple,
+    duration: float,
+    free_hint: str,
+    plan_path: Path,
+) -> str:
+    """Build vision prompt for Claude auto-pick zones.
+
+    Returns the prompt text to send to Claude CLI.
+    """
+    w, h = image_size
+    r, g, b = bg_color
+    bg_hex = f"#{r:02x}{g:02x}{b:02x}".upper()
+
+    image_path_forward = str(image_path).replace("\\", "/")
+    plan_path_forward = str(plan_path).replace("\\", "/")
+
+    prompt = f"""You are an animation director designing a sticker-reveal animation for an infographic. Execute immediately, do not ask questions.
+
+YOUR ROLE:
+- Identify the meaningful "zones" in the image: groups of visual elements that should animate together as one sticker
+- Each zone covers one conceptual unit (e.g. a character + its label + its arrow → one zone)
+- You decide: which zones, where (bbox), what animation, what timing, what sound
+
+EXECUTION STEPS:
+1. Read tool: {image_path_forward}  (open the image)
+2. Examine the image carefully — identify the semantic groups
+3. Write tool: create JSON file at {plan_path_forward}
+4. Respond with only: "Done"
+
+IMAGE METADATA:
+- Path: {image_path_forward}
+- Dimensions: {w}x{h} (pixel coordinates origin at top-left)
+- Background color (solid): RGB({r}, {g}, {b}) — hex {bg_hex}
+- Total video duration: {duration}s
+
+USER FREE HINT (follow this carefully):
+{free_hint if free_hint else "(none)"}
+
+DEFINE THE BBOX IN TWO PASSES.
+
+PASS 1 — Initial bbox:
+- Each bbox is [x1, y1, x2, y2] in image pixel coordinates
+- Identify each conceptual unit (a character + label + arrow → one zone)
+- Draw a rough rectangle around it including borders/shadows/decorations
+
+PASS 2 — Margin verification (MANDATORY):
+After Pass 1, you MUST verify each bbox edge has at least 20 pixels of
+clean background between the edge and ANY non-background pixel of the
+element. This means:
+- Top edge: scan from (x1, y1) downward — first 20 rows must be pure
+  background (no shadow, no halo, no element pixel)
+- Same check for bottom, left, right
+- If any edge fails, EXPAND that edge outward until it passes
+
+Common mistakes to avoid:
+- Drop shadows, edges, surplus parts extending outside the visible content
+- Halos or glow effects around stickers
+- Soft outlines that blur into the background
+All of these MUST be inside the bbox. They are part of the element.
+
+ANIMATION CATALOG
+=================
+
+ENTRY animations (pick one per zone):
+- fade_in        : alpha 0->1, generic safe
+- scale_pop      : scales from 0.5 with overshoot, playful
+- slide_in_left  : slides from left edge
+- slide_in_right : slides from right edge
+- slide_in_top   : slides from top
+- slide_in_bottom: slides from bottom
+- drop_in        : drops from above with bounce, dramatic
+
+EMPHASIS animations (optional, runs after entry completes):
+- none           : no emphasis
+- pulse          : scale wave 1.0 -> peak -> 1.0
+- glow           : warm halo around sticker, alpha pulse
+- shake          : wiggle position, decays
+
+SOUNDS (must pick one):
+- pop, flip, whoosh, swoosh, ding
+
+NATURAL DURATION DEFAULTS (you can adjust):
+- fade_in entry: 0.5s
+- scale_pop entry: 0.6s
+- slide_in_* entry: 0.6s
+- drop_in entry: 0.8s
+- pulse emphasis: 0.4s
+- glow emphasis: 0.6s
+- shake emphasis: 0.4s
+
+YOUR TASK
+=========
+Generate zone plan JSON conforming to this schema:
+
+{{
+  "duration": {duration},
+  "zones": [
+    {{
+      "label": "zone name (short, 1-3 words)",
+      "bbox": [x1, y1, x2, y2],
+      "animation": "fade_in",
+      "emphasis": "none",
+      "sound": "pop",
+      "appear_at": 0.0,
+      "end_at": 0.5,
+      "rationale": "why you picked this animation and timing"
+    }}
+  ]
+}}
+
+REQUIREMENTS
+============
+1. Generate one zone per distinct conceptual unit.
+2. Honor the user's free_hint above. Examples of intent:
+   - "Zone 1-2 cùng lúc, zone 3 sau" => zone 1 and 2 share appear_at, zone 3 later
+   - "Pacing nhanh" => shorter gaps, smaller durations
+   - "Pacing chậm rãi" => longer gaps, more breathing room
+   - "Zone 2 dramatic" => use drop_in or scale_pop with emphasis
+3. appear_at distribution: fit within total duration. Don't cram everything
+   in first 2 seconds. Don't leave 3+ seconds of dead time at the end.
+   Last zone's end_at should be ~0.5s before total duration.
+4. end_at = appear_at + entry_duration + (emphasis_delay + emphasis_duration if emphasis)
+5. Pick animation + sound that match the visual intent of each zone
+6. Default sound by entry animation when no specific intent:
+   fade_in->ding, scale_pop->pop, slide_in_*->swoosh, drop_in->pop
+7. Minimum 2 zones, maximum 12 zones per image.
+
+OUTPUT
+======
+Write the JSON to: {plan_path_forward}
+
+Use the Write tool to create that file. Do not print the JSON to stdout.
+After writing, print one line: "Done"
+"""
+
+    return prompt
+
+
+def run_auto_pick(
+    image_path: Path,
+    image_size: tuple,
+    bg_color: tuple,
+    duration: float,
+    free_hint: str,
+    work_dir: Path,
+    log_cb=None,
+) -> dict:
+    """Run Claude auto-pick zones.
+
+    Args:
+        image_path: Path to source image
+        image_size: (width, height) tuple
+        bg_color: (r, g, b) tuple
+        duration: video duration in seconds
+        free_hint: user hint text
+        work_dir: working directory (where Claude can read/write files)
+        log_cb: optional callback for progress logs
+
+    Returns:
+        dict with 'duration' and 'zones[]' entries
+    """
+    if log_cb is None:
+        log_cb = print
+
+    plan_path = work_dir / "auto_plan.json"
     if plan_path.exists():
-        try:
-            with open(plan_path, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except json.JSONDecodeError as e:
-            raise RuntimeError(
-                f"Plan file tồn tại nhưng parse JSON lỗi: {e}\n"
-                f"Xem file: {plan_path}"
-            )
+        plan_path.unlink()
 
-    try:
-        plan = extract_json_from_text(result.stdout)
-        with open(plan_path, 'w', encoding='utf-8') as f:
-            json.dump(plan, f, indent=2, ensure_ascii=False)
-        return plan
-    except Exception as e:
+    log_cb("Building Claude prompt...")
+    prompt = build_auto_prompt(
+        image_path=image_path,
+        image_size=image_size,
+        bg_color=bg_color,
+        duration=duration,
+        free_hint=free_hint,
+        plan_path=plan_path,
+    )
+
+    log_cb("Calling Claude CLI (30-60s)...")
+    # CRITICAL: cwd must be image's parent directory so Claude's Read tool
+    # can resolve the image path (we pass absolute path in prompt but cwd
+    # is also needed in case prompt resolves relative paths).
+    stdout = call_claude(
+        prompt=prompt,
+        timeout=300,
+        log_dir=work_dir,
+        cwd=image_path.parent,
+    )
+
+    # Try to load the plan file that Claude wrote
+    if plan_path.exists():
+        log_cb(f"Loading plan from {plan_path.name}...")
+        plan = json.loads(plan_path.read_text(encoding="utf-8"))
+    else:
+        # Fallback: try to extract JSON from stdout
+        log_cb("Extracting JSON from stdout...")
+        import re
+        match = re.search(r"\{.*\}", stdout, re.DOTALL)
+        if not match:
+            raise RuntimeError("Claude didn't return JSON in stdout or write file")
+        plan = json.loads(match.group())
+
+    zones = plan.get("zones") or []
+    if not zones:
         raise RuntimeError(
-            f"Claude không tạo được plan.\nError: {e}\n\n"
-            f"Output:\n{result.stdout[-2000:]}"
+            "Claude không tìm thấy zone nào. Thử viết hint cụ thể hơn."
         )
 
-
-def validate_plan(plan: dict, available_objects: list, duration: int,
-                  min_scenes: int = 3) -> None:
-    """Validate v3 plan: scenes có array 'objects'."""
-    from animations import SUPPORTED_ANIMATIONS
-
-    if "scenes" not in plan or not isinstance(plan["scenes"], list):
-        raise ValueError("Plan thiếu 'scenes' array")
-
-    if len(plan["scenes"]) < min_scenes:
-        raise ValueError(
-            f"Plan chỉ có {len(plan['scenes'])} scenes, yêu cầu tối thiểu {min_scenes}. "
-            f"Claude cần group ít dừng lại hơn hoặc thêm scenes riêng."
-        )
-
-    available_set = set(available_objects)
-    used = set()
-
-    for i, scene in enumerate(plan["scenes"]):
-        # Support both "objects" (v3) and "object" (v2 legacy)
-        if "objects" in scene:
-            objs = scene["objects"]
-            if not isinstance(objs, list) or len(objs) == 0:
-                raise ValueError(f"Scene {i}: 'objects' phải là array non-empty")
-        elif "object" in scene:
-            # Legacy v2 format → convert
-            objs = [scene["object"]]
-            scene["objects"] = objs
-        else:
-            raise ValueError(f"Scene {i}: thiếu 'objects' array")
-
-        for field in ("appear_at", "animation"):
-            if field not in scene:
-                raise ValueError(f"Scene {i}: thiếu field '{field}'")
-
-        for obj_fn in objs:
-            if obj_fn not in available_set:
-                raise ValueError(
-                    f"Scene {i}: object '{obj_fn}' không tồn tại.\n"
-                    f"Available: {sorted(available_set)}"
-                )
-            if obj_fn in used:
-                raise ValueError(
-                    f"Scene {i}: object '{obj_fn}' bị duplicate (đã dùng ở scene trước)"
-                )
-            used.add(obj_fn)
-
-        if scene["animation"] not in SUPPORTED_ANIMATIONS:
-            raise ValueError(
-                f"Scene {i}: animation '{scene['animation']}' không support.\n"
-                f"Available: {SUPPORTED_ANIMATIONS}"
-            )
-
-        if not (0 <= scene["appear_at"] <= duration):
-            raise ValueError(
-                f"Scene {i}: appear_at {scene['appear_at']} ngoài [0, {duration}]"
-            )
-
-    unused = available_set - used
-    if unused:
-        raise ValueError(
-            f"Plan BỎ SÓT {len(unused)} objects: {sorted(unused)}. "
-            f"Claude phải include TẤT CẢ objects."
-        )
+    log_cb(f"Claude proposed {len(zones)} zone(s)")
+    return plan

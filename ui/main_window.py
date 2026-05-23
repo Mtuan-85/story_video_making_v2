@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 from loguru import logger as log
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import (
     QFileDialog,
@@ -32,6 +32,9 @@ from runtime.estimator import Estimator
 from ui.connection_panel import ConnectionPanel
 from ui.refs_panel import RefImagesPanel
 from ui.dialogs.preview_dialog import PreviewDialog
+from ui.dialogs.image_preview_dialog import ImagePreviewDialog
+from ui.dialogs.video_preview_dialog import VideoPreviewDialog
+from ui.dialogs.slideshow_edit_dialog import SlideshowEditDialog
 from ui.dialogs.voice_align_review import VoiceAlignReviewDialog
 from ui.scene_list import SceneList
 from workers._async_thread import AsyncQThread
@@ -44,6 +47,12 @@ from workers.task_contract import CdpConfig, GenerateTask, TaskOptions, WorkerEv
 
 
 class MainWindow(QMainWindow):
+    # Cross-thread log sink: loguru's _sink may fire from any worker thread.
+    # Touching log_view directly from a non-GUI thread = Qt thread affinity
+    # violation = segfault (heap corruption 0xc0000374). We emit a signal
+    # instead — Qt auto-routes to the main thread via QueuedConnection.
+    _log_sink_signal = pyqtSignal(str)
+
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("Story Video Maker")
@@ -170,6 +179,12 @@ class MainWindow(QMainWindow):
         self.btn_render.setEnabled(False)
         action_row.addWidget(self.btn_render)
 
+        self.btn_process_voice = QPushButton("🎤 Process voice")
+        self.btn_process_voice.setToolTip("Scan voice/ and align MP3/WAV/M4A/FLAC to scene scripts")
+        self.btn_process_voice.clicked.connect(self._on_process_voice)
+        self.btn_process_voice.setEnabled(False)
+        action_row.addWidget(self.btn_process_voice)
+
         self.btn_export_kdenlive = QPushButton("📤 Export Kdenlive XML")
         self.btn_export_kdenlive.clicked.connect(self._on_export_kdenlive)
         self.btn_export_kdenlive.setEnabled(False)
@@ -214,15 +229,29 @@ class MainWindow(QMainWindow):
 
         outer.addLayout(log_row)
 
-        # Loguru sink → log panel
-        log.add(self._sink, level="INFO", format="{time:HH:mm:ss} | {level} | {message}")
+        # Loguru sink → log panel.
+        # _sink fires synchronously on whatever thread emitted the log line
+        # (worker threads, qasync, etc.). Cross-thread safety: _sink emits
+        # a signal; the slot does the actual QTextEdit append on main thread.
+        # `enqueue=True` also routes loguru through its own MP queue, but
+        # the signal hop is required because the listener thread STILL is
+        # not the GUI thread.
+        self._log_sink_signal.connect(self.log_view.append, type=Qt.ConnectionType.QueuedConnection)
+        log.add(
+            self._sink,
+            level="INFO",
+            format="{time:HH:mm:ss} | {level} | {message}",
+            enqueue=True,
+        )
 
     def _wire_signals(self) -> None:
         self.connection_panel.log_message.connect(self._append_log)
         self.connection_panel.page_ready.connect(self._on_page_ready)
         self.connection_panel.disconnected.connect(self._on_disconnected)
 
-        self.scene_list.edit_clicked.connect(self._show_preview_dialog)
+        self.scene_list.image_clicked.connect(self._on_image_btn_clicked)
+        self.scene_list.video_clicked.connect(self._on_video_btn_clicked)
+        self.scene_list.edit_clicked.connect(self._on_edit_btn_clicked)
         self.scene_list.visual_type_changed.connect(self._on_visual_type_changed)
         self.scene_list.effect_changed.connect(self._on_effect_changed)
         self.scene_list.batch_selection_changed.connect(self._on_batch_selection_changed)
@@ -232,13 +261,21 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
 
     def _sink(self, message) -> None:
+        """Loguru sink — may fire from ANY thread.
+
+        Do NOT touch self.log_view here. Emit signal → slot updates widget
+        on main thread (queued connection auto-routes cross-thread).
+        """
         try:
             text = message.record["message"]
-            self.log_view.append(f"{message.record['time'].strftime('%H:%M:%S')}  {text}")
+            ts = message.record["time"].strftime("%H:%M:%S")
+            self._log_sink_signal.emit(f"{ts}  {text}")
         except Exception:
+            # Swallow — never raise inside loguru sink
             pass
 
     def _append_log(self, msg: str) -> None:
+        # Always invoked on main thread (signal/direct UI handlers)
         self.log_view.append(msg)
 
     # ------------------------------------------------------------------
@@ -268,6 +305,7 @@ class MainWindow(QMainWindow):
         self.btn_reload.setEnabled(True)
         self.btn_reset_design.setEnabled(True)
         self.btn_render.setEnabled(self.project.voice_mapping is not None)
+        self.btn_process_voice.setEnabled(True)
         self.btn_export_kdenlive.setEnabled(True)
 
         self.refs_panel.set_state(
@@ -718,15 +756,17 @@ class MainWindow(QMainWindow):
         )
 
     def _regen_one_edit(self, scene_id: str, _fast_mode: bool = False) -> None:
+        """First-time slideshow Edit gen (full pipeline with Claude).
+
+        Note: V3 supports parallel workers (don't block on _active_workers).
+        Edit worker can run alongside Gen Video on different scenes.
+        """
         if self.project is None:
             QMessageBox.information(self, "Chưa sẵn sàng", "Load dự án trước")
             return
-        if any(self._is_worker_running(w) for w in self._active_workers):
-            QMessageBox.information(
-                self,
-                "Đang chạy",
-                "Đợi worker hiện tại xong trước khi bắt đầu edit.",
-            )
+        # Check only conflict on SAME scene
+        if scene_id in self._single_video_workers and self._single_video_workers[scene_id].isRunning():
+            self._append_log(f"{scene_id}: Edit worker đã đang chạy")
             return
         scene = self.project.scene(scene_id)
         if scene.visual_type != "slideshow":
@@ -741,15 +781,20 @@ class MainWindow(QMainWindow):
         if not ok:
             QMessageBox.warning(self, f"Không đủ điều kiện — {scene_id}", reason)
             return
-        self._start_single_edit_worker(scene_id)
+        self._start_single_edit_worker(scene_id, rerender_only=False)
 
-    def _start_single_edit_worker(self, scene_id: str, on_finished=None) -> None:
+    def _start_single_edit_worker(
+        self, scene_id: str, on_finished=None, rerender_only: bool = False
+    ) -> None:
         if self.project is None:
             return
         if scene_id in self._single_video_workers and self._single_video_workers[scene_id].isRunning():
             return
 
-        worker = SlideshowWorker(self.project, scene_id, estimator=self.estimator)
+        worker = SlideshowWorker(
+            self.project, scene_id, estimator=self.estimator,
+            rerender_only=rerender_only,
+        )
         worker.scene_started.connect(self._on_scene_started)
         worker.scene_finished.connect(self._on_scene_finished)
         worker.scene_failed.connect(self._on_scene_failed)
@@ -823,17 +868,26 @@ class MainWindow(QMainWindow):
             p = self.project.paths.root / p
         return p if p.exists() else p  # caller decides on missing-file UX
 
-    def _show_preview_dialog(self, scene_id: str) -> None:
-        """Unified preview + edit. Entry point for thumbnail, 🖼/🎬, and ✏ clicks.
+    # ------------------------------------------------------------------
+    # State-aware button routing (v3)
+    # ------------------------------------------------------------------
 
-        Save → atomic write scenes_edited.json.
-        Gen Image / Gen Animation → save first, then dispatch the right worker.
-        """
+    def _on_image_btn_clicked(self, scene_id: str) -> None:
+        """🖼 click: pending/failed → direct Gen, ready → ImagePreviewDialog."""
         if self.project is None:
             return
+        state = self.project.get_scene_state(scene_id).get("image", {})
+        status = state.get("status", "pending")
+        if status in ("pending", "failed"):
+            self._regen_one(scene_id, fast_mode=False)
+            return
+        if status == "generating":
+            self._append_log(f"{scene_id}: Image đang chạy, đợi...")
+            return
+        # ready → open dialog
         scene = self.project.scene(scene_id)
         scene_state = self.project.get_scene_state(scene_id)
-        dlg = PreviewDialog(
+        dlg = ImagePreviewDialog(
             scene=scene,
             scene_state=scene_state,
             project_root=self.project.paths.root,
@@ -841,9 +895,98 @@ class MainWindow(QMainWindow):
         )
         dlg.save_requested.connect(self._on_preview_save)
         dlg.gen_image_requested.connect(self._regen_one)
-        dlg.gen_animation_requested.connect(self._regen_one_video)
-        dlg.gen_edit_requested.connect(self._regen_one_edit)
         dlg.exec()
+
+    def _on_video_btn_clicked(self, scene_id: str) -> None:
+        """🎬 click: pending/failed → direct Gen Video, ready → VideoPreviewDialog."""
+        if self.project is None:
+            return
+        state = self.project.get_scene_state(scene_id).get("video", {})
+        status = state.get("status", "pending")
+        if status in ("pending", "failed"):
+            self._regen_one_video(scene_id, fast_mode=False)
+            return
+        if status == "generating":
+            self._append_log(f"{scene_id}: Video đang chạy, đợi...")
+            return
+        # ready → open dialog
+        scene = self.project.scene(scene_id)
+        scene_state = self.project.get_scene_state(scene_id)
+        dlg = VideoPreviewDialog(
+            scene=scene,
+            scene_state=scene_state,
+            project_root=self.project.paths.root,
+            parent=self,
+        )
+        dlg.save_requested.connect(self._on_preview_save)
+        dlg.gen_animation_requested.connect(self._regen_one_video)
+        dlg.exec()
+
+    def _on_edit_btn_clicked(self, scene_id: str) -> None:
+        """🛠 click: pending → check image first, ready → SlideshowEditDialog."""
+        if self.project is None:
+            return
+        state = self.project.get_scene_state(scene_id).get("edit", {})
+        status = state.get("status", "pending")
+
+        if status == "generating":
+            self._append_log(f"{scene_id}: Edit đang chạy, đợi...")
+            return
+
+        if status in ("pending", "failed"):
+            # First-gen: need image ready first
+            image_state = self.project.get_scene_state(scene_id).get("image", {})
+            if image_state.get("status") != "ready":
+                QMessageBox.warning(
+                    self,
+                    "Cần image trước",
+                    f"Scene {scene_id} chưa có image. Hãy Gen Image trước khi chạy Edit.",
+                )
+                return
+            self._regen_one_edit(scene_id)
+            return
+
+        # ready → open SlideshowEditDialog
+        zones_json = state.get("zones_json")
+        if not zones_json:
+            QMessageBox.warning(
+                self, "Thiếu zones JSON",
+                f"State 'ready' nhưng zones_json không có. Re-run Edit từ đầu.",
+            )
+            return
+
+        zones_json_path = self._resolve_asset_path(zones_json)
+        if zones_json_path is None or not zones_json_path.exists():
+            QMessageBox.warning(
+                self, "Zones JSON không tồn tại",
+                f"Không tìm thấy {zones_json}. Re-run Edit từ đầu.",
+            )
+            return
+
+        video_state = self.project.get_scene_state(scene_id).get("video", {})
+        video_path = None
+        if video_state.get("path"):
+            video_path = self._resolve_asset_path(video_state["path"])
+
+        dlg = SlideshowEditDialog(
+            scene_id=scene_id,
+            scene_state=self.project.get_scene_state(scene_id),
+            project_root=self.project.paths.root,
+            zones_json_path=zones_json_path,
+            video_path=video_path,
+            parent=self,
+        )
+        dlg.rerender_requested.connect(self._on_rerender_requested)
+        dlg.exec()
+
+    def _on_rerender_requested(self, scene_id: str) -> None:
+        """SlideshowEditDialog → user clicked Re-render → skip Claude, render only."""
+        if self.project is None:
+            return
+        if scene_id in self._single_video_workers and self._single_video_workers[scene_id].isRunning():
+            QMessageBox.information(self, "Đang chạy", f"{scene_id}: Edit worker đang chạy.")
+            return
+        self._start_single_edit_worker(scene_id, rerender_only=True)
 
     def _on_preview_save(self, scene_id: str, updates: dict) -> None:
         if self.project is None:
@@ -889,8 +1032,7 @@ class MainWindow(QMainWindow):
         scenes = [
             {
                 "id": s.id,
-                "story_en": s.story_en,
-                "story_vi": s.story_vi,
+                "script": s.script,
                 "duration": s.duration,
             }
             for s in self.project.scenes
@@ -1025,8 +1167,7 @@ class MainWindow(QMainWindow):
         scenes_data = [
             {
                 "id": s.id,
-                "story_en": s.story_en,
-                "story_vi": s.story_vi,
+                "script": s.script,
                 "duration": s.duration,
             }
             for s in self.project.scenes
