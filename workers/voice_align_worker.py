@@ -61,13 +61,12 @@ class VoiceAlignWorker(AsyncTaskWorker):
                 self.failed.emit(vf.name, f"all voice files must live in {voice_dir}")
                 return
 
-        # User-flagged silent scenes: drop story_en so Plan D marks them silent.
+        # User-flagged silent scenes: drop script so Plan D marks them silent.
         scenes_for_align: list[dict[str, Any]] = []
         for s in self.scenes:
             sc = dict(s)
             if sc["id"] in self.user_silent_scenes:
-                sc["story_en"] = ""
-                sc["story_vi"] = ""
+                sc["script"] = ""
             scenes_for_align.append(sc)
 
         self.emit_log(

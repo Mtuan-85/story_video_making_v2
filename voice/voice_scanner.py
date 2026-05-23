@@ -51,7 +51,7 @@ def scan_voice_folder(voice_dir: Path) -> list[VoiceFileMeta]:
         raise FileNotFoundError(f"Voice folder not found: {voice_dir}")
 
     audio_files: list[Path] = []
-    for ext in (".mp3", ".wav", ".m4a"):
+    for ext in (".mp3", ".wav", ".m4a", ".flac"):
         audio_files.extend(voice_dir.glob(f"*{ext}"))
 
     if not audio_files:

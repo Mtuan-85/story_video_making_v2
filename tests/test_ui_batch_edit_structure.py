@@ -50,4 +50,4 @@ def test_main_window_exposes_batch_edit_and_selection_controls():
     assert win.btn_batch_edit.text() == "🛠 Batch edit"
     assert win.btn_select_all.text() == "☑ All"
     assert win.btn_clear_selection.text() == "☐ Clear"
-    assert not hasattr(win, "btn_process_voice")
+    assert win.btn_process_voice.text() == "🎤 Process voice"

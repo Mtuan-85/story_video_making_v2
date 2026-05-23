@@ -39,7 +39,7 @@ def _words_in_range(
 def _scene_script(scenes_data: list[dict[str, Any]], scene_id: str) -> str:
     for s in scenes_data:
         if s["id"] == scene_id:
-            return (s.get("story_en") or s.get("story_vi") or "").strip()
+            return (s.get("script") or "").strip()
     return ""
 
 
@@ -94,7 +94,7 @@ def move_tail_to_next(
 
     script = _scene_script(scenes_data, scene_id)
     if not script:
-        raise ValueError(f"Scene {scene_id} has no story_en/story_vi")
+        raise ValueError(f"Scene {scene_id} has no script")
 
     cur_words = _words_in_range(whisper_words, cur["voice_in"], cur["voice_out"])
     if len(cur_words) < 2:
@@ -159,7 +159,7 @@ def move_head_to_previous(
 
     script = _scene_script(scenes_data, scene_id)
     if not script:
-        raise ValueError(f"Scene {scene_id} has no story_en/story_vi")
+        raise ValueError(f"Scene {scene_id} has no script")
 
     cur_words = _words_in_range(whisper_words, cur["voice_in"], cur["voice_out"])
     if len(cur_words) < 2:

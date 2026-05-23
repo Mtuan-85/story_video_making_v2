@@ -130,11 +130,7 @@ class _SceneRow(QFrame):
         grid.addWidget(self._heading("Render duration", align_right=True), 0, 1)
 
         # Row 1 — Script text + render mode controls
-        script_text = (
-            self.scene_data.get("story_en")
-            or self.scene_data.get("story_vi")
-            or ""
-        )
+        script_text = self.scene_data.get("script") or ""
         self.script_view = QTextEdit()
         self.script_view.setPlainText(script_text)
         self.script_view.setReadOnly(True)

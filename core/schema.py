@@ -69,6 +69,7 @@ class Scene(BaseModel):
     id: str = Field(min_length=1)
     visual_type: VisualType
     effect: EffectType = "no_effect"
+    script: str | None = None
     story_vi: str | None = None
     story_en: str | None = None
     imagePrompt: str | None = None
@@ -101,10 +102,8 @@ class Scene(BaseModel):
             data["id"] = data.pop("scene_id")
         else:
             data.pop("scene_id", None)
-        if "script" in data and not data.get("story_en") and not data.get("story_vi"):
-            data["story_en"] = data.pop("script")
-        else:
-            data.pop("script", None)
+        if not data.get("script"):
+            data["script"] = data.get("story_en") or data.get("story_vi")
         if "duration_sec" in data and "duration" not in data:
             data["duration"] = data.pop("duration_sec")
         else:
@@ -113,17 +112,9 @@ class Scene(BaseModel):
             data["visual_type"] = cls.normalize_visual_type(data["visual_type"])
         return data
 
-    @model_validator(mode="after")
-    def _at_least_one_story(self) -> "Scene":
-        if not self.story_vi and not self.story_en:
-            raise ValueError(f"Scene {self.id}: phải có ít nhất story_vi hoặc story_en")
-        return self
-
     def get_story(self, lang: Language) -> str:
-        """Return story text for the given language. Falls back to the other language if missing."""
-        if lang == "vi":
-            return self.story_vi or self.story_en or ""
-        return self.story_en or self.story_vi or ""
+        """Return the canonical narration script."""
+        return self.script or ""
 
 
 class ScenesJson(BaseModel):

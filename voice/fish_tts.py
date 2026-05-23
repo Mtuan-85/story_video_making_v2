@@ -61,17 +61,16 @@ def load_scenes(json_path: Path) -> dict:
     if "scenes" not in data or not data["scenes"]:
         raise ValueError("File JSON phai co truong 'scenes' va co du lieu")
 
-    # Auto-detect language: check meta.language hoac fallback story_vi
+    # Auto-detect language: check meta.language; narration text is scene.script.
     lang = data.get("meta", {}).get("language", "vi")
     story_field = f"story_{lang}"
 
     for scene in data["scenes"]:
         # voice_batch_id no longer in project schema — default to 1.
         scene.setdefault("voice_batch_id", 1)
-        # Try story_<lang> first, fallback to story_vi or story_en
-        story = scene.get(story_field) or scene.get("story_vi") or scene.get("story_en")
+        story = scene.get("script") or scene.get(story_field) or scene.get("story_vi") or scene.get("story_en")
         if not story or not story.strip():
-            raise ValueError(f"Scene {scene.get('id', '?')} thieu story (story_{lang}/story_vi/story_en)")
+            raise ValueError(f"Scene {scene.get('id', '?')} thieu script")
 
     return data
 
@@ -99,10 +98,16 @@ def voice_settings_from_project_data(data: dict[str, Any]) -> dict[str, Any]:
 # ============================================================================
 
 def apply_emotion(scene: dict, syntax: str = "s2", lang: str = "vi") -> str:
-    """Apply emotion tag vao story field theo language."""
-    # Try story_<lang> first, fallback to whatever exists
+    """Apply emotion tag vao canonical script text."""
+    # Prefer canonical script, then legacy story fields for old project files.
     story_field = f"story_{lang}"
-    story = (scene.get(story_field) or scene.get("story_vi") or scene.get("story_en") or "").strip()
+    story = (
+        scene.get("script")
+        or scene.get(story_field)
+        or scene.get("story_vi")
+        or scene.get("story_en")
+        or ""
+    ).strip()
     emotion = scene.get("emotion", "").strip()
 
     if ("(" in story and ")" in story) or ("[" in story and "]" in story):
@@ -287,7 +292,13 @@ def generate_tts(
                 {
                     "scene_id": s["id"],
                     "order_in_batch": idx,
-                    "raw_story": (s.get(f"story_{lang}") or s.get("story_vi") or s.get("story_en") or ""),
+                    "raw_story": (
+                        s.get("script")
+                        or s.get(f"story_{lang}")
+                        or s.get("story_vi")
+                        or s.get("story_en")
+                        or ""
+                    ),
                     "emotion": s.get("emotion", ""),
                     "expected_duration_sec": s.get("duration"),
                 }

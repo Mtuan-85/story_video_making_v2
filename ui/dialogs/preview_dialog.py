@@ -3,7 +3,7 @@
 Triggered by clicking a row's thumbnail, the 🖼/🎬 status buttons, or the ✏
 edit button. Shows the current visual (image static; video via Qt's native
 QMediaPlayer + QVideoWidget — no external player required), editable
-story / prompts / visual_type / effect / duration, and three action buttons:
+script / prompts / visual_type / effect / duration, and three action buttons:
 
   💾 Save        — persist edits without gen.
   🖼 Gen Image   — persist edits, then run image worker (overwrites existing).
@@ -87,10 +87,10 @@ class PreviewDialog(QDialog):
         outer.addWidget(self.visual_frame, 1)
         self._load_visual()
 
-        # 2. Story
-        outer.addWidget(QLabel("<b>Story (English):</b>"))
+        # 2. Script
+        outer.addWidget(QLabel("<b>Script:</b>"))
         self.story_edit = QTextEdit()
-        self.story_edit.setPlainText(self.scene.story_en or "")
+        self.story_edit.setPlainText(self.scene.script or "")
         self.story_edit.setMaximumHeight(70)
         outer.addWidget(self.story_edit)
 
@@ -275,7 +275,7 @@ class PreviewDialog(QDialog):
 
     def _collect_updates(self) -> dict:
         return {
-            "story_en": self.story_edit.toPlainText().strip() or None,
+            "script": self.story_edit.toPlainText().strip() or None,
             "imagePrompt": self.image_prompt_edit.toPlainText().strip(),
             "videoPrompt": (self.video_prompt_edit.toPlainText().strip() or None),
             "visual_type": self.visual_combo.currentText(),

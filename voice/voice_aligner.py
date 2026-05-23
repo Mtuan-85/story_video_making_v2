@@ -3,7 +3,7 @@
 Pipeline:
     1. Scan voice folder → list of files with cumulative offsets.
     2. Whisper transcribe all files → flat word list with global timestamps.
-    3. Deterministic fuzzy align each scene's `story_en` against the transcript.
+    3. Deterministic fuzzy align each scene's `script` against the transcript.
     4. LLM fallback (Claude) for scenes whose deterministic score is below
        threshold (and not silent).
     5. Extract subtitle phrases (with word-level timestamps) per scene for
@@ -45,7 +45,7 @@ async def align_voice_to_scenes(
 
     Args:
         scenes: list of scene dicts (from scenes.json) — each must have id +
-            story_en (may be empty/None for silent scenes) and duration.
+            script (may be empty/None for silent scenes) and duration.
         voice_dir: folder containing voice mp3 files.
         output_dir: where to save voice_mapping.json (and a .v3.bak backup
             of the previous file, if any).
@@ -72,7 +72,7 @@ async def align_voice_to_scenes(
         raise RuntimeError("Whisper produced no words. Check voice file quality.")
 
     log.info("Step 3: Deterministic align...")
-    det_results = align_deterministic(scenes, whisper_words)
+    det_results = align_deterministic(scenes, whisper_words, language=language)
     log.info(f"Deterministic stats: {calculate_stats(det_results)}")
 
     fallback_indices = [
@@ -105,6 +105,7 @@ async def align_voice_to_scenes(
                 whisper_words=whisper_words,
                 search_start_idx=prev_end_idx,
                 search_end_idx=next_start_idx - 1,
+                language=language,
             )
             llm_result["fallback_from_score"] = r.get("score", 0)
             det_results[idx] = llm_result
@@ -197,8 +198,11 @@ def add_freeze_pauses(voice_scenes: list[dict]) -> list[dict]:
 
     Voice-led timeline (Sprint 3 final): each rendered scene = voice part +
     freeze-frame for the natural pause to the next scene. Silent scenes and
-    the last non-silent scene get 0 (no freeze tail). Mutates and returns the
-    list for ergonomics.
+    the last non-silent scene get 0 (no freeze tail).
+
+    Empty-script scenes are timeline anchors: they keep their design duration
+    and should consume voice gaps before any residual freeze is added.
+    Mutates and returns the list for ergonomics.
     """
     n = len(voice_scenes)
     for i, vs in enumerate(voice_scenes):
@@ -207,16 +211,25 @@ def add_freeze_pauses(voice_scenes: list[dict]) -> list[dict]:
             continue
 
         next_voice_in = None
+        silent_design_between = 0.0
         for j in range(i + 1, n):
             nxt = voice_scenes[j]
-            if not nxt.get("is_silent") and nxt.get("voice_in") is not None:
+            if nxt.get("is_silent"):
+                silent_design_between += float(
+                    nxt.get("render_duration")
+                    or nxt.get("duration_adjusted")
+                    or nxt.get("duration_original")
+                    or 0.0
+                )
+                continue
+            if nxt.get("voice_in") is not None:
                 next_voice_in = nxt["voice_in"]
                 break
 
         if next_voice_in is None:
             vs["freeze_pause_after"] = 0.0
         else:
-            pause = next_voice_in - (vs.get("voice_out") or 0)
+            pause = next_voice_in - (vs.get("voice_out") or 0) - silent_design_between
             vs["freeze_pause_after"] = round(max(0.0, pause), 3)
     return voice_scenes
 

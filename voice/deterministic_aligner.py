@@ -4,12 +4,13 @@ No LLM. Uses rapidfuzz for text similarity.
 
 Algorithm:
 1. For each scene (in order):
-2.   Extract first N words as start anchor, last N as end anchor
-3.   Search start anchor in [cursor, cursor+SEARCH_WINDOW] of whisper words
-4.   Search end anchor in window after start match
-5.   Compute combined score (start_anchor + end_anchor + full_match)
-6.   If score >= THRESHOLD: use deterministic result
-7.   Advance cursor past this scene's last word
+2.   Read scene.script.
+3.   Extract first N words as start anchor, last N as end anchor
+4.   Search start anchor in [cursor, cursor+SEARCH_WINDOW] of whisper words
+5.   Search end anchor in window after start match
+6.   Compute combined score (start_anchor + end_anchor + full_match)
+7.   If score >= THRESHOLD: use deterministic result
+8.   Advance cursor past this scene's last word
 """
 
 from __future__ import annotations
@@ -59,6 +60,11 @@ def normalize_phrase(text: str) -> list[str]:
     words = text.split()
     normalized = [normalize_word(w) for w in words]
     return [w for w in normalized if w]
+
+
+def scene_script(scene: dict) -> str:
+    """Return the canonical narration script for this scene."""
+    return str(scene.get("script") or "").strip()
 
 
 def get_anchor_size(scene_words_count: int) -> int:
@@ -175,13 +181,14 @@ def find_match_with_anchors(
 def align_deterministic(
     scenes: list[dict],
     whisper_words: list[dict],
+    language: str = "en",
 ) -> list[dict]:
     """Run deterministic align for all scenes.
 
     Returns list of result dicts (one per scene), with:
     id, voice_in, voice_out, score, is_silent, method, matched_text, word_indices
 
-    Silent scenes (story_en empty) marked is_silent=True.
+    Silent scenes (empty script) marked is_silent=True.
     Unmatched scenes (no start anchor) also is_silent=True with warning.
     """
     results: list[dict] = []
@@ -189,10 +196,10 @@ def align_deterministic(
 
     for scene in scenes:
         scene_id = scene["id"]
-        story = (scene.get("story_en") or "").strip()
+        story = scene_script(scene)
 
         if not story:
-            log.info(f"{scene_id}: silent (no story_en)")
+            log.info(f"{scene_id}: silent (empty script)")
             results.append({
                 "id": scene_id,
                 "voice_in": None,

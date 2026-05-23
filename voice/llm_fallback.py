@@ -14,6 +14,8 @@ import subprocess
 
 from loguru import logger as log
 
+from voice.deterministic_aligner import scene_script
+
 
 CLAUDE_TIMEOUT = 120  # seconds
 
@@ -32,11 +34,12 @@ async def claude_align_scene(
     whisper_words: list[dict],
     search_start_idx: int,
     search_end_idx: int,
+    language: str = "en",
 ) -> dict:
     """Use Claude CLI to align ONE scene within a search window.
 
     Args:
-        scene: dict with id + story_en
+        scene: dict with id + script
         whisper_words: full whisper word list (global indices)
         search_start_idx: lower bound (inclusive, in whisper_words)
         search_end_idx: upper bound (inclusive)
@@ -60,6 +63,7 @@ async def claude_align_scene(
 
     window_end = min(search_end_idx + 1, len(whisper_words))
     window_words = whisper_words[search_start_idx:window_end]
+    story = scene_script(scene)
 
     words_desc = "\n".join(
         f"  [{i + search_start_idx}] {w['start']:.2f}-{w['end']:.2f}s: {w['word']}"
@@ -70,7 +74,7 @@ async def claude_align_scene(
 
 SCENE:
 ID: {scene["id"]}
-Story: "{scene["story_en"]}"
+Story: "{story}"
 
 WHISPER WORDS (with global timestamps, search window only):
 {words_desc}

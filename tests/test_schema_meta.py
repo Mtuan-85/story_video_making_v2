@@ -178,7 +178,8 @@ def test_project_s4_style_ai_json_normalizes_to_app_schema():
     assert "version" not in dumped
     assert "settings" not in dumped
     assert scene.id == "scene-01"
-    assert scene.story_en.startswith("Last Tuesday")
+    assert scene.script.startswith("Last Tuesday")
+    assert scene.story_en is None
     assert scene.duration == 10
     assert scene.scene_type == "Narrative Anchor"
     assert scene.visual_technique == "Single Vignette"
@@ -187,7 +188,7 @@ def test_project_s4_style_ai_json_normalizes_to_app_schema():
     assert scene.visual_type == "Video"
     assert dumped["scenes"][0]["visual_type"] == "Video"
     assert "scene_id" not in dumped["scenes"][0]
-    assert "script" not in dumped["scenes"][0]
+    assert dumped["scenes"][0]["script"].startswith("Last Tuesday")
     assert "duration_sec" not in dumped["scenes"][0]
 
 
