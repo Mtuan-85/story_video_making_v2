@@ -43,9 +43,9 @@
        ↓
 [Sprint 1] Per-scene: chọn make video Grok / Slideshow / Ken Burns
        ↓
-[Sprint 2] Voice (Fish Audio batch + silence split) + Subtitle render
+[Sprint 2] Voice timeline matching + Subtitle render
        ↓
-[Sprint 3] User tick chọn source per scene → Composite + Assemble + BGM
+[Sprint 3] User tick chọn source per scene → Visual timeline + master voice + subtitle + BGM
        ↓
 [final.mp4]
 ```
@@ -58,9 +58,9 @@ Workflow:
 1. Viết kịch bản qua Claude Chat → output `scenes.json` (theo schema mục 4)
 2. Mở app → load file → batch gen images Grok → preview → re-gen nếu cần
 3. Per-scene: chọn make video Grok HOẶC slideshow (cho infographic) HOẶC Ken Burns
-4. Gen voice (Fish Audio TTS) → cắt theo scene
+4. Process Voice → tạo `master_voice.wav` + `voice_matching_timeline.json`
 5. Tick chọn visual source (image/video) cho từng scene
-6. Make full video → ffmpeg ghép + BGM auto-pick → output mp4
+6. Make full video → ffmpeg dựng visual timeline + master voice + subtitle + BGM → output mp4
 
 ### Use case phụ
 
@@ -196,6 +196,7 @@ story_video_maker/
         │   ├── batch_1.mp3 ... batch_N.mp3
         │   ├── manifest.json
         │   └── scene_1.mp3 ... scene_N.mp3
+        ├── {project_name}_ref_mapping.json
         ├── bgm/
         │   ├── chosen.json
         │   └── mixed.mp3
@@ -335,8 +336,6 @@ class ScenesJson(BaseModel):
 {
   "version": 1,
   "updated_at": "2026-04-27T10:30:00",
-  "image_refs": ["D:/photos/character.png", "D:/photos/style.png"],
-  "use_refs_for_image": true,
   "scenes": {
     "SCENE-01": {
       "image": {
@@ -364,9 +363,23 @@ class ScenesJson(BaseModel):
 }
 ```
 
-**Project-level fields** (added Sprint 3):
-- `image_refs: list[str]` — absolute paths of reference images (max 5) for image-with-refs flow.
-- `use_refs_for_image: bool` — when true, `BatchImageWorker` / `SingleImageWorker` route through `GrokImageRefEngine` (linear single-result) instead of the masonry `GrokImageEngine`. Empty list with flag on → log warning + fallback to masonry.
+**Reference image mapping**
+
+Current project-level refs live outside `state.json` in:
+
+```
+{project_stem}_ref_mapping.json
+```
+
+`state.json.image_refs` and `state.json.use_refs_for_image` are legacy compatibility fields only. New image generation tasks receive `ref_mapping_path` and resolve refs per scene from `core/ref_mapping.py`.
+
+Mapping rules:
+
+- `style_ref` / background ref is the default for scenes without characters.
+- Character refs are keyed by project-level `character` names and loaded once.
+- Each scene resolves character refs from scene-level `characters_in_scene`.
+- If `include_style_ref_with_character` is true, character scenes also include the style/background ref.
+- Disabled or missing refs are ignored during resolution, but the GUI preflight warns before image tasks.
 
 ### Status enum
 
@@ -623,9 +636,23 @@ async def render_slideshow(
     # Return output_path
 ```
 
-### 8.4. Per-scene composite (`render/composite.py`)
+### 8.4. Native timeline visual render (`render/timeline_visual.py`)
 
-Compose 1 scene thành mp4 hoàn chỉnh: visual + subtitle PNG sequence + voice audio.
+Final render uses `voice/voice_matching_timeline.json` as the trusted timing source and `voice/master_voice.wav` as one continuous audio track. Render does not cut voice into per-scene files.
+
+Visual segment types:
+
+| Segment | Source | Purpose |
+|---|---|---|
+| `scene` | selected scene visual | Show the matched scene duration from timeline |
+| `freeze_gap` | previous scene last frame/image | Preserve natural gaps between timeline items |
+| `beat_pause` | previous scene last frame/image | Preserve explicit `pause_after_sec` beat pauses |
+
+`render/timeline_visual.py` renders every segment as visual-only H.264 (`-an`) at the project resolution/fps, then hard-cut concats the segment list into `temp/final_video_only.mp4`.
+
+### 8.5. Legacy per-scene composite (`render/composite.py`)
+
+Legacy helper for older flows. It is no longer the final render timing source because per-scene audio slicing can remove natural pauses between scenes.
 
 ```python
 async def composite_scene(
@@ -672,7 +699,21 @@ elif ratio < 0.7:
 
 ## 9. Subtitle
 
-### 9.1. Style spec (copy từ Parenting Tips)
+### 9.1. Current ASS style
+
+Current final subtitles are ASS burned during the last ffmpeg pass:
+
+| Param | Value |
+|---|---|
+| Font | Cambria |
+| Bold | true |
+| Position | middle center |
+| Margin L/R/V | 100px |
+| Wrapping | ASS line wrapping within margins |
+| Fill | white |
+| Outline | black |
+
+### 9.2. Legacy PNG style spec (copy từ Parenting Tips)
 
 | Param | Value |
 |---|---|
@@ -686,7 +727,7 @@ elif ratio < 0.7:
 | Shadow | 2px black offset (1, 1) |
 | Background | None (transparent overlay) |
 
-### 9.2. `render/subtitle.py`
+### 9.3. `render/subtitle.py`
 
 **Input**:
 - `story_vi` của scene
@@ -713,7 +754,7 @@ Note: Nếu chưa có word-level timestamps (P3 chưa làm split với word alig
   → Karaoke timing không 100% chính xác nhưng acceptable cho MVP
 ```
 
-### 9.3. Composite subtitle vào scene
+### 9.4. Composite subtitle vào scene
 
 ffmpeg overlay PNG sequence:
 ```
@@ -726,7 +767,20 @@ ffmpeg -i visual.mp4 -framerate 30 -i temp/subtitle_SCENE-01/frame_%05d.png \
 
 ## 10. BGM
 
-### 10.1. BGM index JSON (user maintain)
+### 10.1. Current BGM policy
+
+Current implementation is intentionally simple:
+
+- Read `bgm/*.mp3` and `bgm/*.wav`.
+- Sort by filename.
+- Concatenate tracks from top to bottom.
+- Loop if shorter than final video.
+- Trim at final video end.
+- Fade in/out 2s.
+- Mix at `-17dB` relative to voice.
+- Mix in the same ffmpeg pass that burns ASS and muxes master voice.
+
+### 10.2. Legacy BGM index JSON (user maintain)
 
 **File**: `bgm/index.json` (user tự label thủ công 1 lần)
 
@@ -761,7 +815,7 @@ ffmpeg -i visual.mp4 -framerate 30 -i temp/subtitle_SCENE-01/frame_%05d.png \
 }
 ```
 
-### 10.2. `bgm/picker.py`
+### 10.3. `bgm/picker.py`
 
 ```python
 async def pick_bgm(
@@ -782,14 +836,14 @@ async def pick_bgm(
     # Returns: {file, volume_db, fade_in, fade_out, rationale}
 ```
 
-### 10.3. `bgm/mixer.py`
+### 10.4. `render/bgm_mixer.py`
 
 ```python
 async def mix_bgm(
     main_video: Path,         # video đã ghép tất cả scenes
     bgm_path: Path,
-    volume_db: float = -22,   # relative to main audio
-    fade_in_sec: float = 1.5,
+    volume_db: float = -17,   # relative to voice
+    fade_in_sec: float = 2.0,
     fade_out_sec: float = 2.0,
     output_path: Path = None
 ) -> Path:
@@ -811,22 +865,23 @@ async def mix_bgm(
 ```
 Pre-check:
   - Mỗi scene phải có selected_visual (image hoặc video) → block + UI highlight nếu thiếu
-  - Voice optional (warn nếu thiếu, không block)
+  - `voice/voice_matching_timeline.json` bắt buộc
+  - `voice/master_voice.wav` bắt buộc
 
-For each scene:
-  1. Determine visual:
-     - selected_visual == "video" → sources/vid{N}.mp4
-     - selected_visual == "image" → sources/pic{N}.jpg
-  2. Determine voice: voice/scene_{id}.mp3 (nếu có)
-  3. Generate subtitle PNG sequence (nếu có voice)
-  4. Composite: visual + subtitle + voice → temp/scene_{id}.mp4
-     Speed match logic ở mục 8.4
+Visual timeline:
+  1. Load trusted timeline.
+  2. Resolve selected visual for every scene.
+  3. Build `scene`, `freeze_gap`, and `beat_pause` visual segments.
+  4. Render visual-only segment mp4s under temp.
+  5. Hard-cut concat segment mp4s → `temp/final_video_only.mp4`.
 
-Assemble:
-  1. Hard-cut concat tất cả temp/scene_{id}.mp4 → temp/main.mp4
-     (KHÔNG xfade — gây freeze VLC)
-  2. Pick BGM via Claude → bgm/chosen.json
-  3. Mix BGM → final.mp4
+Final mux:
+  1. Generate `final.ass` when legacy subtitle phrases exist.
+  2. Mux continuous `master_voice.wav`.
+  3. Normalize voice with `loudnorm=I=-16:TP=-1.5:LRA=11`.
+  4. Burn ASS if present.
+  5. Mix sorted/looped/trimmed BGM at `-17dB` with 2s fade.
+  6. Output `final.mp4`.
 ```
 
 ### 11.2. `render/assemble.py`
@@ -977,23 +1032,26 @@ QSettings save:
 - Window size + position
 - Default settings (quality, resolution, etc.)
 
-### 12.6. Reference Images panel (Sprint 3)
+### 12.6. Reference Images panel
 
 `ui/refs_panel.py::RefImagesPanel` — sits beside the Log box (7:3 split, 280-400px clamp). Disabled until a project loads.
 
 ```
-┌─ Reference Images (Image gen) ────────────┐
-│ ☐ Use refs for image gen                   │
-│ [📁 Browse...] (N/5)                       │
-│ 1. character.png      [✗ Remove]           │
-│ 2. style_ref.png      [✗ Remove]           │
-└────────────────────────────────────────────┘
+┌─ Reference Setup ─────────────────────────────┐
+│ ☐ Use refs for image gen                       │
+│ ☐ Include style ref with character scenes      │
+│ Style / Background  ☐ [path...] [Browse] [Clear]│
+│ Character A         ☐ [path...] [Browse] [Clear]│
+│ Character B         ☐ [path...] [Browse] [Clear]│
+│ [Save refs]                                      │
+└────────────────────────────────────────────────┘
 ```
 
-- Multi-select file dialog; capped at 5 entries
-- Per-row remove button
-- Toggle + list emit `refs_changed(paths, use_refs)` → `MainWindow._on_refs_changed` writes both fields to project state via `set_image_refs` / `set_use_refs_for_image`
-- On project load, `set_state(paths, use_refs)` restores from `state.json`
+- On project load, `MainWindow` loads or creates `{project_stem}_ref_mapping.json`.
+- Rows are generated from project-level `character` names plus one `Style / Background` row.
+- `Save refs` writes the mapping file and validates required paths.
+- Batch/single image tasks include `ref_mapping_path`; worker loads mapping once and resolves refs per scene.
+- Legacy `state.json.image_refs` is kept only for compatibility fallback.
 
 ### 12.7. Stop All button (Sprint 3)
 
@@ -1253,21 +1311,23 @@ async def safe_action(action_name, page, fn):
 - Subtitle PNG sequence sinh ra cho mỗi scene
 - Karaoke timing acceptable (chưa cần 100% perfect)
 
-### Sprint 3 — Composite + Assemble + BGM
+### Sprint 3 — Visual Timeline + Master Audio + BGM
 
 **Mục tiêu**: Make full video.
 
 **Modules**:
-- `render/composite.py`
+- `render/timeline_visual.py`
 - `render/assemble.py`
-- `bgm/picker.py`, `bgm/mixer.py`
-- `workers/final_video.py`
+- `render/bgm_mixer.py`
+- `workers/render_worker.py`
 
 **Test exit criteria**:
 - Pre-check pass khi đủ visual selected
-- Composite từng scene OK
+- `voice_matching_timeline.json` + `master_voice.wav` tồn tại trước render
+- Visual-only scene/gap/pause segments render OK
 - Assemble hard-cut OK, play VLC không freeze
-- BGM auto-pick + mix OK
+- BGM sorted loop/trim/fade + mix OK ở `-17dB`
+- Voice loudnorm active
 - Final.mp4 player được, đủ scenes, đúng aspect ratio, voice + subtitle khớp
 
 ---

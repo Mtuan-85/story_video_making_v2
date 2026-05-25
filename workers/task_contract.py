@@ -33,6 +33,7 @@ class TaskOptions(BaseModel):
     fast_mode: bool = False
     use_refs_for_image: bool = False
     image_refs: list[str] = Field(default_factory=list)
+    ref_mapping_path: str | None = None
 
 
 class GenerateTask(BaseModel):

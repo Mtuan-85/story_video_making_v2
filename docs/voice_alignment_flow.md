@@ -1,73 +1,65 @@
 # Voice Alignment Flow
 
-This project uses a voice-led timeline. The MP3/WAV/M4A/FLAC file in `voice/`
-is the timing source. Scene `script` is the text source used to locate each
-scene inside that voice file.
+This project uses a voice-led timeline. The current render path treats
+`voice/voice_matching_timeline.json` and `voice/master_voice.wav` as the trusted
+source of timing.
 
-## Canonical Scene Text
+## Canonical Inputs
 
-- `scene.script` is the only field used by voice alignment.
-- `story_en` and `story_vi` are legacy fields from the fork and are not used
-  for matching voice.
-- `meta.language` is passed to Whisper so transcription uses the right
-  language. It does not choose between script fields.
+- `{project_stem}_S5.json` is the beat/story source for Process Voice.
+- `voice/beat-XX.mp3` are the per-beat TTS files.
+- `voice/master_voice.wav` is the continuous narration track built from the beat
+  files plus synthetic beat pauses.
+- `voice/voice_matching_timeline.json` is the timing contract consumed by final
+  render.
+- `voice_mapping.json` is legacy. Render may still read it for ASS subtitle
+  phrases, but it is not the final timing source.
 
-## Alignment Pipeline
+## Matching Pipeline
 
-1. The UI scans `voice/` and starts `VoiceAlignWorker`.
-2. `voice_aligner.align_voice_to_scenes()` scans audio files and computes
-   cumulative offsets.
-3. Whisper transcribes all voice files into a single global word list:
-   `[{word, start, end, source_file}]`.
-4. The deterministic aligner walks scenes in order.
-5. For a scene with non-empty `script`, it fuzzy-matches that script against
-   Whisper words starting from the current cursor.
-6. A matched scene receives `voice_in`, `voice_out`, `matched_text`,
-   `word_indices`, and subtitle phrases.
-7. A scene with empty `script` is marked silent/no-voice. It keeps its design
-   duration and does not consume Whisper words.
-8. After all scenes are aligned, freeze pauses are calculated from gaps between
-   voiced scenes, subtracting the design duration of silent scenes between
-   them.
-9. Render slices voice audio only during final composite using ffmpeg `atrim`.
+1. Load `{project_stem}_S5.json` and validate scene references.
+2. Probe all `voice/beat-XX.mp3` files and build an exact beat timeline.
+3. Concatenate beat audio and synthetic `pause_after_sec` silence into
+   `voice/master_voice.wav`.
+4. Whisper transcribes `master_voice.wav` once, producing global word
+   timestamps.
+5. Match each scene inside its beat window. The scene cursor resets per beat.
+6. Allocate explicit silent/gap regions into the same timeline.
+7. Save `voice/voice_matching_timeline.json` and diagnostics.
 
-## Empty Script Scenes as Anchors
+Important rule: Whisper timestamps are already global in master-audio mode. Do
+not add the beat offset again.
 
-Empty-script scenes are visual-only anchors in the timeline.
+## Final Render Contract
 
-Example:
+`RenderWorker` requires both:
 
 ```text
-scene-01 script -> voice 0s-5s
-scene-02 script empty, design duration 4s
-scene-03 script -> voice starts at 9s
+voice/voice_matching_timeline.json
+voice/master_voice.wav
 ```
 
-The MP3 gap between scene-01 and scene-03 is `9 - 5 = 4s`. Because scene-02
-already occupies 4s visually, scene-01 gets no extra freeze pause:
+The render flow is:
 
-```text
-residual_pause = max(0, mp3_gap - silent_design_between)
-               = max(0, 4 - 4)
-               = 0
-```
+1. Build visual-only timeline segments from `voice_matching_timeline.json`.
+2. Render `scene`, `freeze_gap`, and `beat_pause` segments without audio.
+3. Hard-cut concat those visual segments into `temp/final_video_only.mp4`.
+4. Final ffmpeg pass muxes the continuous `master_voice.wav`, applies voice
+   loudnorm, burns ASS if available, and mixes optional BGM.
 
-If the MP3 gap were 6s, scene-01 would receive a 2s freeze tail. This prevents
-double-counting silence while preserving the MP3 as the source of truth.
+This avoids the old per-scene `atrim` behavior, where cutting voice into scene
+clips removed natural narration gaps between scenes.
 
-## Visual Timing
+## Subtitle Status
 
-For voiced scenes, the visual is fit to `voice_out - voice_in`:
+ASS subtitles still come from legacy `voice_mapping.json` phrase data when that
+file is available. The next clean step is to generate subtitle phrases directly
+from `voice_matching_timeline.json` so subtitles no longer depend on the legacy
+mapping.
 
-- Image: rendered/zoomed for the voice duration.
-- Video: sped up if the voice is shorter than design duration, capped at 1.2x.
-- Video: extended with frozen tail if the voice is longer than design duration.
+Current ASS style:
 
-For silent scenes, render uses the scene design duration and silent audio.
-
-## Render Output
-
-`voice_mapping.json` is the contract between alignment and render. Render does
-not re-match text. It uses scene IDs to pair each visual asset with its
-assignment, then slices the original voice files according to `voice_in` and
-`voice_out`.
+- Font: Cambria, bold.
+- Position: middle center.
+- Margins: 100px left/right/vertical.
+- Wrapping: handled by ASS within margins.

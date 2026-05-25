@@ -13,7 +13,7 @@ import numpy as np
 
 # Tuned constants
 CHROMA_THRESHOLD = 15
-MIN_COMPONENT_AREA = 100
+MIN_COMPONENT_AREA = 20
 DOUGLAS_PEUCKER_EPSILON = 2.0
 EDGE_TOUCH_RATIO = 0.05
 EXPANSION_PX = 30
@@ -147,13 +147,12 @@ def refine_polygon_from_bbox(
     mask = _build_chroma_mask(crop, bg_color)
     _log(log_cb, f"     [{zone_label}] chroma-mask: {w}x{h}, {(mask>0).sum()} fg-px, {(time.monotonic()-t_step)*1000:.0f}ms")
 
-    # ===== Morphological open =====
+    # ===== Gentle denoise =====
     t_step = time.monotonic()
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
-    # Defensive: ensure contiguous uint8 before cv2 (prevents heap corruption)
+    # Avoid MORPH_OPEN here. It erases thin text strokes and punctuation before
+    # the polygon is even built, which makes text-heavy zones look broken.
     mask = np.ascontiguousarray(mask, dtype=np.uint8)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
-    _log(log_cb, f"     [{zone_label}] morph-open: {(time.monotonic()-t_step)*1000:.0f}ms")
+    _log(log_cb, f"     [{zone_label}] denoise-skip-open: {(time.monotonic()-t_step)*1000:.0f}ms")
 
     # ===== Connected components filter (uses stats, not O(N*pixels) loop) =====
     t_step = time.monotonic()

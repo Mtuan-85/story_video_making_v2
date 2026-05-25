@@ -5,8 +5,8 @@ Desktop PyQt6 app tự động hóa pipeline tạo video story từ `scenes.json
 - **Gen ảnh** qua Grok Imagine bằng worker process riêng (Brave + CDP + Patchright nằm ngoài GUI)
 - **Gen video Grok** đang deferred tới worker process phase sau
 - **Batch Edit** offline cho slideshow/edit tools (ffmpeg + rembg + Claude director)
-- **Voice-first alignment** với Whisper + Claude Code CLI (user cung cấp file voice, app align scene timing)
-- **Render** ghép visual + voice + subtitle + BGM + fade transitions
+- **Voice-first alignment** tạo timeline tin cậy (`voice_matching_timeline.json`) + `master_voice.wav`
+- **Render** dựng visual timeline, giữ master voice liên tục, burn subtitle và mix BGM ở pass cuối
 
 ## Stack
 
@@ -15,7 +15,7 @@ Desktop PyQt6 app tự động hóa pipeline tạo video story từ `scenes.json
 ## Cấu trúc
 
 ```
-core/          # Schema, project state, paths, voice_mapping, config loader
+core/          # Schema, project state, paths, ref_mapping, voice_mapping, config loader
 engines/       # Provider/browser automation implementations
   grok/        # Selectors, atomic actions, declarative flows, FlowRunner, engine adapters
 render/        # FFmpeg composition + assembly + transitions
@@ -33,7 +33,8 @@ test_run/      # Working example project (scenes.json + state)
 - `schema.py` — Pydantic v2 schema cho `scenes.json` (`Scene`, `Meta`, `VisualType` Literal); generation config lives under `meta`
 - `project.py` — `Project.load()` đọc scenes.json + state.json, tracking per-scene status, atomic backup
 - `paths.py` — `ProjectPaths`: `image_path(N)`, `video_path(N)`, `voice_dir`, `renders_dir`, etc.
-- `voice_mapping.py` — Schema `VoiceMapping` (voice_files + per-scene voice_in/out + subtitle_phrases)
+- `voice_mapping.py` — Legacy subtitle/timing schema; render chỉ còn dùng để lấy `subtitle_phrases` nếu có
+- `ref_mapping.py` — Project-level style/background + character reference image mapping
 - `config.py` — `load_config()` + `wait_brave_ready()` poll CDP port
 
 **engines/grok/**
@@ -50,10 +51,11 @@ test_run/      # Working example project (scenes.json + state)
 
 **render/**
 - `slideshow.py` — Async wrapper + sys.path injection cho `slideshow/` edit-tool package
-- `composite.py` — `composite_scene()`: visual + voice slice + subtitle drawtext + fade-in/out 0.25s mỗi side
+- `timeline_visual.py` — Builds visual-only scene/gap/pause clips from `voice_matching_timeline.json`
+- `composite.py` — Legacy per-scene composite helper; no longer the final render timing source
 - `subtitle_filter.py` — Build drawtext chain per phrase (yellow + black border, scene-relative timestamps)
-- `bgm_mixer.py` — `pick_bgm_files` + `build_bgm_filter` (aloop + atrim + volume -15dB + afade)
-- `assemble.py` — Hard-cut concat via `filter_complex concat=` + optional BGM mix
+- `bgm_mixer.py` — Final ffmpeg mux: ASS burn + master voice loudnorm + sorted BGM loop/trim/fade at `-17dB`
+- `assemble.py` — Hard-cut concat helper for normalized visual segments
 
 **workers/**
 - `task_contract.py` — typed task JSON, worker events, exit codes; default CDP URL `http://127.0.0.1:9222`
@@ -67,12 +69,12 @@ Legacy/offline workers:
 - `batch_video.py` / `single_video.py` — legacy Grok video workers; GUI Grok video is deferred until process-worker phase
 - `slideshow_worker.py` — Single-scene slideshow edit/render worker
 - `voice_align_worker.py` — Whisper + Claude align (blocking, wrapped trong `asyncio.to_thread`)
-- `render_worker.py` — Composite all scenes → assemble final.mp4
+- `render_worker.py` — Native timeline render → master voice + ASS + BGM → final.mp4
 
 **ui/**
 - `main_window.py` — Wires provider config + project + scene list + QProcess image generation + offline workers; Stop All button + worker registry
 - `connection_panel.py` — Provider/model/CDP URL health panel; does not own Patchright, browser, page, or tab state
-- `refs_panel.py` — `RefImagesPanel`: multi-ref upload (max 5) for image-with-refs flow, persisted to state.json
+- `refs_panel.py` — `RefImagesPanel`: edit `{stem}_ref_mapping.json` with style/background ref + per-character refs
 - `scene_list.py` + `scene_row.py` — Per-scene row (status icons, regen/edit, batch checkbox)
 - `dialogs/` — `preview_image`, `preview_video`, `prompt_editor`, `voice_import`, `voice_align_review`
 
@@ -130,12 +132,20 @@ Trong app, panel Provider dùng mặc định `http://127.0.0.1:9222`. Nút **Ch
 ### 3. Load project
 📂 **Mở scenes.json** → app đọc + tạo `state.json` + render scene rows.
 
-### 4. Gen ảnh
+### 4. Reference setup + gen ảnh
+Khi load project, app tạo/đọc `{project_stem}_ref_mapping.json`.
+
+Reference mapping:
+- `Style / Background` dùng cho scene không có character.
+- Character refs được map một lần từ project-level `character`.
+- Scene có `characters_in_scene` sẽ dùng đúng character refs đó; có thể kèm style ref nếu toggle bật.
+- Trước image task, app validate ref paths và cảnh báo nếu còn thiếu.
+
 Tick scenes → ➕ **Batch ảnh** → confirm estimate → GUI tạo `GenerateTask` và chạy `workers.generate_worker` qua `GenerateProcess`.
 
-Two engines depending on the **Reference Images panel**:
-- ☐ Use refs OFF → `GrokImageEngine` (4-candidate masonry + Claude pick)
-- ☑ Use refs ON (1-5 ref images uploaded) → `GrokImageRefEngine` (linear single-result flow). Aspect auto-resets to "Original" on Grok after upload — engine re-applies project aspect.
+Two engines depending on resolved refs for each scene:
+- No resolved refs → `GrokImageEngine` (4-candidate masonry + Claude pick)
+- Resolved refs exist → `GrokImageRefEngine` (linear single-result flow). Aspect auto-resets to "Original" on Grok after upload; engine re-applies project aspect.
 
 Per scene:
 - Worker emits `scene_started`, `scene_done`, `scene_failed`.
@@ -182,17 +192,22 @@ Current status:
 | `Video` | deferred | – |
 | `slideshow` | `SlideshowWorker` / `render_slideshow` (offline, single scene) | `sources/vidN.mp4` |
 
-### 6. Import voice + align
-🎤 **Import voice** → wizard chọn voice files + assign scene → `VoiceAlignWorker`:
-- Whisper transcribe (word-level timestamps)
-- Claude CLI maps Whisper words → scene story → tính `voice_in`/`voice_out` + `subtitle_phrases`
-- Save `voice_mapping.json` → review dialog cho user chỉnh start/end
-- `method="user_override"` ghi nhận khi user save chỉnh tay
+### 6. Process voice + match timeline
+🎤 **Process Voice** → two-level matcher:
+- Load `{stem}_S5.json` + `voice/beat-XX.mp3`
+- Build continuous `voice/master_voice.wav`
+- Whisper transcribes master voice once with global timestamps
+- Match scenes into `voice/voice_matching_timeline.json`
+- Save diagnostics to `voice/voice_matching_diagnostics.json`
+
+Render requires this timeline and master voice. Legacy `voice_mapping.json` may still be used for ASS subtitle phrases when present, but it is no longer the final timing source.
 
 ### 7. Render final
 🎬 **Render final** → `RenderWorker`:
-- Per scene: `composite_scene()` → ffmpeg dựng `renders/{id}.mp4` (visual + voice slice + drawtext subtitles + fade-in/out 0.25s)
-- `assemble_final()` → hard-cut concat (KHÔNG xfade) + optional BGM mix → `final.mp4`
+- Build visual-only timeline segments from `voice_matching_timeline.json` (`scene`, `freeze_gap`, `beat_pause`)
+- Hard-cut concat visual-only segments to `temp/final_video_only.mp4`
+- Final pass muxes continuous `master_voice.wav`, applies voice loudnorm, burns ASS if available, and mixes sorted BGM at `-17dB` with 2s fade in/out
+- Output: `final.mp4`
 
 ## CDP / Worker behavior
 

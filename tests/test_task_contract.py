@@ -30,6 +30,20 @@ def test_generate_task_defaults_to_grok_9222():
     assert task.provider == "grok"
     assert task.model == "grok-auto"
     assert task.cdp.url == "http://127.0.0.1:9222"
+    assert task.options.ref_mapping_path is None
+
+
+def test_generate_task_accepts_ref_mapping_path():
+    task = GenerateTask(
+        task_id="t1",
+        project_file="D:/p/story.json",
+        project_root="D:/p",
+        task_type="batch_image",
+        scene_ids=["1"],
+        options={"ref_mapping_path": "D:/p/story_ref_mapping.json"},
+    )
+
+    assert task.options.ref_mapping_path == "D:/p/story_ref_mapping.json"
 
 
 def test_parse_event_line():

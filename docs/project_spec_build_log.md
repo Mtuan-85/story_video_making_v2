@@ -1,6 +1,6 @@
 # Project Spec & Build Log Index
 
-**Ngày cập nhật:** 2026-05-20  
+**Ngày cập nhật:** 2026-05-25  
 **Mục đích:** File đọc nhanh để biết spec chính, build log chính, và các spec phụ của dự án `story_video_making_v2`.
 
 ---
@@ -24,6 +24,8 @@ Quy ước: `README.md` phản ánh trạng thái app hiện tại ngắn gọn;
 | `docs/fast_mode_spec.md` | Spec Fast Mode: single re-gen dán prompt nhanh trong PreviewDialog, không áp dụng batch |
 | `docs/cdp_provider_worker_refactor_spec.md` | Spec active cho GUI/CDP separation, provider worker contract, schema `meta`, canonical `visual_type` |
 | `docs/cdp_resilience_refactor_spec.md` | Spec refactor CDP/Brave resilience, phân tích risk và phase đề xuất |
+| `docs/voice_alignment_flow.md` | Active contract cho Process Voice, `voice_matching_timeline.json`, master voice, và final render |
+| `docs/history/learning/render_voice_timeline_learning.md` | Learning note về lý do bỏ render cắt voice theo scene |
 | `docs/history/` | Nơi lưu patch/spec cũ sau khi sprint đóng |
 | `docs/voice_rebuild/` | Tài liệu liên quan rebuild voice pipeline |
 
@@ -41,9 +43,9 @@ Pipeline chính:
 scenes.json
   -> Grok image/video generation qua Brave CDP + Patchright
   -> slideshow / Ken Burns offline nếu scene dùng visual offline
-  -> voice alignment + subtitle
-  -> ffmpeg composite từng scene
-  -> assemble final.mp4 + BGM
+  -> voice timeline matching + subtitle
+  -> visual-only timeline render
+  -> final mux: master voice + ASS + BGM
 ```
 
 Module chính:
@@ -54,7 +56,7 @@ Module chính:
 | `engines/grok/` | Browser automation, actions, flows, engine adapters |
 | `workers/` | Async workers cho batch/single image/video, voice align, render |
 | `ui/` | PyQt6 main window, scene list, dialogs, refs panel |
-| `render/` | Composite, subtitle filter, BGM mixer, assemble, Kdenlive export |
+| `render/` | Timeline visual render, subtitle filter, BGM/master-audio mixer, assemble, Kdenlive export |
 | `slideshow/` | External slideshow pipeline wrapper |
 | `voice/` | Whisper/Claude alignment, subtitle builder, legacy Fish TTS |
 | `runtime/` | Estimator/history phục vụ dự đoán thời gian |
@@ -69,12 +71,16 @@ Theo `BUILD_LOG.md`, các mốc gần nhất:
 - 2026-05-09: Retry/Cancel popup đơn giản hơn và Fast Mode cho single re-gen.
 - 2026-05-20: Implemented schema `meta`, GUI/CDP separation for Grok image worker process, and canonical app-level `visual_type` (`Image`, `Video`, `slideshow`).
 - 2026-05-20: Có thêm spec `docs/cdp_resilience_refactor_spec.md` để xử lý risk CDP/Brave.
+- 2026-05-25: Final render chuyển sang native `voice_matching_timeline.json` + continuous `master_voice.wav`; BGM active ở `-17dB`; ref image chuyển sang `{stem}_ref_mapping.json`.
+- 2026-05-25: Slideshow SFX hiện chỉ nằm trong MP4 slideshow standalone; final render strip audio scene segments (`-an`). Khi mở rộng engine, cần thêm SFX timeline/mix pass nếu muốn SFX vào `final.mp4`.
 
 Việc còn mở đáng chú ý:
 
 - Cần live UI test cho PreviewDialog Gen Image / Gen Animation.
 - Cần live test Fast Mode với image, image-with-refs, video, slideshow fallback.
 - Cần live test Retry/Cancel khi worker fail đủ 3 lần.
+- Subtitle phrase extraction trực tiếp từ `voice_matching_timeline.json` còn deferred; hiện ASS vẫn đọc legacy `voice_mapping.json` nếu có.
+- Slideshow SFX trong final render còn deferred; xem `slideshow/README_V2.md` mục Sound Effects Contract.
 - Grok video process-worker, ChatGPT, Gemini còn deferred.
 - CDP resilience refactor chưa triển khai, chỉ mới có spec.
 - Một số doc cũ có thể còn nhắc `preview_image` / `preview_video` dialog sau khi UI chuyển sang PreviewDialog unified.

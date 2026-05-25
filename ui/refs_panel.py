@@ -1,163 +1,172 @@
-"""Reference Images panel — multi-ref upload (max 5) for image gen.
-
-Drives project state fields ``image_refs`` + ``use_refs_for_image`` via
-the ``refs_changed`` signal. Owner (MainWindow) wires that signal to the
-loaded Project's setters.
-"""
+"""Character reference setup panel for image generation."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from loguru import logger as log
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
     QCheckBox,
     QFileDialog,
+    QGridLayout,
     QGroupBox,
     QHBoxLayout,
     QLabel,
-    QListWidget,
-    QListWidgetItem,
     QMessageBox,
     QPushButton,
+    QScrollArea,
     QVBoxLayout,
     QWidget,
 )
 
-MAX_REFS = 5
+from core.ref_mapping import CharacterRef, RefMapping
 
 
 class RefImagesPanel(QGroupBox):
-    """Side-by-side companion to the Project box. Disabled until a project loads."""
+    """Project-level ref mapping editor: style ref + one row per character."""
 
-    refs_changed = pyqtSignal(list, bool)  # (paths, use_refs)
+    mapping_saved = pyqtSignal(object)
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__("Reference Images (Image gen)", parent)
-        self._refs: list[str] = []
+        super().__init__("Reference Setup", parent)
+        self._mapping = RefMapping()
+        self._character_names: list[str] = []
+        self._path_labels: dict[str, QLabel] = {}
+        self._enabled_checks: dict[str, QCheckBox] = {}
         self._build_ui()
-        self.setMinimumWidth(280)
-        self.setMaximumWidth(400)
+        self.setMinimumWidth(320)
+        self.setMaximumWidth(520)
         self.setEnabled(False)
 
-    # ------------------------------------------------------------------
-    # Build
-    # ------------------------------------------------------------------
-
     def _build_ui(self) -> None:
-        layout = QVBoxLayout(self)
-        layout.setSpacing(6)
+        outer = QVBoxLayout(self)
+        outer.setSpacing(6)
 
         self.chk_use = QCheckBox("Use refs for image gen")
         self.chk_use.toggled.connect(self._on_use_toggled)
-        layout.addWidget(self.chk_use)
+        outer.addWidget(self.chk_use)
 
-        browse_row = QHBoxLayout()
-        self.btn_browse = QPushButton("📁 Browse...")
-        self.btn_browse.clicked.connect(self._on_browse)
-        browse_row.addWidget(self.btn_browse)
+        self.chk_include_style = QCheckBox("Use style ref with character scenes")
+        self.chk_include_style.toggled.connect(self._on_include_style_toggled)
+        outer.addWidget(self.chk_include_style)
 
-        self.lbl_count = QLabel(f"(0/{MAX_REFS})")
-        self.lbl_count.setStyleSheet("color:#666;")
-        browse_row.addWidget(self.lbl_count)
-        browse_row.addStretch()
-        layout.addLayout(browse_row)
+        self.scroll = QScrollArea()
+        self.scroll.setWidgetResizable(True)
+        self.rows_widget = QWidget()
+        self.rows_layout = QGridLayout(self.rows_widget)
+        self.rows_layout.setColumnStretch(1, 1)
+        self.scroll.setWidget(self.rows_widget)
+        outer.addWidget(self.scroll, 1)
 
-        self.list_widget = QListWidget()
-        self.list_widget.setMaximumHeight(140)
-        layout.addWidget(self.list_widget)
+        actions = QHBoxLayout()
+        self.lbl_status = QLabel("")
+        self.lbl_status.setStyleSheet("color:#666;")
+        actions.addWidget(self.lbl_status, 1)
+        self.btn_save = QPushButton("Save refs")
+        self.btn_save.clicked.connect(self._on_save)
+        actions.addWidget(self.btn_save)
+        outer.addLayout(actions)
 
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
+    def set_mapping(self, mapping: RefMapping, character_names: list[str]) -> None:
+        self._mapping = mapping
+        self._character_names = sorted(character_names)
+        self._rebuild_rows()
 
-    def set_state(self, paths: list[str], use_refs: bool) -> None:
-        self._refs = list(paths)[:MAX_REFS]
-        # Block signals while restoring so we don't double-write to project state.
+    def current_mapping(self) -> RefMapping:
+        return self._mapping
+
+    def set_status(self, text: str, ok: bool) -> None:
+        color = "#2e7d32" if ok else "#c62828"
+        self.lbl_status.setStyleSheet(f"color:{color};")
+        self.lbl_status.setText(text)
+
+    def _rebuild_rows(self) -> None:
         prev = self.chk_use.blockSignals(True)
-        self.chk_use.setChecked(use_refs)
+        self.chk_use.setChecked(self._mapping.use_refs_for_image)
         self.chk_use.blockSignals(prev)
-        self._refresh_list()
+        prev = self.chk_include_style.blockSignals(True)
+        self.chk_include_style.setChecked(self._mapping.include_style_ref_with_character)
+        self.chk_include_style.blockSignals(prev)
 
-    def get_paths(self) -> list[str]:
-        return list(self._refs)
+        while self.rows_layout.count():
+            item = self.rows_layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
 
-    def get_use_refs(self) -> bool:
-        return self.chk_use.isChecked()
+        self._path_labels.clear()
+        self._enabled_checks.clear()
 
-    # ------------------------------------------------------------------
-    # Slots
-    # ------------------------------------------------------------------
+        self._add_ref_row(0, "Style / Background", "__style__", self._mapping.style_ref)
+        for row, name in enumerate(self._character_names, start=1):
+            ref = self._mapping.characters.setdefault(name, CharacterRef())
+            self._add_ref_row(row, name, name, ref)
+
+    def _add_ref_row(self, row: int, title: str, key: str, ref: CharacterRef) -> None:
+        enabled = QCheckBox()
+        enabled.setChecked(ref.enabled)
+        enabled.toggled.connect(lambda checked, k=key: self._on_ref_enabled(k, checked))
+        self._enabled_checks[key] = enabled
+        self.rows_layout.addWidget(enabled, row, 0)
+
+        label = QLabel(title)
+        label.setToolTip(title)
+        self.rows_layout.addWidget(label, row, 1)
+
+        path_label = QLabel(Path(ref.path).name if ref.path else "(missing)")
+        path_label.setToolTip(ref.path)
+        path_label.setStyleSheet("color:#444;")
+        self._path_labels[key] = path_label
+        self.rows_layout.addWidget(path_label, row, 2)
+
+        browse = QPushButton("Browse")
+        browse.clicked.connect(lambda _checked=False, k=key: self._browse_ref(k))
+        self.rows_layout.addWidget(browse, row, 3)
+
+        clear = QPushButton("Clear")
+        clear.clicked.connect(lambda _checked=False, k=key: self._set_ref_path(k, ""))
+        self.rows_layout.addWidget(clear, row, 4)
+
+    def _ref_for_key(self, key: str) -> CharacterRef:
+        if key == "__style__":
+            return self._mapping.style_ref
+        return self._mapping.characters.setdefault(key, CharacterRef())
 
     def _on_use_toggled(self, checked: bool) -> None:
-        self.refs_changed.emit(self._refs, checked)
+        self._mapping.use_refs_for_image = bool(checked)
 
-    def _on_browse(self) -> None:
-        if len(self._refs) >= MAX_REFS:
-            QMessageBox.information(
-                self,
-                "Max refs",
-                f"Đã đạt giới hạn {MAX_REFS} refs. Remove bớt trước khi add.",
-            )
-            return
+    def _on_include_style_toggled(self, checked: bool) -> None:
+        self._mapping.include_style_ref_with_character = bool(checked)
 
-        files, _ = QFileDialog.getOpenFileNames(
+    def _on_ref_enabled(self, key: str, checked: bool) -> None:
+        self._ref_for_key(key).enabled = bool(checked)
+
+    def _browse_ref(self, key: str) -> None:
+        file_path, _ = QFileDialog.getOpenFileName(
             self,
-            "Chọn ref images",
+            "Chọn reference image",
             "",
             "Images (*.png *.jpg *.jpeg *.webp)",
         )
-        if not files:
-            return
+        if file_path:
+            self._set_ref_path(key, file_path)
 
-        remaining = MAX_REFS - len(self._refs)
-        to_add = files[:remaining]
-        if len(files) > remaining:
-            QMessageBox.information(
-                self,
-                "Limit reached",
-                f"Chỉ add {remaining} files. Bỏ {len(files) - remaining} file (quá max {MAX_REFS}).",
-            )
-
-        self._refs.extend(to_add)
-        self._refresh_list()
-        self.refs_changed.emit(self._refs, self.chk_use.isChecked())
-
-    def _on_remove(self, idx: int) -> None:
-        if 0 <= idx < len(self._refs):
-            removed = self._refs.pop(idx)
-            log.info(f"Removed ref: {removed}")
-            self._refresh_list()
-            self.refs_changed.emit(self._refs, self.chk_use.isChecked())
-
-    # ------------------------------------------------------------------
-    # Internal
-    # ------------------------------------------------------------------
-
-    def _refresh_list(self) -> None:
-        self.list_widget.clear()
-
-        for i, path in enumerate(self._refs):
-            item = QListWidgetItem()
-            row_widget = QWidget()
-            row = QHBoxLayout(row_widget)
-            row.setContentsMargins(4, 2, 4, 2)
-
-            name = Path(path).name
-            label = QLabel(f"{i + 1}. {name}")
+    def _set_ref_path(self, key: str, path: str) -> None:
+        ref = self._ref_for_key(key)
+        ref.path = path
+        label = self._path_labels.get(key)
+        if label is not None:
+            label.setText(Path(path).name if path else "(missing)")
             label.setToolTip(path)
-            row.addWidget(label)
-            row.addStretch()
 
-            btn_remove = QPushButton("✗ Remove")
-            btn_remove.setMaximumWidth(80)
-            btn_remove.clicked.connect(lambda _checked=False, idx=i: self._on_remove(idx))
-            row.addWidget(btn_remove)
-
-            item.setSizeHint(row_widget.sizeHint())
-            self.list_widget.addItem(item)
-            self.list_widget.setItemWidget(item, row_widget)
-
-        self.lbl_count.setText(f"({len(self._refs)}/{MAX_REFS})")
-        self.btn_browse.setEnabled(len(self._refs) < MAX_REFS)
+    def _on_save(self) -> None:
+        if not self._mapping.use_refs_for_image:
+            reply = QMessageBox.question(
+                self,
+                "Refs disabled",
+                "Use refs đang tắt. Save trạng thái này?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+        self.mapping_saved.emit(self._mapping)

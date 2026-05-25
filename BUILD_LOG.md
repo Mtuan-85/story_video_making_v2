@@ -5,6 +5,399 @@
 
 ---
 
+## Session 2026-05-25 — native timeline render + ref mapping + final audio mix
+
+Status: implemented with targeted verification. Full repo test deliberately not run because it can crash this Codex session.
+
+### Summary
+
+The final render path now consumes the trusted voice timeline directly:
+
+```
+voice/voice_matching_timeline.json + voice/master_voice.wav
+  -> render/timeline_visual.py builds visual-only scene/gap/pause segments
+  -> concat visual-only timeline
+  -> final ffmpeg pass burns ASS and mixes master voice + optional BGM
+```
+
+This replaces the legacy behavior where render sliced voice per scene and then concatenated scene mp4s. That old approach removed natural inter-scene voice gaps that were present in `master_voice.wav`, making narration feel unnaturally tight.
+
+### Render / voice changes
+
+- `workers/render_worker.py` now requires both:
+  - `voice/voice_matching_timeline.json`
+  - `voice/master_voice.wav`
+- No automatic fallback to legacy `voice_mapping.json` for timing.
+- `voice_mapping.json` is only used for ASS subtitle phrase data when available.
+- `render/timeline_visual.py` is the visual timeline builder:
+  - scene segments use the matched render duration from timeline items
+  - `freeze_gap` segments preserve natural gaps between timeline items
+  - `beat_pause` segments preserve explicit beat pauses
+  - all intermediate clips are visual-only (`-an`)
+- Final audio uses the continuous `master_voice.wav`, not per-scene `atrim` slices.
+- Voice is normalized in the final mix with ffmpeg loudnorm:
+  - `I=-16:TP=-1.5:LRA=11`
+
+### Subtitle / BGM changes
+
+- ASS subtitle style now uses Cambria bold, centered vertically, with 100px horizontal margins for wrapping.
+- BGM is selected by sorted filename order from `bgm/*.mp3` and `bgm/*.wav`, concatenated sequentially, looped if needed, trimmed at video end, and faded in/out 2s.
+- BGM level changed from `-15dB` to `-17dB`.
+- Subtitle burn and BGM/voice mixing happen in one final ffmpeg command to avoid double re-encode.
+- `render/bgm_mixer.py` now supports:
+  - ASS + BGM
+  - no ASS + BGM
+  - ASS + master voice + BGM
+  - no BGM fallback with subtitle burn only
+
+### Reference image mapping
+
+Added project-level ref mapping file:
+
+```
+{project_stem}_ref_mapping.json
+```
+
+New contract:
+
+- style/background ref is the default ref for scenes without characters
+- character refs are mapped once from project-level `character` names
+- each scene resolves refs from its scene-level `characters_in_scene`
+- character scenes may also include the style ref when the toggle is enabled
+- disabled refs are ignored
+- render/generation checks the mapping file before image tasks and warns if required paths are missing
+
+Main modules:
+
+```
+core/ref_mapping.py
+ui/refs_panel.py
+engines/grok/image_worker_flow.py
+workers/task_contract.py
+```
+
+### Verification run
+
+Targeted checks only:
+
+```
+python -m pytest tests\test_ref_mapping.py tests\test_image_worker_flow_paths.py tests\test_task_contract.py tests\test_ui_batch_edit_structure.py tests\test_generate_worker_routing.py tests\test_worker_cli_noop.py
+# 32 passed
+
+python -m pytest tests\test_timeline_render.py tests\test_bgm_mix_and_ass.py
+# 8 passed
+
+python -m py_compile render\timeline_visual.py render\bgm_mixer.py workers\render_worker.py ui\main_window.py
+# passed
+```
+
+### Open follow-ups
+
+- Live render on a real project after Process Voice to confirm perceived narration pacing.
+- Generate subtitle phrases from the new voice timeline directly, then make ASS independent from legacy `voice_mapping.json`.
+- Expose BGM dB / fade / voice loudnorm parameters in UI only if repeated manual tuning is needed.
+
+### Reminder for future slideshow engine expansion
+
+Slideshow SFX currently belongs to the standalone slideshow MP4:
+
+- each zone has a `sound` value (`pop`, `flip`, `whoosh`, `swoosh`, `ding`)
+- `slideshow/renderer.py::_collect_audio_inputs()` places each WAV at the zone `appear_at`
+- `_encode_video()` mixes those clips into the slideshow MP4 with ffmpeg `amix`
+- `SlideshowEditDialog` supports per-zone sound and bulk `Sound all → Apply`
+
+Important limitation: final render uses `render/timeline_visual.py` visual-only
+segments (`-an`) and then muxes continuous `master_voice.wav` + BGM. That means
+audio embedded in slideshow MP4s is intentionally stripped from `final.mp4`.
+If we want slideshow SFX in final render, add a separate SFX timeline/mix pass
+that extracts/places slideshow audio against the trusted voice timeline and
+mixes it with master voice + BGM.
+
+---
+
+## 🔖 PENDING — older resume note (2026-05-25, superseded by session above)
+
+Sprint 1 + Sprint 2 implementation is **done but not yet committed**.
+BUILD_LOG session entry below (2026-05-24) is fully written.
+
+**To resume:**
+
+1. Read the 2026-05-24 session entry below for full context.
+2. Verify uncommitted changes match the file list at the bottom of that entry:
+   ```bash
+   cd D:/Projects/story_video_making_v2
+   git status --short
+   ```
+3. Stage SOURCE files only (skip `project 1/*`, `exports/*`, `launch_opera.bat`,
+   `.claude/settings.local.json`):
+   ```bash
+   git add BUILD_LOG.md core/paths.py slideshow/orchestrator.py \
+           slideshow/assets/sounds/*.wav \
+           workers/export_worker.py workers/render_worker.py \
+           workers/two_level_match_worker.py ui/main_window.py \
+           voice/s5_loader.py voice/beat_timeline.py voice/master_audio_builder.py \
+           voice/master_whisper.py voice/flexible_matcher.py voice/silent_allocator.py \
+           voice/timeline_builder.py voice/timeline_to_mapping.py \
+           exporters/ \
+           sprint_1_two_level_voice_matching_spec.md \
+           sprint_2_kdenlive_xml_export_spec.md
+   ```
+4. Commit:
+   ```
+   sprint 1 + 2: two-level voice match + Kdenlive XML export
+   ```
+   See "Session 2026-05-24" below for the full message body.
+5. Push:
+   ```bash
+   git push origin main
+   ```
+6. Live-test punch list (defer if time-boxed):
+   - Open `exports/kdenlive/Naomi2.kdenlive` in Kdenlive 22+ → verify
+     timeline has A1 master audio + V1 scene/pause clips + markers.
+   - Click Render Final after Process Voice → verify resume (stop
+     mid-render → restart → finished scenes skipped).
+   - Slideshow re-render → verify pop/flip/whoosh sound effects in output mp4.
+
+Open follow-ups from this older note have been partially superseded:
+- BGM mix is now active in render.
+- Render now consumes `voice_matching_timeline.json` natively.
+- Subtitle phrase extraction from the new timeline is still open; legacy `voice_mapping.json` can still provide ASS phrases when present.
+
+---
+
+## Session 2026-05-24 — Sprint 1 (two-level voice match) + Sprint 2 (Kdenlive export)
+
+Status: ready to commit. End-to-end tested on Naomi2 (25 beats / 86 scenes).
+
+### Overview
+
+Replaced the global-cursor voice alignment with a **two-level matcher**
+driven by a per-beat narration source-of-truth (`{stem}_S5.json`) and
+per-beat TTS audio (`voice/beat-XX.mp3`). Rebuilt the Kdenlive XML
+exporter as a clean editable project (master audio on A1, separate
+visual clips for scenes + beat pauses on V1, markers, freeze-frame
+generation, placeholder fallback).
+
+Specs consumed verbatim:
+- `sprint_1_two_level_voice_matching_spec.md` (root)
+- `sprint_2_kdenlive_xml_export_spec.md` (root)
+
+### Sprint 1 — voice matching
+
+New modules under `voice/`:
+
+```
+s5_loader.py              # parse + validate {stem}_S5.json against scenes
+beat_timeline.py          # ffprobe per beat → exact beat-level timeline
+master_audio_builder.py   # concat beats + synthetic silence → master_voice.wav
+master_whisper.py         # Whisper master once (global timestamps)
+flexible_matcher.py       # per-beat fuzzy match (70-135% window, weighted score)
+silent_allocator.py       # allocate silent scenes inside beat gaps
+timeline_builder.py       # orchestrator + validations + diagnostics
+timeline_to_mapping.py    # adapter → legacy VoiceMapping for render
+```
+
+New worker:
+
+```
+workers/two_level_match_worker.py   # GUI wrapper, 6-step pipeline
+```
+
+New `ProjectPaths` properties:
+
+```
+s5_beats_json                       # {root}/{stem}_S5.json
+master_voice_wav                    # {root}/voice/master_voice.wav
+voice_matching_timeline_json        # {root}/voice/voice_matching_timeline.json
+voice_matching_diagnostics_json     # {root}/voice/voice_matching_diagnostics.json
+```
+
+Pipeline (sync, per call):
+
+```
+input: {stem}_S5.json + voice/beat-XX.mp3 + scenes_edited.json
+[1] Load + validate S5 (scene refs in order, no dupes, beat MP3s exist)
+[2] ffprobe per beat → beat timeline (cursor only used here, exact)
+[3] ffmpeg concat beats + anullsrc(pause_after_sec) → master_voice.wav
+    Validation: |measured - expected| ≤ 0.05s
+[4] Whisper transcribe master_voice.wav once (global timestamps)
+[5] Per-beat scene matching:
+    - Filter words to beat window [voice_in, voice_out]
+    - Local cursor per beat (NEVER global)
+    - Single-scene beat → full beat window shortcut
+    - Multi-scene beat → flexible 70-135% window, weighted score:
+        start 25 / end 25 / full 35 / continuity 15
+    - no_match keeps scene_type="voiced" + status="unmatched_voiced_scene"
+      (spec §14.3: never silently convert to silent)
+    - Silent scenes allocated into existing beat gaps proportional to design
+[6] Cross-beat overlap normalization, validation, save outputs
+```
+
+Outputs:
+
+```
+voice/master_voice.wav
+voice/voice_matching_timeline.json
+voice/voice_matching_diagnostics.json
+```
+
+Hard rules (spec §17 + §14):
+- Master-audio mode → Whisper timestamps are GLOBAL. Do NOT add beat.voice_in.
+  `detect_double_offset` raises a diagnostic warning if first-word.start > max beat.voice_in.
+- Scene cursor resets at the start of every beat (acceptance #7).
+- `pause_after_sec` is synthesized as silence in the master audio, not a TTS task.
+- No voiced scene is ever converted to silent (acceptance #13).
+
+Test on Naomi2 (25 beats / 86 scenes):
+
+```
+S5 validation:       86/86 scene refs, 0 errors, 0 warnings
+Beat timeline:       758.15s total (voice 741.35s + pauses 16.80s)
+Master audio drift:  +0.002s (tolerance ±0.05s)
+Whisper output:      2078 words on master timeline
+Match results:       86 voiced matched, 0 silent, 0 unmatched, 24 pauses
+Cross-beat overlap:  2 clamps (SCENE-44 +0.013s, SCENE-55 +0.220s)
+```
+
+### Sprint 2 — Kdenlive XML export
+
+New `exporters/` package:
+
+```
+timecode.py        # sec↔frame conversion (single source of truth)
+freeze_frame.py    # ffmpeg -sseof -0.1 for video-pause stills
+placeholder.py     # PIL placeholder JPGs for missing assets
+asset_registry.py  # resolve every asset, register producer_id, generate freezes/placeholders
+validators.py      # pre-export checks (audio dur, no negative dur, no major overlap)
+mlt_builder.py     # MLT XML structure: profile, producers, V1/A1, tractor, guides
+kdenlive_exporter.py  # top-level orchestrator (export_kdenlive_project)
+```
+
+`workers/export_worker.py` rewritten to call the new exporter.
+`ui/main_window.py::_on_export_done` updated to surface the new
+`(kdenlive_path, diagnostics_path)` signal.
+The legacy `render/kdenlive_export.py` is retired (still on disk for git history).
+
+Track layout produced:
+
+```
+V1: scene clips + beat_pause clips (separate visible clips, spec §9)
+A1: master_voice.wav as 1 continuous clip (no per-scene slicing, spec §6.1)
+```
+
+Markers via `kdenlive:docproperties.guides` JSON property: BEAT/SCENE/PAUSE
+labels at every boundary with color codes.
+
+Scene visual resolution:
+- Image scene → `sources/{id}.jpg`, MLT image producer
+- Video / slideshow scene → `sources/{id}.mp4`, MLT avformat producer
+- Beat pause after image scene → reuse same image producer (new playlist entry)
+- Beat pause after video scene → ffmpeg `-sseof -0.1` extracts last frame
+- Missing asset → policy="placeholder" (default) generates labelled JPG; "strict" fails
+
+Test on Naomi2:
+- Output: `exports/kdenlive/Naomi2.kdenlive` (61.3 KB)
+- 110 clips (86 scenes + 24 pauses)
+- 110 placeholders generated (project has no rendered visuals yet)
+- 0 freeze-frames (no source videos exist)
+
+### Render pipeline migration (adapter, not full rewrite)
+
+The render pipeline (composite_scene + assemble_concat + ASS burn) still
+consumes the legacy `voice_mapping.json` (v4.0). Rather than rewrite it,
+`voice/timeline_to_mapping.py` adapts Sprint 1's timeline → VoiceMapping
+on demand. `_start_render` invokes the adapter automatically when no
+legacy mapping exists.
+
+Mapping decisions:
+- voice_files: single entry pointing at master_voice.wav (concat demuxer
+  with one file = just that file, atrim works directly with global ts)
+- freeze_pause_after per scene: derived from beat.pause_after_sec for the
+  LAST scene of each beat; 0 for others (silent gaps handled by allocator)
+- subtitle_phrases: not extracted (Sprint 1 doesn't compute these);
+  `apply_ass_subtitle` falls back to copy when the .ass file is empty/missing
+
+### Resume support in RenderWorker
+
+`workers/render_worker.py` now skips composite for scenes whose
+`renders/SCENE-XX.mp4` already exists with a duration matching expected
+(`voice_part + freeze_pause`, ±0.10s).
+
+- User can stop mid-render → on next click, only un-rendered scenes
+  are composited; finished scenes are appended to `scene_outputs` and
+  pipeline proceeds.
+- Force re-render: delete `renders/` folder.
+
+### Slideshow sound effects bundling
+
+5 WAV files (`pop/flip/whoosh/swoosh/ding`) copied from
+`zone_show_automation/assets/sounds/` to `slideshow/assets/sounds/`.
+`slideshow/orchestrator.py` auto-wires `_DEFAULT_SOUNDS_DIR` when caller
+passes `sounds_dir=None`. Slideshow renders now include zone sound effects
+without any caller configuration.
+
+### UI changes
+
+- "🎬 Render Final" button moved from the bottom action row into the
+  project header (right side), height 36px, green background. Acts as
+  the pipeline endpoint.
+- `_on_process_voice` swapped from `VoiceAlignWorker` (legacy global align)
+  to `TwoLevelMatchWorker` (Sprint 1).
+- Pre-flight check fails clearly if `{stem}_S5.json` or `beat-XX.mp3` are
+  missing.
+- Render + Kdenlive buttons enable when EITHER the legacy mapping OR
+  the new timeline exists.
+
+### Specs
+
+`sprint_1_two_level_voice_matching_spec.md` and
+`sprint_2_kdenlive_xml_export_spec.md` checked into the repo root so the
+implementation contract is versioned with the code.
+
+### Files in this session
+
+```
+NEW   voice/s5_loader.py
+NEW   voice/beat_timeline.py
+NEW   voice/master_audio_builder.py
+NEW   voice/master_whisper.py
+NEW   voice/flexible_matcher.py
+NEW   voice/silent_allocator.py
+NEW   voice/timeline_builder.py
+NEW   voice/timeline_to_mapping.py
+NEW   workers/two_level_match_worker.py
+NEW   exporters/__init__.py
+NEW   exporters/timecode.py
+NEW   exporters/freeze_frame.py
+NEW   exporters/placeholder.py
+NEW   exporters/asset_registry.py
+NEW   exporters/validators.py
+NEW   exporters/mlt_builder.py
+NEW   exporters/kdenlive_exporter.py
+NEW   slideshow/assets/sounds/{ding,flip,pop,swoosh,whoosh}.wav
+NEW   sprint_1_two_level_voice_matching_spec.md
+NEW   sprint_2_kdenlive_xml_export_spec.md
+
+MOD   core/paths.py                          # Sprint 1 path properties
+MOD   slideshow/orchestrator.py              # _DEFAULT_SOUNDS_DIR auto-wire
+MOD   workers/export_worker.py               # new exporter API
+MOD   workers/render_worker.py               # resume support
+MOD   ui/main_window.py                      # Sprint 1 wiring + render button placement
+```
+
+### Open follow-ups
+
+- Subtitle phrases for render: Sprint 1 doesn't extract them. Either
+  add a phrase extractor that reads whisper_words.json + timeline OR
+  fold ASS generation into `voice_aligner`-equivalent inside Sprint 1.
+- Superseded 2026-05-25: BGM is now active in render at `-17dB`.
+- Superseded 2026-05-25: render now consumes `voice_matching_timeline.json`
+  natively and uses continuous `master_voice.wav`.
+- Nested zones in slideshow (Scene 13 case): documented limitation
+  from earlier session — not affected by this work.
+
+---
+
 ## Session 2026-05-23 — Slideshow v2 engine (zone-animate) + state-aware UI
 
 Status: ready to commit. End-to-end tested (Edit single, re-render, multi-scene).

@@ -25,6 +25,11 @@ _slideshow_dir = Path(__file__).resolve().parent
 if str(_slideshow_dir) not in sys.path:
     sys.path.insert(0, str(_slideshow_dir))
 
+# Bundled sound effects shipped with the engine. Each zone's `sound` value
+# (pop/flip/whoosh/swoosh/ding) resolves to a .wav under this directory.
+# Caller may override by passing sounds_dir explicitly.
+_DEFAULT_SOUNDS_DIR = _slideshow_dir / "assets" / "sounds"
+
 # Import modules
 try:
     from bg_detect import detect_bg_color
@@ -84,6 +89,8 @@ def render_slideshow_v2(
         thumb_path = output_path.parent / f"{output_path.stem}-thumb.png"
     if cache_dir is None:
         cache_dir = output_path.parent / f".{output_path.stem}-cache"
+    if sounds_dir is None and _DEFAULT_SOUNDS_DIR.exists():
+        sounds_dir = _DEFAULT_SOUNDS_DIR
 
     zones_json_path = Path(zones_json_path)
     thumb_path = Path(thumb_path)
@@ -331,6 +338,9 @@ def rerender_slideshow_v2(
     if thumb_path is None:
         thumb_path = zones_json_path.parent / zones_json_path.name.replace("-zones.json", "-thumb.png")
     thumb_path = Path(thumb_path)
+
+    if sounds_dir is None and _DEFAULT_SOUNDS_DIR.exists():
+        sounds_dir = _DEFAULT_SOUNDS_DIR
 
     success = False
     try:

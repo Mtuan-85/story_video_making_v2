@@ -4,9 +4,10 @@ import json
 import time
 from pathlib import Path
 
+from core.ref_mapping import RefMapping, resolve_refs_for_scene
 from core.project import Project
 from core.paths import ProjectPaths
-from core.schema import ScenesJson
+from core.schema import Scene, ScenesJson
 from engines.grok.cdp_worker import connect_worker_cdp
 from engines.grok.engine import GrokImageEngine
 from engines.grok.image_ref_engine import GrokImageRefEngine
@@ -40,17 +41,35 @@ def _load_project_readonly(scenes_file: Path) -> Project:
     return Project(paths=paths, scenes_json=scenes_json, state={})
 
 
+def _load_task_ref_mapping(task: GenerateTask, scenes_json: ScenesJson) -> RefMapping | None:
+    raw_path = task.options.ref_mapping_path
+    if not raw_path:
+        return None
+    mapping_path = _project_path(Path(task.project_root), raw_path)
+    if not mapping_path.exists():
+        return None
+    mapping = RefMapping.model_validate_json(mapping_path.read_text(encoding="utf-8"))
+    if not mapping.use_refs_for_image:
+        return None
+    return mapping
+
+
+def _refs_for_scene(mapping: RefMapping | None, project_root: Path, scene: Scene) -> list[Path]:
+    if mapping is None:
+        return []
+    return resolve_refs_for_scene(mapping, project_root, scene)
+
+
 async def run_grok_image_task(task: GenerateTask) -> tuple[int, int]:
     project_root = Path(task.project_root)
     project = _load_project_readonly(_project_path(project_root, task.project_file))
     session = await connect_worker_cdp(task.cdp.url, task.cdp.base_url)
     try:
         image_engine = GrokImageEngine(session.page)
-        ref_engine = None
-        ref_paths = [_project_path(project_root, p) for p in task.options.image_refs]
-        use_refs = bool(task.options.use_refs_for_image and ref_paths)
-        if use_refs:
-            ref_engine = GrokImageRefEngine(session.page)
+        ref_mapping = _load_task_ref_mapping(task, project.scenes_json)
+        legacy_ref_paths = [_project_path(project_root, p) for p in task.options.image_refs]
+        legacy_use_refs = bool(task.options.use_refs_for_image and legacy_ref_paths)
+        ref_engine = GrokImageRefEngine(session.page) if (ref_mapping or legacy_use_refs) else None
 
         success = 0
         total = len(task.scene_ids)
@@ -68,7 +87,11 @@ async def run_grok_image_task(task: GenerateTask) -> tuple[int, int]:
                 settings["fast_mode"] = task.options.fast_mode
                 prompt = settings.pop("prompt")
 
-                if ref_engine is not None:
+                ref_paths = _refs_for_scene(ref_mapping, project_root, scene)
+                if not ref_paths and legacy_use_refs:
+                    ref_paths = legacy_ref_paths
+
+                if ref_engine is not None and ref_paths:
                     result = await ref_engine.gen_image_with_refs(
                         scene_id=scene_id,
                         prompt=prompt,

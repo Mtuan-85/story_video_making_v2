@@ -1,17 +1,21 @@
-"""Async render pipeline (Plan D): composite each scene → concat → ASS burn."""
+"""Native timeline render pipeline: visual timeline → master voice final mux."""
 
 from __future__ import annotations
 
 import asyncio
+import json
+import shutil
 from pathlib import Path
 
 from PyQt6.QtCore import pyqtSignal
 
 from core.project import Project
-from core.schema import Scene
 from core.voice_mapping import VoiceMapping
-from render.assemble import apply_ass_subtitle, assemble_concat
-from render.composite import composite_scene
+from render.bgm_mixer import (
+    burn_subtitle_mix_master_audio_bgm,
+    pick_bgm_files,
+)
+from render.timeline_visual import render_timeline_visuals
 from voice.ass_generator import generate_final_ass
 from workers._async_thread import AsyncTaskWorker
 
@@ -31,12 +35,10 @@ def _resolve_path(project: Project, rel_or_abs: str | None) -> Path | None:
 
 
 class RenderWorker(AsyncTaskWorker):
-    """Plan D render pipeline.
+    """Native timeline render pipeline.
 
-    Pass 1: composite per scene (visual + voice slice, NO subtitle).
-    Pass 2: assemble_concat → final_raw.mp4.
-    Pass 3: generate_final_ass from voice_mapping → final.ass.
-    Pass 4: apply_ass_subtitle (libass burn) → final.mp4.
+    Requires voice_matching_timeline.json + master_voice.wav. Audio stays as one
+    continuous master track; only visuals are segmented by timeline.
     """
 
     scene_started = pyqtSignal(str)
@@ -49,52 +51,67 @@ class RenderWorker(AsyncTaskWorker):
     def __init__(
         self,
         project: Project,
-        voice_mapping: VoiceMapping,
+        voice_mapping: VoiceMapping | None,
         bgm_dir: Path | None = None,
     ) -> None:
         super().__init__()
         self.project = project
         self.mapping = voice_mapping
-        self.bgm_dir = bgm_dir  # BGM mixing not wired in Plan D pipeline yet
+        self.bgm_dir = bgm_dir
+        self._partial_paths: list[Path] = []
+
+    def request_stop(self) -> None:
+        super().request_stop()
+        self.emit_log("Render stop requested; cleanup will run after current ffmpeg step")
+
+    def _stop_requested(self) -> bool:
+        try:
+            return self.stop_event.is_set()
+        except RuntimeError:
+            return False
+
+    def _cleanup_partial_outputs(self) -> None:
+        for path in self._partial_paths:
+            try:
+                if path.is_dir():
+                    shutil.rmtree(path, ignore_errors=True)
+                elif path.exists():
+                    path.unlink()
+            except OSError:
+                pass
+
+    def _cancel_if_stopped(self, stage: str) -> bool:
+        if not self._stop_requested():
+            return False
+        self._cleanup_partial_outputs()
+        self.finished_fail.emit(f"Đã dừng render tại {stage}; đã xóa output tạm")
+        return True
 
     async def _async_run(self) -> None:
-        scenes: list[Scene] = list(self.project.scenes)
-        total = len(scenes)
-        if total == 0:
-            self.finished_fail.emit("Không có scene nào để render")
+        timeline_path = self.project.paths.voice_matching_timeline_json
+        master_audio = self.project.paths.master_voice_wav
+        if not timeline_path.exists():
+            self.finished_fail.emit("Thiếu voice_matching_timeline.json — chạy Process Voice trước")
+            return
+        if not master_audio.exists():
+            self.finished_fail.emit("Thiếu voice/master_voice.wav — chạy Process Voice trước")
             return
 
         aspect = self.project.scenes_json.meta.aspect_ratio
         canvas_w, canvas_h = (1080, 1920) if aspect == "9:16" else (1920, 1080)
 
-        renders_dir = self.project.paths.renders_dir
-        renders_dir.mkdir(parents=True, exist_ok=True)
         temp_dir = self.project.paths.temp_dir
         temp_dir.mkdir(parents=True, exist_ok=True)
 
-        mapping_dict = self.mapping.model_dump(mode="json")
-        voice_files_meta = mapping_dict.get("voice_files", [])
-        voice_scenes = {vs["id"]: vs for vs in mapping_dict.get("scenes", [])}
+        try:
+            timeline = json.loads(timeline_path.read_text(encoding="utf-8"))
+        except Exception as e:
+            self.finished_fail.emit(f"Không đọc được voice_matching_timeline.json: {e}")
+            return
 
-        scene_outputs: list[Path] = []
-
-        # === Pass 1: composite each scene (no subtitle) ===
-        for i, scene in enumerate(scenes, start=1):
-            if self.stop_event.is_set():
-                self.emit_log("Đã hủy render")
-                self.finished_fail.emit("stopped")
-                return
-
-            self.scene_started.emit(scene.id)
-            self.progress.emit(i, total)
-
-            voice_scene = voice_scenes.get(scene.id)
-            if voice_scene is None:
-                reason = f"{scene.id}: không có entry trong voice_mapping"
-                self.scene_failed.emit(scene.id, reason)
-                self.emit_log(f"❌ {reason}")
-                continue
-
+        scenes_by_id = {scene.id: scene.model_dump() for scene in self.project.scenes}
+        visual_paths: dict[str, Path] = {}
+        for scene in self.project.scenes:
             asset_key = _visual_state_key(scene.visual_type)
             visual_state = self.project.get_scene_state(scene.id).get(asset_key, {})
             visual_path = _resolve_path(self.project, visual_state.get("path"))
@@ -102,77 +119,82 @@ class RenderWorker(AsyncTaskWorker):
                 reason = f"visual ({asset_key}) chưa ready"
                 self.scene_failed.emit(scene.id, reason)
                 self.emit_log(f"❌ {scene.id}: {reason}")
-                continue
+                return
+            visual_paths[scene.id] = visual_path
 
-            output = renders_dir / f"{scene.id}.mp4"
-            self.emit_log(
-                f"[{i}/{total}] composite {scene.id} "
-                f"({scene.visual_type}, "
-                f"{'silent' if voice_scene.get('is_silent') else 'voice'})..."
-            )
-            try:
-                await asyncio.to_thread(
-                    composite_scene,
-                    scene=scene.model_dump(),
-                    voice_scene=voice_scene,
-                    visual_path=visual_path,
-                    voice_files=voice_files_meta,
-                    project_root=self.project.paths.root,
-                    output_path=output,
-                    width=canvas_w,
-                    height=canvas_h,
-                )
-            except Exception as e:
-                self.scene_failed.emit(scene.id, str(e))
-                self.emit_log(f"❌ {scene.id}: {e}")
-                continue
-
-            scene_outputs.append(output)
-            self.scene_done.emit(scene.id)
-            self.emit_log(f"✓ {scene.id} composed → {output.name}")
-
-        if not scene_outputs:
-            self.finished_fail.emit("Không có scene nào composite OK")
-            return
-        if self.stop_event.is_set():
-            self.finished_fail.emit("stopped")
-            return
-
-        # === Pass 2: concat ===
-        self.emit_log(f"Concat {len(scene_outputs)} scenes...")
-        final_raw = temp_dir / "final_raw.mp4"
-        try:
-            await asyncio.to_thread(assemble_concat, scene_outputs, final_raw)
-        except Exception as e:
-            self.finished_fail.emit(f"assemble_concat: {e}")
-            return
-
-        # === Pass 3: gen ASS ===
-        ass_path = self.project.paths.root / "final.ass"
-        self.emit_log("Generate final.ass (karaoke)...")
+        self.emit_log("Render visual timeline (voice stays continuous)...")
+        final_video_only = temp_dir / "final_video_only.mp4"
+        timeline_work_dir = temp_dir / "timeline_segments"
+        self._partial_paths = [
+            final_video_only,
+            timeline_work_dir,
+            self.project.paths.root / "final.ass",
+        ]
         try:
             await asyncio.to_thread(
-                generate_final_ass,
-                voice_mapping=mapping_dict,
-                output_path=ass_path,
-                video_width=canvas_w,
-                video_height=canvas_h,
+                render_timeline_visuals,
+                timeline,
+                scenes_by_id,
+                visual_paths,
+                final_video_only,
+                timeline_work_dir,
+                canvas_w,
+                canvas_h,
             )
         except Exception as e:
-            self.finished_fail.emit(f"generate_final_ass: {e}")
+            self.finished_fail.emit(f"render_timeline_visuals: {e}")
+            return
+        if self._cancel_if_stopped("visual timeline"):
             return
 
-        # === Pass 4: burn ASS ===
+        ass_path: Path | None = self.project.paths.root / "final.ass"
+        if self.mapping is not None:
+            mapping_dict = self.mapping.model_dump(mode="json")
+            self.emit_log("Generate final.ass (karaoke)...")
+            try:
+                await asyncio.to_thread(
+                    generate_final_ass,
+                    voice_mapping=mapping_dict,
+                    output_path=ass_path,
+                    video_width=canvas_w,
+                    video_height=canvas_h,
+                )
+            except Exception as e:
+                self.finished_fail.emit(f"generate_final_ass: {e}")
+                return
+            if self._cancel_if_stopped("subtitle"):
+                return
+        else:
+            ass_path = None
+            self.emit_log("No voice_mapping subtitle phrases; render without ASS events")
+
         final_path = self.project.paths.final_mp4
-        self.emit_log("Burn ASS (libass)...")
+        if final_path not in self._partial_paths:
+            self._partial_paths.append(final_path)
         try:
-            await asyncio.to_thread(apply_ass_subtitle, final_raw, ass_path, final_path)
+            bgm_files = pick_bgm_files(self.bgm_dir)
+            if bgm_files:
+                self.emit_log(
+                    f"Burn ASS + loudnorm voice + mix BGM ({len(bgm_files)} files, -17dB)..."
+                )
+            else:
+                self.emit_log("Burn ASS + loudnorm master voice (no BGM)...")
+            await asyncio.to_thread(
+                burn_subtitle_mix_master_audio_bgm,
+                final_video_only,
+                master_audio,
+                ass_path,
+                final_path,
+                self.bgm_dir,
+            )
         except Exception as e:
-            self.finished_fail.emit(f"apply_ass_subtitle: {e}")
+            self.finished_fail.emit(f"final audio/subtitle pass: {e}")
+            return
+        if self._cancel_if_stopped("final mux"):
             return
 
         try:
-            final_raw.unlink()
+            final_video_only.unlink()
         except OSError:
             pass
 

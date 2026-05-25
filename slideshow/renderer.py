@@ -17,7 +17,10 @@ from animations import (
     build_animation,
     compose_transforms,
 )
-from zone_refiner import CHROMA_THRESHOLD as _REFINER_CHROMA_THRESHOLD
+# Sticker extraction needs a lower threshold than polygon refinement. The
+# refiner can be conservative, but the final alpha must keep antialiased text,
+# pale labels, and 1px strokes inside the polygon.
+STICKER_CHROMA_THRESHOLD = 4
 
 
 PRESETS = {
@@ -163,6 +166,9 @@ def render_slideshow_video(
         audio_inputs = []
         if sounds_dir:
             audio_inputs = _collect_audio_inputs(render_plan, sounds_dir)
+            log_cb(f"  Sound effects: {len(audio_inputs)} audio clip(s)")
+        else:
+            log_cb("  Sound effects: disabled (sounds_dir not set)")
 
         _encode_video(
             frames_dir=frames_dir,
@@ -309,22 +315,20 @@ def _extract_sticker(
     poly_mask = np.ascontiguousarray(np.array(mask_img), dtype=np.uint8)
 
     # Chroma mask via int32 squared-distance (no BLAS — safer in threaded context).
-    # CRITICAL: use SAME threshold as zone_refiner so polygon area matches
-    # sticker alpha exactly. Different thresholds → halo of bg_color around
-    # faint content (chroma 15-25) that never animates.
+    # Use a low extraction threshold so text antialiasing and pale strokes do
+    # not disappear even when the detected background is close in color.
     bg = np.array(bg_color, dtype=np.int32)
     diff = crop.astype(np.int32) - bg
     chroma_dist_sq = (diff * diff).sum(axis=2)
-    chroma_threshold_sq = _REFINER_CHROMA_THRESHOLD * _REFINER_CHROMA_THRESHOLD
+    chroma_threshold_sq = STICKER_CHROMA_THRESHOLD * STICKER_CHROMA_THRESHOLD
     chroma_mask = (chroma_dist_sq > chroma_threshold_sq).astype(np.uint8) * 255
 
     alpha = np.ascontiguousarray((poly_mask & chroma_mask), dtype=np.uint8)
 
-    # Morph open + blur (each step ensures contiguous uint8)
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
-    alpha = cv2.morphologyEx(alpha, cv2.MORPH_OPEN, kernel)
+    # Do not morph-open the sticker alpha. Opening erases thin text strokes and
+    # punctuation. A tiny blur is enough to soften jagged polygon/chroma edges.
     alpha = np.ascontiguousarray(alpha, dtype=np.uint8)
-    alpha = cv2.GaussianBlur(alpha, (5, 5), 1.5)
+    alpha = cv2.GaussianBlur(alpha, (3, 3), 0.6)
 
     rgba = np.dstack([crop, alpha])
     sticker_img = Image.fromarray(rgba, "RGBA")

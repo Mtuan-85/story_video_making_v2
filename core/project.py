@@ -489,6 +489,7 @@ class Project:
         scene = self.scene(scene_id)
         merged = {**scene.model_dump(), **updates}
         new_scene = Scene.model_validate(merged)
+        visual_type_changed = new_scene.visual_type != scene.visual_type
 
         scenes = list(self.scenes_json.scenes)
         for i, s in enumerate(scenes):
@@ -499,6 +500,15 @@ class Project:
             {**self.scenes_json.model_dump(), "scenes": [s.model_dump() for s in scenes]}
         )
         self.save_scenes_json()
+        if visual_type_changed:
+            scene_state = self.get_scene_state(scene_id)
+            scene_state["video"] = _initial_scene_state()["video"]
+            scene_state["edit"] = _initial_scene_state()["edit"]
+            scene_state["selected_visual"] = None
+            self.clear_warnings(scene_id, code="slideshow_render_failed")
+            self.clear_warnings(scene_id, code="slideshow_no_objects")
+            self.clear_warnings(scene_id, code="grok_no_video")
+            self._save_state_atomic()
         log.info(f"Đã cập nhật scene {scene_id}")
         return new_scene
 

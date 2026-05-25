@@ -26,8 +26,15 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from core.thumbnail import regenerate_thumbnail
 from core.project import Project
+from core.ref_mapping import (
+    RefMappingValidation,
+    RefMapping,
+    load_or_create_ref_mapping,
+    save_ref_mapping,
+    validate_ref_mapping,
+)
+from core.thumbnail import regenerate_thumbnail
 from runtime.estimator import Estimator
 from ui.connection_panel import ConnectionPanel
 from ui.refs_panel import RefImagesPanel
@@ -40,7 +47,8 @@ from ui.scene_list import SceneList
 from workers._async_thread import AsyncQThread
 from workers.export_worker import ExportKdenliveWorker
 from workers.render_worker import RenderWorker
-from workers.voice_align_worker import VoiceAlignWorker
+from workers.voice_align_worker import VoiceAlignWorker        # legacy
+from workers.two_level_match_worker import TwoLevelMatchWorker  # Sprint 1
 from workers.process_launcher import GenerateProcess
 from workers.slideshow_worker import SlideshowWorker, is_slideshow_eligible
 from workers.task_contract import CdpConfig, GenerateTask, TaskOptions, WorkerEvent
@@ -63,7 +71,7 @@ class MainWindow(QMainWindow):
         self._generate_proc: GenerateProcess | None = None
         self._generate_active_scene_ids: set[str] = set()
         self._single_video_workers: dict[str, AsyncQThread] = {}
-        self._voice_align_worker: VoiceAlignWorker | None = None
+        self._voice_align_worker: TwoLevelMatchWorker | None = None  # Sprint 1
         self._render_worker: RenderWorker | None = None
         self._export_worker: ExportKdenliveWorker | None = None
         self._active_workers: list = []
@@ -109,6 +117,26 @@ class MainWindow(QMainWindow):
         self.project_label = QLabel("(Chưa load dự án)")
         self.project_label.setStyleSheet("color:#666")
         proj_layout.addWidget(self.project_label, 1)
+
+        # Render final — placed in project header (right side), pipeline endpoint
+        self.btn_render = QPushButton("🎬 Render Final")
+        self.btn_render.setMinimumHeight(36)
+        self.btn_render.setStyleSheet(
+            "QPushButton { "
+            "  font-weight: bold; padding: 4px 16px; "
+            "  background-color: #2d7d2d; color: white; border-radius: 4px; "
+            "} "
+            "QPushButton:hover:enabled { background-color: #379037; } "
+            "QPushButton:disabled { background-color: #5a5a5a; color: #aaa; }"
+        )
+        self.btn_render.setToolTip(
+            "Composite all scenes + voice → final.mp4\n"
+            "(Yêu cầu Process Voice xong trước)"
+        )
+        self.btn_render.clicked.connect(self._start_render)
+        self.btn_render.setEnabled(False)
+        proj_layout.addWidget(self.btn_render)
+
         outer.addWidget(self.project_box)
 
         # Scene list + actions
@@ -174,11 +202,6 @@ class MainWindow(QMainWindow):
         self.btn_reset_design.setEnabled(False)
         action_row.addWidget(self.btn_reset_design)
 
-        self.btn_render = QPushButton("🎬 Render final")
-        self.btn_render.clicked.connect(self._start_render)
-        self.btn_render.setEnabled(False)
-        action_row.addWidget(self.btn_render)
-
         self.btn_process_voice = QPushButton("🎤 Process voice")
         self.btn_process_voice.setToolTip("Scan voice/ and align MP3/WAV/M4A/FLAC to scene scripts")
         self.btn_process_voice.clicked.connect(self._on_process_voice)
@@ -224,7 +247,7 @@ class MainWindow(QMainWindow):
         log_row.addWidget(log_box, 7)
 
         self.refs_panel = RefImagesPanel()
-        self.refs_panel.refs_changed.connect(self._on_refs_changed)
+        self.refs_panel.mapping_saved.connect(self._on_ref_mapping_saved)
         log_row.addWidget(self.refs_panel, 3)
 
         outer.addLayout(log_row)
@@ -304,23 +327,64 @@ class MainWindow(QMainWindow):
         self.scene_list.bind_project(self.project)  # emits batch_selection_changed
         self.btn_reload.setEnabled(True)
         self.btn_reset_design.setEnabled(True)
-        self.btn_render.setEnabled(self.project.voice_mapping is not None)
+        # Render unlocks if either legacy voice_mapping or Sprint 1 timeline exists
+        has_alignment = (
+            self.project.voice_mapping is not None
+            or self.project.paths.voice_matching_timeline_json.exists()
+        )
+        self.btn_render.setEnabled(has_alignment)
         self.btn_process_voice.setEnabled(True)
         self.btn_export_kdenlive.setEnabled(True)
 
-        self.refs_panel.set_state(
-            paths=[str(p) for p in self.project.get_image_refs()],
-            use_refs=self.project.get_use_refs_for_image(),
+        ref_mapping = load_or_create_ref_mapping(
+            self.project.paths.ref_mapping_json,
+            sorted(self.project.scenes_json.character.keys()),
+        )
+        self.refs_panel.set_mapping(
+            ref_mapping,
+            sorted(self.project.scenes_json.character.keys()),
         )
         self.refs_panel.setEnabled(True)
+        self._report_ref_mapping_status(ref_mapping, show_dialog=True)
 
         self._append_log(f"✓ Đã load dự án: {meta.title}")
 
-    def _on_refs_changed(self, paths: list, use_refs: bool) -> None:
+    def _on_ref_mapping_saved(self, mapping: RefMapping) -> None:
         if self.project is None:
             return
-        self.project.set_image_refs([str(p) for p in paths])
-        self.project.set_use_refs_for_image(bool(use_refs))
+        save_ref_mapping(self.project.paths.ref_mapping_json, mapping)
+        report = self._report_ref_mapping_status(mapping, show_dialog=True)
+        if report.ok:
+            QMessageBox.information(self, "Reference setup", "Refs ready.")
+
+    def _report_ref_mapping_status(
+        self,
+        mapping: RefMapping,
+        show_dialog: bool = False,
+    ) -> RefMappingValidation:
+        if self.project is None:
+            return RefMappingValidation(ok=True, missing=[])
+        report = validate_ref_mapping(
+            mapping,
+            self.project.paths.root,
+            sorted(self.project.scenes_json.character.keys()),
+        )
+        if report.ok:
+            self.refs_panel.set_status("Refs ready", ok=True)
+            self._append_log("✓ Reference setup ready")
+            return report
+
+        missing = ", ".join(report.missing)
+        self.refs_panel.set_status(f"Missing: {missing}", ok=False)
+        self._append_log(f"⚠ Reference setup thiếu: {missing}")
+        if show_dialog:
+            QMessageBox.warning(
+                self,
+                "Reference setup chưa đủ",
+                "Cần nạp đủ refs đang bật trước khi dùng image-with-refs:\n\n"
+                + "\n".join(f"- {item}" for item in report.missing),
+            )
+        return report
 
     # ------------------------------------------------------------------
     # Connection callbacks
@@ -373,11 +437,14 @@ class MainWindow(QMainWindow):
                 fast_mode=fast_mode,
                 use_refs_for_image=self.project.get_use_refs_for_image(),
                 image_refs=refs,
+                ref_mapping_path=str(self.project.paths.ref_mapping_json),
             ),
         )
 
     def _start_generate_process(self, task: GenerateTask) -> None:
         if self.project is None:
+            return
+        if not self._check_ref_mapping_before_image_task(task):
             return
         if self._generate_proc is not None and self._generate_proc.is_running():
             QMessageBox.information(self, "Đang chạy", "Image generation đang chạy.")
@@ -402,6 +469,37 @@ class MainWindow(QMainWindow):
         self._append_log(f"▶ Bắt đầu {task.task_type}: {len(task.scene_ids)} scene(s)")
         proc.start()
         self._refresh_batch_buttons()
+
+    def _check_ref_mapping_before_image_task(self, task: GenerateTask) -> bool:
+        if self.project is None or not task.task_type.endswith("_image"):
+            return True
+        mapping_path = self.project.paths.ref_mapping_json
+        if not mapping_path.exists():
+            return True
+        try:
+            mapping = RefMapping.model_validate_json(mapping_path.read_text(encoding="utf-8"))
+        except Exception as e:
+            QMessageBox.warning(
+                self,
+                "Reference setup lỗi",
+                f"Không đọc được ref mapping:\n{mapping_path}\n\n{e}",
+            )
+            return False
+        report = validate_ref_mapping(
+            mapping,
+            self.project.paths.root,
+            sorted(self.project.scenes_json.character.keys()),
+        )
+        if report.ok:
+            return True
+        QMessageBox.warning(
+            self,
+            "Reference setup chưa đủ",
+            "Cần Save refs đầy đủ trước khi chạy image generation:\n\n"
+            + "\n".join(f"- {item}" for item in report.missing),
+        )
+        self.refs_panel.set_status(f"Missing: {', '.join(report.missing)}", ok=False)
+        return False
 
     def _on_generate_event(self, event: WorkerEvent) -> None:
         if self.project is None:
@@ -1012,52 +1110,56 @@ class MainWindow(QMainWindow):
         return sorted(files, key=lambda p: p.name.lower())
 
     def _on_process_voice(self) -> None:
-        """Auto-align voice/ folder against scenes (Plan D, no wizard)."""
+        """Sprint 1 two-level voice matching.
+
+        Replaces the legacy Plan-D global-cursor align. Requires:
+          - {stem}_S5.json (beat narration + scenes[] + pause_after_sec)
+          - voice/beat-XX.mp3 (one per beat)
+        Outputs voice_matching_timeline.json + diagnostics into voice/.
+        """
         if self.project is None:
             return
         if self._voice_align_worker is not None and self._voice_align_worker.isRunning():
             QMessageBox.information(self, "Đang chạy", "Alignment đang chạy, đợi xong rồi thử lại.")
             return
 
-        voice_dir = self.project.paths.voice_dir
-        voice_files = self._scan_voice_dir(voice_dir)
-        if not voice_files:
+        paths = self.project.paths
+
+        # Validate inputs before spawning the worker for a clearer error
+        if not paths.s5_beats_json.exists():
             QMessageBox.warning(
                 self,
-                "Không có voice",
-                f"Folder voice/ trống. Bỏ file mp3/wav vào:\n{voice_dir}",
+                "Thiếu S5",
+                f"Không tìm thấy {paths.s5_beats_json.name}. "
+                f"S5 là file beat-level narration (script + scenes[] + pause_after_sec). "
+                f"Cần build từ TTS pipeline.",
             )
             return
 
-        scenes = [
-            {
-                "id": s.id,
-                "script": s.script,
-                "duration": s.duration,
-            }
-            for s in self.project.scenes
-        ]
-        language = self.project.scenes_json.meta.language
+        beat_mp3s = sorted(paths.voice_dir.glob("beat-*.mp3"))
+        if not beat_mp3s:
+            QMessageBox.warning(
+                self,
+                "Thiếu beat MP3",
+                f"Folder voice/ không có file beat-XX.mp3 nào.\n"
+                f"Cần TTS từng beat thành {paths.voice_dir}/beat-NN.mp3",
+            )
+            return
+
         self._append_log(
-            f"▶ Plan D align: {len(voice_files)} voice file(s), {len(scenes)} scene(s), "
-            f"lang={language}"
+            f"▶ Two-level match: {paths.s5_beats_json.name} + "
+            f"{len(beat_mp3s)} beat MP3(s)"
         )
 
-        worker = VoiceAlignWorker(
-            voice_files=voice_files,
-            scene_assignments={},  # Plan D auto-matches; legacy field
-            scenes=scenes,
-            work_dir=self.project.paths.temp_dir,
-            project_root=self.project.paths.root,
-            silent_scenes=[],  # Plan D detects silent via low score
+        worker = TwoLevelMatchWorker(
+            project=self.project,
             whisper_model="base",
-            language=language,
         )
         worker.log_message.connect(self._append_log)
         worker.failed.connect(
-            lambda fn, msg: self._append_log(f"❌ {fn}: {msg}")
+            lambda stage, msg: self._append_log(f"❌ {stage}: {msg}")
         )
-        worker.all_done.connect(self._on_voice_align_done)
+        worker.done.connect(self._on_voice_align_done)
         worker.finished.connect(self._cleanup_voice_align)
         self._voice_align_worker = worker
         worker.start()
@@ -1152,45 +1254,56 @@ class MainWindow(QMainWindow):
         box.setIcon(QMessageBox.Icon.Warning if missing else QMessageBox.Icon.Information)
         box.exec()
 
-    def _on_voice_align_done(self, mapping) -> None:
-        from core.voice_mapping import VoiceMapping  # local import to keep top tidy
-        if not isinstance(mapping, VoiceMapping):
-            self._append_log("⚠ alignment trả về dữ liệu không hợp lệ")
-            return
+    def _on_voice_align_done(self, timeline_path: str, diag_path: str) -> None:
+        """Sprint 1 TwoLevelMatchWorker done handler.
+
+        Emits (timeline_path, diagnostics_path) — both strings. We surface
+        a summary dialog with paths + key stats so the user knows where
+        the outputs landed. The legacy VoiceAlignReviewDialog is not used
+        because it consumes voice_mapping.json (v4 schema), not the new
+        voice_matching_timeline.json.
+        """
         if self.project is None:
             return
-        self.project.save_voice_mapping(mapping)
-        self._append_log(
-            f"✓ Alignment xong: {len(mapping.voice_files)} file, "
-            f"silent={len(mapping.silent_scenes)} scenes — đã lưu voice_mapping.json"
+
+        self._append_log(f"✓ Two-level match done: {Path(timeline_path).name}")
+
+        # Read diagnostics for a quick summary
+        summary_lines: list[str] = [f"Timeline: {timeline_path}"]
+        try:
+            import json as _json
+            diag = _json.loads(Path(diag_path).read_text(encoding="utf-8"))
+            s = diag.get("summary", {})
+            summary_lines.extend([
+                "",
+                f"beats:               {s.get('beats')}",
+                f"scenes total:        {s.get('scenes')}",
+                f"voiced:              {s.get('voiced_scenes')}",
+                f"silent:              {s.get('silent_scenes')}",
+                f"unmatched (voiced):  {s.get('unmatched_voiced_scenes')}",
+                f"beat pauses:         {s.get('beat_pauses')}",
+                f"total duration:      {s.get('total_duration'):.2f}s"
+                if s.get("total_duration") is not None else "",
+                "",
+                f"warnings: {len(diag.get('warnings', []))} (see {Path(diag_path).name})",
+            ])
+            if diag.get("warnings"):
+                summary_lines.append("\nFirst 5 warnings:")
+                for w in diag["warnings"][:5]:
+                    summary_lines.append(f"  • {w}")
+        except Exception as e:
+            log.warning(f"could not load diagnostics: {e}")
+
+        # Re-render path now unlocked
+        self.btn_render.setEnabled(True)
+        if hasattr(self, "btn_export_kdenlive"):
+            self.btn_export_kdenlive.setEnabled(True)
+
+        QMessageBox.information(
+            self,
+            "Two-level voice match xong",
+            "\n".join(summary_lines),
         )
-        scenes_data = [
-            {
-                "id": s.id,
-                "script": s.script,
-                "duration": s.duration,
-            }
-            for s in self.project.scenes
-        ]
-        whisper_words: list = []
-        whisper_words_path = self.project.paths.root / "whisper_words.json"
-        if whisper_words_path.exists():
-            try:
-                import json as _json
-                whisper_words = _json.loads(whisper_words_path.read_text(encoding="utf-8"))
-            except Exception as e:
-                log.warning(f"could not load whisper_words.json: {e}")
-        dlg = VoiceAlignReviewDialog(
-            voice_mapping=mapping,
-            scenes_data=scenes_data,
-            whisper_words=whisper_words,
-            parent=self,
-        )
-        dlg.save_requested.connect(self._on_voice_mapping_saved)
-        result = dlg.exec()
-        # Re-align all = result code 2 (set by dialog button).
-        if result == 2:
-            self._on_process_voice()
 
     def _on_voice_mapping_saved(self, mapping) -> None:
         from core.voice_mapping import VoiceMapping
@@ -1211,8 +1324,15 @@ class MainWindow(QMainWindow):
         if worker is not None:
             worker.deleteLater()
         self._voice_align_worker = None
-        if self.project is not None and self.project.voice_mapping is not None:
+        if self.project is None:
+            return
+        # Sprint 1 output unlocks BOTH Kdenlive export AND Render final.
+        # Render final now consumes voice_matching_timeline.json natively.
+        has_timeline = self.project.paths.voice_matching_timeline_json.exists()
+        if has_timeline:
             self.btn_render.setEnabled(True)
+            if hasattr(self, "btn_export_kdenlive"):
+                self.btn_export_kdenlive.setEnabled(True)
 
     # ------------------------------------------------------------------
     # Render final (Sprint 2 Phase 2B)
@@ -1221,12 +1341,20 @@ class MainWindow(QMainWindow):
     def _start_render(self) -> None:
         if self.project is None:
             return
-        if self.project.voice_mapping is None:
+
+        if not self.project.paths.voice_matching_timeline_json.exists():
             QMessageBox.warning(
-                self, "Chưa có voice_mapping",
-                "Import voice và alignment trước khi render final.",
+                self, "Chưa có voice alignment",
+                "Bấm 'Process Voice' để tạo voice_matching_timeline.json trước.",
             )
             return
+        if not self.project.paths.master_voice_wav.exists():
+            QMessageBox.warning(
+                self, "Thiếu master audio",
+                "Bấm 'Process Voice' để tạo voice/master_voice.wav trước.",
+            )
+            return
+
         if self._render_worker is not None and self._render_worker.isRunning():
             return
 
@@ -1287,15 +1415,11 @@ class MainWindow(QMainWindow):
             )
             if reply != QMessageBox.StandardButton.Yes:
                 return
-        voice_dict = (
-            self.project.voice_mapping.model_dump()
-            if self.project.voice_mapping is not None else None
-        )
+        aspect = self.project.scenes_json.meta.aspect_ratio
         worker = ExportKdenliveWorker(
             project=self.project,
-            voice_mapping=voice_dict,
             output_path=output_path,
-            also_srt=True,
+            aspect_ratio=aspect,
         )
         worker.log_message.connect(self._append_log)
         worker.export_done.connect(self._on_export_done)
@@ -1307,13 +1431,14 @@ class MainWindow(QMainWindow):
         worker.start()
         self._register_worker(worker)
 
-    def _on_export_done(self, kpath: str, srt: str) -> None:
-        msg = f"Đã xuất Kdenlive XML:\n{kpath}"
-        if srt:
-            msg += f"\n\nSubtitles SRT:\n{srt}"
+    def _on_export_done(self, kpath: str, diag_path: str) -> None:
+        msg = f"Đã xuất Kdenlive:\n{kpath}"
+        if diag_path:
+            msg += f"\n\nDiagnostics:\n{diag_path}"
         msg += (
             "\n\nMở Kdenlive → File → Open → chọn .kdenlive này.\n"
-            "Lưu ý: effects/transitions/color chưa export — re-add manual nếu cần."
+            "Master audio đã wire vào A1. V1 có scene + beat-pause clips.\n"
+            "Effects/transitions chưa export — re-add manual nếu cần."
         )
         QMessageBox.information(self, "Export OK", msg)
 

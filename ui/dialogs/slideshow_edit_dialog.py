@@ -50,6 +50,13 @@ from PyQt6.QtWidgets import (
 )
 
 from ui.dialogs.slideshow_canvas import SlideshowCanvas
+from ui.dialogs.slideshow_zone_ops import (
+    add_default_zone,
+    apply_sound_to_all,
+    delete_zone,
+    move_zone,
+    resequence_zones,
+)
 
 
 # Animation catalogs (sync with slideshow/animations.py DEFAULTS)
@@ -195,6 +202,39 @@ class SlideshowEditDialog(QDialog):
         self.table.cellClicked.connect(self._on_table_cell_clicked)
         right_layout.addWidget(self.table, 1)
 
+        # Bulk sound controls
+        sound_all_row = QHBoxLayout()
+        sound_all_row.addWidget(QLabel("Sound all:"))
+        self.sound_all_combo = QComboBox()
+        self.sound_all_combo.addItems(SOUNDS)
+        self.sound_all_combo.setCurrentText("ding")
+        sound_all_row.addWidget(self.sound_all_combo, 1)
+        b_sound_all = QPushButton("Apply")
+        b_sound_all.setToolTip("Áp dụng sound này cho tất cả zones")
+        b_sound_all.clicked.connect(self._on_apply_sound_all)
+        sound_all_row.addWidget(b_sound_all)
+        right_layout.addLayout(sound_all_row)
+
+        # Zone structure controls
+        zone_ops = QHBoxLayout()
+        b_add = QPushButton("+ Add Zone")
+        b_add.setToolTip("Thêm zone chữ nhật ở giữa ảnh, rồi kéo vertex để chỉnh polygon")
+        b_add.clicked.connect(self._on_add_zone)
+        zone_ops.addWidget(b_add)
+        b_up = QPushButton("↑ Up")
+        b_up.setToolTip("Đưa zone đang chọn lên trước trong thứ tự render/timing")
+        b_up.clicked.connect(self._on_move_up)
+        zone_ops.addWidget(b_up)
+        b_down = QPushButton("↓ Down")
+        b_down.setToolTip("Đưa zone đang chọn xuống sau trong thứ tự render/timing")
+        b_down.clicked.connect(self._on_move_down)
+        zone_ops.addWidget(b_down)
+        b_delete = QPushButton("× Delete")
+        b_delete.setToolTip("Xóa zone đang chọn")
+        b_delete.clicked.connect(self._on_delete_zone)
+        zone_ops.addWidget(b_delete)
+        right_layout.addLayout(zone_ops)
+
         # Undo/redo controls
         undo_row = QHBoxLayout()
         b_undo = QPushButton("↩ Undo")
@@ -242,6 +282,7 @@ class SlideshowEditDialog(QDialog):
     # ------------------------------------------------------------------
 
     def _populate_table(self) -> None:
+        resequence_zones(self._zones)
         self.table.setRowCount(len(self._zones))
         for row, zone in enumerate(self._zones):
             zone_id = zone.get("zone_id", row + 1)
@@ -331,6 +372,23 @@ class SlideshowEditDialog(QDialog):
                 self.table.selectRow(row)
                 break
 
+    def _selected_zone_id(self) -> Optional[int]:
+        row = self.table.currentRow()
+        if 0 <= row < len(self._zones):
+            return int(self._zones[row].get("zone_id", row + 1))
+        return None
+
+    def _refresh_zones_view(self, select_zone_id: Optional[int] = None) -> None:
+        self.canvas.set_zones(self._zones)
+        self._populate_table()
+        if select_zone_id is not None:
+            for row, zone in enumerate(self._zones):
+                if int(zone.get("zone_id", -1)) == int(select_zone_id):
+                    self.table.selectRow(row)
+                    self.canvas.select_zone(select_zone_id)
+                    break
+        self._dirty = True
+
     def _on_polygons_changed(self) -> None:
         self._dirty = True
 
@@ -349,6 +407,14 @@ class SlideshowEditDialog(QDialog):
             self._zones[row]["sound"] = value
             self._dirty = True
 
+    def _on_apply_sound_all(self) -> None:
+        sound = self.sound_all_combo.currentText()
+        if sound not in SOUNDS:
+            return
+        apply_sound_to_all(self._zones, sound)
+        self._populate_table()
+        self._dirty = True
+
     def _on_appear_changed(self, row: int, value: float) -> None:
         if 0 <= row < len(self._zones):
             self._zones[row]["appear_at"] = round(value, 2)
@@ -358,6 +424,49 @@ class SlideshowEditDialog(QDialog):
         if 0 <= row < len(self._zones):
             self._zones[row]["end_at"] = round(value, 2)
             self._dirty = True
+
+    def _on_add_zone(self) -> None:
+        image_size = (1280, 720)
+        if self._image_path and self._image_path.exists():
+            from PIL import Image
+
+            with Image.open(self._image_path) as img:
+                image_size = img.size
+        template = self._zones[-1] if self._zones else None
+        zone = add_default_zone(self._zones, image_size=image_size, template=template)
+        self._refresh_zones_view(int(zone["zone_id"]))
+
+    def _on_move_up(self) -> None:
+        zone_id = self._selected_zone_id()
+        if zone_id is None:
+            return
+        if move_zone(self._zones, zone_id, -1):
+            self._refresh_zones_view(zone_id)
+
+    def _on_move_down(self) -> None:
+        zone_id = self._selected_zone_id()
+        if zone_id is None:
+            return
+        if move_zone(self._zones, zone_id, 1):
+            self._refresh_zones_view(zone_id)
+
+    def _on_delete_zone(self) -> None:
+        zone_id = self._selected_zone_id()
+        if zone_id is None:
+            return
+        if len(self._zones) <= 1:
+            QMessageBox.information(self, "Không thể xóa", "Cần giữ ít nhất 1 zone.")
+            return
+        reply = QMessageBox.question(
+            self,
+            "Xác nhận xóa",
+            f"Xóa zone {zone_id}?",
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        delete_zone(self._zones, zone_id)
+        next_id = int(self._zones[min(self.table.currentRow(), len(self._zones) - 1)]["zone_id"])
+        self._refresh_zones_view(next_id)
 
     # ------------------------------------------------------------------
     # Actions

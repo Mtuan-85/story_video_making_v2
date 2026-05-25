@@ -14,7 +14,7 @@ This is the new slideshow engine, replacing the old object-cropping + group-anim
 | **Grouping** | Claude decides grouping/animation | Claude picks zones directly (simpler) |
 | **Animation** | filter_complex overlay on objects | M1 renderer + frame composition (robust) |
 | **Threading** | Async worker thread | Sync function (single-thread, no cancel) |
-| **Integration** | Wrapped in SlideshowWorker | Direct function call |
+| **Integration** | Async wrapper / shared thread pool | Fresh `SlideshowWorker` QThread calls package directly |
 
 ### Module Structure
 
@@ -75,12 +75,12 @@ mp4_path = render_slideshow_v2(
 )
 ```
 
-### From Render Layer
+### Legacy Render Layer
 
 ```python
 from render.slideshow import render_slideshow
 
-# Async wrapper
+# Deprecated async wrapper kept only for old callers.
 mp4_path = await render_slideshow(
     image_path=Path("scene.png"),
     output_path=Path("output.mp4"),
@@ -165,12 +165,37 @@ After successful render, the caller can:
 
 The zone editor reuses the `zone_animate_app.zone_editor.ZoneEditorDialog` component.
 
+## Sound Effects Contract
+
+Each zone stores a `sound` value. Supported bundled sounds are:
+
+```text
+pop, flip, whoosh, swoosh, ding
+```
+
+During slideshow rendering:
+
+1. `renderer._collect_audio_inputs()` resolves `slideshow/assets/sounds/{sound}.wav`.
+2. Each sound is offset to the zone `appear_at`.
+3. `_encode_video()` mixes all zone sounds into the standalone slideshow MP4.
+4. `SlideshowEditDialog` lets the user edit sound per zone and provides
+   `Sound all -> Apply` for bulk changes before re-render.
+
+Important: story final render currently treats slideshow MP4s as visual-only.
+`render/timeline_visual.py` uses `-an` for scene segments, then final mux adds
+continuous `master_voice.wav` and optional BGM. Therefore slideshow SFX are
+audible in the standalone slideshow MP4 preview, but not in `final.mp4`.
+
+Future expansion: preserve slideshow SFX in final render by building an SFX
+audio timeline from slideshow scene segments and mixing it into the final
+master-voice/BGM pass.
+
 ## Constants & Tuning
 
 All tunable parameters live in `zone_refiner.py` top-level:
 
 - `CHROMA_THRESHOLD = 15` — color distance threshold for chroma mask
-- `MIN_COMPONENT_AREA = 100` — minimum blob size in px²
+- `MIN_COMPONENT_AREA = 20` — minimum blob size in px²
 - `DOUGLAS_PEUCKER_EPSILON = 2.0` — polygon simplification tolerance
 - `EDGE_TOUCH_RATIO = 0.05` — threshold for edge-touch expansion (5% of edge)
 - `EXPANSION_PX = 30` — bbox growth per edge-touch iteration
@@ -180,19 +205,19 @@ Adjust these if zones are too loose or too tight for specific image types.
 
 ## Integration with story_video_making_v2
 
-1. **SlideshowWorker** imports and calls `render_slideshow` from `render/slideshow.py`
-2. **render/slideshow.py** wraps `render_slideshow_v2` in `asyncio.to_thread` for non-blocking execution
-3. **No worker state machine** — single function call, simple success/failure
-4. **User can edit after render** — zone editor modal available post-render
+1. **SlideshowWorker** imports and calls `slideshow.render_slideshow_v2` directly inside a fresh QThread.
+2. **render/slideshow.py** is deprecated and retained only for legacy imports.
+3. **No mid-process cancellation** — full pipeline runs to completion once started.
+4. **User can edit after render** — `SlideshowEditDialog` loads saved zones JSON and re-renders without Claude.
 
 ### Workflow in MainWindow
 
 1. User selects scenes with `visual_type="slideshow"` and ready source images
-2. User clicks **Batch Edit** → creates `SlideshowWorker` for each scene
-3. Worker calls `render_slideshow` → full pipeline → MP4
-4. On success: updates `project.state[scene_id]["video"]` with MP4 path + `source_type="slideshow"`
+2. User clicks **Batch Edit** → creates one `SlideshowWorker` per scene, run sequentially by MainWindow
+3. Worker calls `render_slideshow_v2` → full pipeline → MP4
+4. On success: updates `project.state[scene_id]["video"]` with MP4 path + `source_type="slideshow"` and `project.state[scene_id]["edit"]` with zones/thumb paths
 5. On failure: updates state with `fail_reason`, emits signal
-6. User can preview + optionally open Zone Editor to refine/re-render
+6. User can open Zone Editor to refine/re-render without Claude
 
 ## Performance
 

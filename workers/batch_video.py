@@ -2,7 +2,7 @@
 
 Per-scene routing:
   - Video         → Grok image-to-video (uses connection + retry+kill+relaunch)
-  - slideshow     → render/slideshow.render_slideshow (offline)
+  - slideshow     → SKIP; use Batch Edit / SlideshowWorker instead
   - Image         → SKIP (still image IS the asset; zoom motion is added at
                     final render via Scene.effect, no separate video file needed)
 
@@ -25,7 +25,6 @@ from core.schema import Scene
 from core.thumbnail import regenerate_thumbnail
 from engines.grok.browser import GrokConnection
 from engines.grok.engine import GrokVideoEngine
-from render.slideshow import render_slideshow
 from runtime.estimator import Estimator
 from workers._async_thread import AsyncQThread
 from workers._retry import run_with_retry
@@ -64,7 +63,7 @@ def is_eligible(project: Project, scene: Scene) -> tuple[bool, str]:
 
     Image         → not animated (skip silently)
     Video         → requires videoPrompt + ready ref image
-    slideshow     → requires ready source image
+    slideshow     → handled by Batch Edit, not Batch Video
     """
     vt = scene.visual_type
     if vt == "Image":
@@ -78,9 +77,7 @@ def is_eligible(project: Project, scene: Scene) -> tuple[bool, str]:
         return True, ""
 
     if vt == "slideshow":
-        if not img_ready:
-            return False, "chưa có ảnh ready để render slideshow"
-        return True, ""
+        return False, "slideshow dùng Batch Edit, không chạy trong Batch Video"
 
     return False, f"visual_type không hỗ trợ: {vt}"
 
@@ -200,7 +197,6 @@ class BatchVideoWorker(AsyncQThread):
         vt = scene.visual_type
         scene_idx = self.project.scene_index(scene.id)
         output_path = self.project.paths.video_path(scene_idx)
-        aspect = self.project.scenes_json.meta.aspect_ratio
 
         self.project.update_scene_state(
             scene.id, "video",
@@ -211,7 +207,11 @@ class BatchVideoWorker(AsyncQThread):
         if vt == "Video":
             return await self._gen_one_grok(scene, total, idx, output_path)
         if vt == "slideshow":
-            return await self._gen_one_slideshow(scene, total, idx, output_path, aspect)
+            return self._mark_failed(
+                scene,
+                "slideshow dùng Batch Edit, không chạy trong Batch Video",
+                warn_code="slideshow_render_failed",
+            )
         return self._mark_failed(scene, f"visual_type không hỗ trợ: {vt}", warn_code="grok_no_video")
 
     async def _gen_one_grok(self, scene: Scene, total: int, idx: int, output_path: Path) -> bool:
@@ -284,33 +284,6 @@ class BatchVideoWorker(AsyncQThread):
         return self._mark_ready(scene, total, idx, result_path, source_type="grok",
                                  elapsed=elapsed, action="gen_video",
                                  clear_warn_code="grok_no_video")
-
-    async def _gen_one_slideshow(self, scene: Scene, total: int, idx: int,
-                                  output_path: Path, aspect: str) -> bool:
-        image_path = _resolve_image_path(self.project, scene)
-        if image_path is None:
-            return self._mark_failed(scene, "ảnh nguồn không tồn tại trên disk",
-                                     warn_code="slideshow_render_failed")
-        self.emit_log(f"[{idx}/{total}] {scene.id}: đang render slideshow ({scene.duration}s)...")
-        t0 = time.monotonic()
-        try:
-            result_path = await self.run_with_stop(
-                render_slideshow(
-                    image_path=image_path, output_path=output_path,
-                    duration_sec=float(scene.duration), aspect_ratio=aspect,
-                    log_cb=self.emit_log,
-                )
-            )
-        except asyncio.CancelledError:
-            return self._mark_failed(scene, "user_stopped", warn_code="slideshow_render_failed")
-        except Exception as e:
-            return self._mark_failed(scene, str(e), warn_code="slideshow_render_failed")
-        elapsed = time.monotonic() - t0
-        if result_path is None:
-            return self._mark_failed(scene, "stopped", warn_code="slideshow_render_failed")
-        return self._mark_ready(scene, total, idx, result_path, source_type="slideshow",
-                                 elapsed=elapsed, action="slideshow_render",
-                                 clear_warn_code="slideshow_render_failed")
 
     def _mark_ready(self, scene: Scene, total: int, idx: int, result_path: Path,
                     source_type: str, elapsed: float, action: str,

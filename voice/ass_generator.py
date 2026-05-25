@@ -14,7 +14,7 @@ from loguru import logger as log
 
 
 # === Style configuration ===
-ASS_FONT = "Arial"
+ASS_FONT = "Cambria"
 ASS_FONTSIZE = 50
 ASS_BOLD = True
 
@@ -28,8 +28,9 @@ ASS_OUTLINE_RGB = (0, 0, 0)          # black outline
 ASS_OUTLINE = 2.0
 ASS_SHADOW = 1.0
 
-ASS_ALIGNMENT = pysubs2.Alignment.BOTTOM_CENTER  # 2
-ASS_MARGIN_V = 100  # px from bottom
+ASS_ALIGNMENT = pysubs2.Alignment.MIDDLE_CENTER  # 5
+ASS_MARGIN_V = 100
+ASS_MARGIN_H = 100
 
 
 def generate_final_ass(
@@ -69,6 +70,8 @@ def generate_final_ass(
     style.shadow = ASS_SHADOW
     style.alignment = ASS_ALIGNMENT
     style.marginv = ASS_MARGIN_V
+    style.marginl = ASS_MARGIN_H
+    style.marginr = ASS_MARGIN_H
     subs.styles["Default"] = style
 
     cursor_ms = 0  # cumulative position in final video

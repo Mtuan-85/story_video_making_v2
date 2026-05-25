@@ -70,6 +70,7 @@ class PreviewDialog(QDialog):
         self._audio_output: QAudioOutput | None = None
         self._position_slider: QSlider | None = None
         self._slider_dragging = False
+        self._video_path: Path | None = None
 
         self.setWindowTitle(f"Preview — {scene.id}")
         self.resize(960, 760)
@@ -218,6 +219,7 @@ class PreviewDialog(QDialog):
         layout.addWidget(label)
 
     def _load_video(self, layout: QVBoxLayout, path: Path) -> None:
+        self._video_path = path
         video_widget = QVideoWidget()
         video_widget.setMinimumHeight(380)
         video_widget.setStyleSheet("background:#000;")
@@ -227,7 +229,6 @@ class PreviewDialog(QDialog):
         self._audio_output = QAudioOutput(self)
         self._media_player.setAudioOutput(self._audio_output)
         self._media_player.setVideoOutput(video_widget)
-        self._media_player.setSource(QUrl.fromLocalFile(str(path)))
 
         controls = QHBoxLayout()
         b_play = QPushButton("▶ Play")
@@ -246,9 +247,15 @@ class PreviewDialog(QDialog):
         self._position_slider.sliderReleased.connect(self._on_slider_released)
         controls.addWidget(self._position_slider, 1)
 
+        b_system = QPushButton("📺 Mở bằng player hệ thống")
+        b_system.setToolTip("Mở MP4 bằng default player (nếu Qt không phát được)")
+        b_system.clicked.connect(self._open_in_system_player)
+        controls.addWidget(b_system)
+
         self._media_player.positionChanged.connect(self._on_position_changed)
         self._media_player.durationChanged.connect(self._on_duration_changed)
         self._media_player.errorOccurred.connect(self._on_media_error)
+        self._media_player.setSource(QUrl.fromLocalFile(str(path)))
         layout.addLayout(controls)
 
     def _on_position_changed(self, pos: int) -> None:
@@ -270,6 +277,37 @@ class PreviewDialog(QDialog):
     def _on_media_error(self, _err, msg: str) -> None:
         from loguru import logger as log
         log.warning(f"QMediaPlayer error: {msg}")
+        layout = self.visual_frame.layout()
+        if layout is None:
+            return
+
+        while layout.count():
+            item = layout.takeAt(0)
+            w = item.widget()
+            if w is not None:
+                w.deleteLater()
+
+        warn = QLabel(
+            "⚠ <b>Qt không phát được video</b> (thiếu codec H.264 hoặc MP4 không hợp lệ)<br>"
+            f"<small>{msg}</small>"
+        )
+        warn.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        warn.setStyleSheet("color:#fff; padding:20px;")
+        warn.setWordWrap(True)
+        layout.addWidget(warn)
+
+        b_system = QPushButton("📺 Mở bằng player hệ thống")
+        b_system.setMinimumHeight(40)
+        b_system.clicked.connect(self._open_in_system_player)
+        layout.addWidget(b_system, alignment=Qt.AlignmentFlag.AlignCenter)
+
+    def _open_in_system_player(self) -> None:
+        if self._video_path and self._video_path.exists():
+            try:
+                os.startfile(str(self._video_path))
+            except Exception as e:
+                from loguru import logger as log
+                log.error(f"Open in system player failed: {e}")
 
     # --- Save / Re-gen / Folder ---------------------------------------------
 

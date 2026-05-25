@@ -60,6 +60,34 @@ class ProjectPaths:
         return self.root / f"{self.stem}_state.json"
 
     @property
+    def ref_mapping_json(self) -> Path:
+        return self.root / f"{self.stem}_ref_mapping.json"
+
+    @property
+    def s5_beats_json(self) -> Path:
+        """Sprint 1 source-of-truth beat narration. e.g. Naomi2_S5.json.
+
+        S5 = per-beat raw narration + scenes[] + pause_after_sec. S6 adds
+        emotional TTS tags and must NOT be used for word matching.
+        """
+        return self.root / f"{self.stem}_S5.json"
+
+    @property
+    def master_voice_wav(self) -> Path:
+        """Concatenated beat audio + synthetic silence. Sprint 1 output."""
+        return self.voice_dir / "master_voice.wav"
+
+    @property
+    def voice_matching_timeline_json(self) -> Path:
+        """Sprint 1 output: voice_matching_timeline.json."""
+        return self.voice_dir / "voice_matching_timeline.json"
+
+    @property
+    def voice_matching_diagnostics_json(self) -> Path:
+        """Sprint 1 output: voice_matching_diagnostics.json."""
+        return self.voice_dir / "voice_matching_diagnostics.json"
+
+    @property
     def legacy_state_json(self) -> Path:
         """Old convention: ``state.json`` next to ``scenes.json``. Used as a
         one-shot fallback during load when no ``<stem>_state.json`` exists.
