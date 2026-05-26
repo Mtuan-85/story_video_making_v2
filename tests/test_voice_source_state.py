@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from core.project import Project
+from ui.main_window import voice_source_ui_state
 
 
 def _write_minimal_project(root: Path) -> Path:
@@ -62,3 +63,27 @@ def test_project_uses_legacy_master_voice_when_raw_file_has_not_been_migrated(tm
     project = Project.load(_write_minimal_project(tmp_path))
 
     assert project.active_master_voice_path == legacy
+
+
+def test_voice_source_ui_disables_enhance_source_until_enhanced_master_exists(tmp_path: Path):
+    project = Project.load(_write_minimal_project(tmp_path))
+    project.paths.whisper_words_raw_json.parent.mkdir(parents=True)
+    project.paths.whisper_words_raw_json.write_text('{"words":[]}', encoding="utf-8")
+
+    state = voice_source_ui_state(project)
+
+    assert state["can_enhance_voice"] is True
+    assert state["can_whisper_raw"] is False
+    assert state["can_whisper_enhance"] is False
+
+
+def test_voice_source_ui_enables_enhance_source_after_enhanced_master_exists(tmp_path: Path):
+    project = Project.load(_write_minimal_project(tmp_path))
+    project.paths.whisper_words_raw_json.parent.mkdir(parents=True)
+    project.paths.whisper_words_raw_json.write_text('{"words":[]}', encoding="utf-8")
+    project.paths.master_voice_enhanced_wav.parent.mkdir(parents=True)
+    project.paths.master_voice_enhanced_wav.write_bytes(b"enhanced")
+
+    state = voice_source_ui_state(project)
+
+    assert state["can_whisper_enhance"] is True

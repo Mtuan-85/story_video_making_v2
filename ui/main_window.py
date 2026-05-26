@@ -57,6 +57,16 @@ from workers.slideshow_worker import SlideshowWorker, is_slideshow_eligible
 from workers.task_contract import CdpConfig, GenerateTask, TaskOptions, WorkerEvent
 
 
+def voice_source_ui_state(project: Project) -> dict[str, bool]:
+    paths = project.paths
+    raw_master_available = paths.master_voice_raw_wav.exists() or paths.legacy_master_voice_wav.exists()
+    return {
+        "can_enhance_voice": paths.whisper_words_raw_json.exists(),
+        "can_whisper_raw": raw_master_available,
+        "can_whisper_enhance": paths.master_voice_enhanced_wav.exists(),
+    }
+
+
 class MainWindow(QMainWindow):
     # Cross-thread log sink: loguru's _sink may fire from any worker thread.
     # Touching log_view directly from a non-GUI thread = Qt thread affinity
@@ -1171,13 +1181,24 @@ class MainWindow(QMainWindow):
     def _refresh_voice_source_combo(self) -> None:
         if self.project is None or not hasattr(self, "voice_source_combo"):
             return
+        state = voice_source_ui_state(self.project)
         active = self.project.get_active_voice_source()["source"]
         for i in range(self.voice_source_combo.count()):
+            source = self.voice_source_combo.itemData(i)
+            enabled = state["can_whisper_enhance"] if source == "enhance" else state["can_whisper_raw"]
+            item = self.voice_source_combo.model().item(i)
+            if item is not None:
+                item.setEnabled(enabled)
             if self.voice_source_combo.itemData(i) == active:
                 self.voice_source_combo.setCurrentIndex(i)
-                break
-        self.btn_enhance_voice.setEnabled(self.project.paths.whisper_words_raw_json.exists())
-        self.btn_whisper_voice.setEnabled(True)
+        current_source = self.voice_source_combo.currentData() or "raw"
+        if current_source == "enhance" and not state["can_whisper_enhance"]:
+            self.voice_source_combo.setCurrentIndex(0)
+            current_source = "raw"
+        self.btn_enhance_voice.setEnabled(state["can_enhance_voice"])
+        self.btn_whisper_voice.setEnabled(
+            state["can_whisper_enhance"] if current_source == "enhance" else state["can_whisper_raw"]
+        )
 
     def _on_enhance_voice(self) -> None:
         if self.project is None:
@@ -1220,6 +1241,18 @@ class MainWindow(QMainWindow):
         if self._voice_whisper_worker is not None and self._voice_whisper_worker.isRunning():
             return
         source = self.voice_source_combo.currentData() or "raw"
+        state = voice_source_ui_state(self.project)
+        can_run = state["can_whisper_enhance"] if source == "enhance" else state["can_whisper_raw"]
+        if not can_run:
+            QMessageBox.warning(
+                self,
+                "Thiếu voice source",
+                "Source Enhanced chưa có. Chạy Enhance voice trước rồi mới Whisper Enhanced."
+                if source == "enhance"
+                else "Source Raw chưa có. Chạy Process Voice trước rồi mới Whisper Raw.",
+            )
+            self._refresh_voice_source_combo()
+            return
         worker = VoiceWhisperWorker(self.project, source=str(source), whisper_model="base")
         worker.log_message.connect(self._append_log)
         worker.failed.connect(lambda msg: self._append_log(f"❌ Whisper voice: {msg}"))
