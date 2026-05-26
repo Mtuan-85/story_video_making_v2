@@ -78,6 +78,34 @@ class ProjectPaths:
         return self.voice_dir / "master_voice.wav"
 
     @property
+    def voice_source_dir(self) -> Path:
+        return self.voice_dir / "source"
+
+    @property
+    def voice_source_s6_dir(self) -> Path:
+        return self.voice_source_dir / "s6"
+
+    @property
+    def legacy_s6_voice_dir(self) -> Path:
+        return self.root / f"{self.stem}_S6_voice"
+
+    @property
+    def master_voice_raw_wav(self) -> Path:
+        return self.voice_dir / "master_voice_raw.wav"
+
+    @property
+    def master_voice_enhanced_wav(self) -> Path:
+        return self.voice_dir / "master_voice_enhanced.wav"
+
+    @property
+    def whisper_words_raw_json(self) -> Path:
+        return self.voice_dir / "whisper_words_raw.json"
+
+    @property
+    def whisper_words_enhanced_json(self) -> Path:
+        return self.voice_dir / "whisper_words_enhanced.json"
+
+    @property
     def voice_matching_timeline_json(self) -> Path:
         """Sprint 1 output: voice_matching_timeline.json."""
         return self.voice_dir / "voice_matching_timeline.json"
@@ -109,6 +137,14 @@ class ProjectPaths:
     @property
     def temp_dir(self) -> Path:
         return self.root / "temp"
+
+    @property
+    def cache_dir(self) -> Path:
+        return self.root / "cache"
+
+    @property
+    def kdenlive_cache_dir(self) -> Path:
+        return self.cache_dir / "kdenlive"
 
     @property
     def final_mp4(self) -> Path:

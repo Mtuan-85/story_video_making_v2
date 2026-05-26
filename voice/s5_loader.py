@@ -91,6 +91,17 @@ def _normalize_beat_id(raw_id: str) -> tuple[str, int]:
     return f"beat-{idx:02d}", idx
 
 
+def _candidate_voice_dirs(voice_dir: Path) -> list[Path]:
+    voice_dir = Path(voice_dir)
+    project_root = voice_dir.parent
+    dirs = [
+        voice_dir / "source" / "s6",
+        voice_dir,
+    ]
+    dirs.extend(sorted(project_root.glob("*_S6_voice")))
+    return dirs
+
+
 def _find_voice_file(voice_dir: Path, beat_index: int) -> Optional[Path]:
     """Try common naming patterns for the per-beat MP3."""
     candidates = [
@@ -99,10 +110,11 @@ def _find_voice_file(voice_dir: Path, beat_index: int) -> Optional[Path]:
         f"beat_{beat_index:02d}.mp3",
         f"beat_{beat_index}.mp3",
     ]
-    for name in candidates:
-        p = voice_dir / name
-        if p.exists():
-            return p.resolve()
+    for directory in _candidate_voice_dirs(voice_dir):
+        for name in candidates:
+            p = directory / name
+            if p.exists():
+                return p.resolve()
     return None
 
 

@@ -15,6 +15,7 @@ Clip key convention:
     scene:{scene_id}         → primary scene visual
     pause:{beat_id}          → beat_pause visual (freeze or reused image)
     audio:master             → master_voice.wav
+    audio:scene:{scene_id}   → slideshow scene audio exception
 """
 
 from __future__ import annotations
@@ -69,7 +70,7 @@ class AssetRegistry:
 
     @property
     def generated_dir(self) -> Path:
-        return self.output_dir / "generated"
+        return self.project_root / "cache" / "kdenlive"
 
 
 def _resolve_source(project_root: Path, rel_or_abs: str) -> Path:
@@ -144,6 +145,7 @@ def build_registry(
 
     # ---- Walk timeline ----
     scene_visual_counter = 0
+    scene_audio_counter = 0
     pause_counter = 0
 
     for it in timeline_items:
@@ -171,6 +173,15 @@ def build_registry(
                 entry.producer_id = f"prod_v_{scene_visual_counter}"
                 entry.display_name = scene_id
                 scene_visual_counter += 1
+                if (it.get("visual_type") or "").lower() == "slideshow" and entry.asset_type == "video":
+                    registry.entries[f"audio:scene:{scene_id}"] = AssetEntry(
+                        clip_key=f"audio:scene:{scene_id}",
+                        producer_id=f"prod_audio_scene_{scene_audio_counter}",
+                        path=entry.path,
+                        asset_type="audio",
+                        display_name=f"{scene_id}_slideshow_sfx",
+                    )
+                    scene_audio_counter += 1
 
         elif itype == "beat_pause":
             beat_id = it.get("beat_id") or f"beat_pause_{pause_counter}"
@@ -195,6 +206,7 @@ def build_registry(
     log.info(
         f"AssetRegistry: {len(registry.entries)} assets "
         f"({scene_visual_counter} scenes, {pause_counter} pauses, "
+        f"{scene_audio_counter} slideshow audio exceptions, "
         f"{len(registry.generated_freeze_frames)} freezes, "
         f"{len(registry.placeholders)} placeholders)"
     )
