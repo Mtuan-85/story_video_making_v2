@@ -14,8 +14,8 @@ from loguru import logger as log
 
 
 # === Style configuration ===
-ASS_FONT = "Cambria"
-ASS_FONTSIZE = 50
+ASS_FONT = "iCiel Cadena"
+ASS_FONTSIZE = 80
 ASS_BOLD = True
 
 # pysubs2.Color takes RGB (it converts to BGR &Hxxxxxx internally on save).
@@ -28,9 +28,9 @@ ASS_OUTLINE_RGB = (0, 0, 0)          # black outline
 ASS_OUTLINE = 2.0
 ASS_SHADOW = 1.0
 
-ASS_ALIGNMENT = pysubs2.Alignment.MIDDLE_CENTER  # 5
-ASS_MARGIN_V = 100
-ASS_MARGIN_H = 100
+ASS_ALIGNMENT = pysubs2.Alignment.BOTTOM_CENTER
+ASS_MARGIN_V = 80
+ASS_MARGIN_H = 150
 
 
 def generate_final_ass(

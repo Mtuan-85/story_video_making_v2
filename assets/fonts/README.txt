@@ -1,0 +1,1 @@
+Shared app-level subtitle fonts. Put .ttf/.otf files here and configure ASS Fontname to the font family name inside the font file. Render should pass this directory to ffmpeg/libass via subtitles filter fontsdir.

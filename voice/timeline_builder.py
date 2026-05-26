@@ -45,6 +45,7 @@ from voice.master_whisper import (
     filter_words_by_beat,
 )
 from voice.silent_allocator import allocate_silent_block
+from voice.voice_aligner import extract_subtitle_phrases
 
 
 COVERAGE_TOLERANCE_SEC = 0.05         # spec §14.2
@@ -94,6 +95,7 @@ def _build_voiced_item(
     scene: dict,
     beat: BeatTiming,
     match_result,
+    subtitle_phrases: Optional[list[dict]] = None,
 ) -> dict:
     """Convert MatchResult into a timeline scene item (voiced)."""
     visual_type, visual_source = _scene_visual_source(scene)
@@ -116,6 +118,7 @@ def _build_voiced_item(
             "match_score": round(match_result.score / 100, 3),
             "word_start_index": match_result.word_start_index,
             "word_end_index": match_result.word_end_index,
+            "subtitle_phrases": list(subtitle_phrases or []),
             "warnings": list(match_result.warnings),
         }
     else:
@@ -136,6 +139,7 @@ def _build_voiced_item(
             "visual_source": visual_source,
             "match_method": "no_match",
             "match_score": round(match_result.score / 100, 3) if match_result.score else 0,
+            "subtitle_phrases": [],
             "warnings": [
                 "voiced_scene_not_matched_in_beat",
                 *match_result.warnings,
@@ -147,6 +151,7 @@ def _build_voiced_item(
 def _build_single_scene_beat_item(
     scene: dict,
     beat: BeatTiming,
+    subtitle_phrases: Optional[list[dict]] = None,
 ) -> dict:
     """Spec §8.3: single voiced scene → full beat window."""
     visual_type, visual_source = _scene_visual_source(scene)
@@ -165,6 +170,7 @@ def _build_single_scene_beat_item(
         "visual_source": visual_source,
         "match_method": "single_scene_beat",
         "match_score": 1.0,
+        "subtitle_phrases": list(subtitle_phrases or []),
         "warnings": [],
     }
 
@@ -214,7 +220,16 @@ def process_beat(
     if len(scene_records) == 1:
         only = scene_records[0]
         if only["type"] == "voiced":
-            item = _build_single_scene_beat_item(only["scene"], beat)
+            subtitle_phrases = extract_subtitle_phrases(
+                beat_words,
+                beat.voice_in,
+                beat.voice_out,
+            )
+            item = _build_single_scene_beat_item(
+                only["scene"],
+                beat,
+                subtitle_phrases=subtitle_phrases,
+            )
             return [item], warnings
         # Single silent scene → allocate over entire beat voice window
         items = allocate_silent_block(
@@ -239,7 +254,17 @@ def process_beat(
                 beat_words=beat_words,
                 local_cursor=local_cursor,
             )
-            item = _build_voiced_item(scene, beat, mr)
+            subtitle_phrases = (
+                extract_subtitle_phrases(beat_words, mr.voice_in, mr.voice_out)
+                if mr.matched and mr.voice_in is not None and mr.voice_out is not None
+                else []
+            )
+            item = _build_voiced_item(
+                scene,
+                beat,
+                mr,
+                subtitle_phrases=subtitle_phrases,
+            )
             voiced_items_by_idx[rec["idx"]] = item
 
             voiced_match_records.append({

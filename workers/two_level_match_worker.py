@@ -30,7 +30,15 @@ from voice.master_audio_builder import build_master_audio
 from voice.master_whisper import transcribe_master_audio
 from voice.s5_loader import load_and_validate_s5
 from voice.timeline_builder import build_timeline, save_outputs
+from voice.timeline_to_mapping import timeline_to_voice_mapping
 from workers._async_thread import AsyncTaskWorker
+
+
+def save_voice_mapping_from_timeline(project: Project, timeline_path: Path):
+    """Convert the new two-level timeline into v4 voice_mapping and save it."""
+    mapping = timeline_to_voice_mapping(Path(timeline_path))
+    project.save_voice_mapping(mapping)
+    return mapping
 
 
 class TwoLevelMatchWorker(AsyncTaskWorker):
@@ -224,12 +232,20 @@ class TwoLevelMatchWorker(AsyncTaskWorker):
             await asyncio.to_thread(
                 save_outputs, result, timeline_path, diag_path,
             )
+            mapping = await asyncio.to_thread(
+                save_voice_mapping_from_timeline,
+                self.project,
+                timeline_path,
+            )
         except Exception as e:
             self._fail("save", str(e))
             return
         self._generated_paths.extend([timeline_path, diag_path])
         if self._cancel_if_stopped("save"):
             return
+
+        subtitle_count = sum(len(scene.subtitle_phrases) for scene in mapping.scenes)
+        self.emit_log(f"  ✓ voice_mapping.json saved ({subtitle_count} subtitle phrase events)")
 
         self.emit_log(
             f"✓ DONE. Timeline → {timeline_path.name} "

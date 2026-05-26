@@ -12,10 +12,8 @@ Mapping notes:
   - scenes: one SceneVoiceAssignment per timeline 'scene' item.
     Unmatched voiced scenes get is_silent=False with voice_in=voice_out
     so the renderer falls back to design duration / silence audio.
-  - subtitle_phrases: NOT populated by Sprint 1 (phrase extraction was a
-    Plan-D feature). Render still works — ASS file is empty and the
-    libass burn step is a no-op (`apply_ass_subtitle` falls back to copy
-    when ass_path is missing/empty).
+  - subtitle_phrases: copied from timeline scene items. RenderWorker turns
+    these into final.ass and burns the karaoke overlay in the final render.
   - freeze_pause_after: derived from beat_pause items. For each scene
     that ends a beat (last scene_id in beat.scenes), freeze_pause_after =
     beat.pause_after_sec. Other scenes get 0 (silent gaps inside a beat
@@ -157,7 +155,7 @@ def timeline_to_voice_mapping(timeline_path: Path) -> VoiceMapping:
             method=method,
             score=score,
             matched_text=None,  # not stored in Sprint 1 timeline
-            subtitle_phrases=[],  # see module docstring
+            subtitle_phrases=list(it.get("subtitle_phrases") or []),
             render_mode="voice",
             render_duration=max(0.0, voice_out - voice_in),
             freeze_pause_after=pause_for_scene.get(sid, 0.0),

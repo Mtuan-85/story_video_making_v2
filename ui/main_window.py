@@ -50,6 +50,7 @@ from workers.render_worker import RenderWorker
 from workers.voice_align_worker import VoiceAlignWorker        # legacy
 from workers.two_level_match_worker import TwoLevelMatchWorker  # Sprint 1
 from workers.process_launcher import GenerateProcess
+from workers.process_registry import terminate_registered_processes
 from workers.slideshow_worker import SlideshowWorker, is_slideshow_eligible
 from workers.task_contract import CdpConfig, GenerateTask, TaskOptions, WorkerEvent
 
@@ -645,9 +646,13 @@ class MainWindow(QMainWindow):
     def _on_stop_all(self) -> None:
         active = [w for w in self._active_workers if self._is_worker_running(w)]
         if not active:
-            QMessageBox.information(
-                self, "Stop All", "Không có worker nào đang chạy."
-            )
+            stopped = terminate_registered_processes(force=True)
+            if stopped:
+                self._append_log(f"🛑 Killed {stopped} subprocess(es)")
+            else:
+                QMessageBox.information(
+                    self, "Stop All", "Không có worker nào đang chạy."
+                )
             return
 
         n = len(active)
@@ -674,7 +679,34 @@ class MainWindow(QMainWindow):
                 log.info(f"Sent stop to: {worker.__class__.__name__}")
             except Exception as e:
                 log.error(f"Failed to stop {worker.__class__.__name__}: {e}")
+        stopped = terminate_registered_processes(force=True)
+        if stopped:
+            self._append_log(f"🛑 Killed {stopped} subprocess(es)")
         self._append_log(f"🛑 Stop All: signaled {n} worker(s) to stop")
+
+    def closeEvent(self, event) -> None:
+        """Stop background workers and child CLI processes when app exits."""
+        try:
+            self._on_stop_all_without_prompt()
+        finally:
+            super().closeEvent(event)
+
+    def _on_stop_all_without_prompt(self) -> None:
+        for worker in list(self._active_workers):
+            try:
+                if hasattr(worker, "request_stop"):
+                    worker.request_stop()
+                elif hasattr(worker, "stop"):
+                    worker.stop()
+                elif hasattr(worker, "kill"):
+                    worker.kill()
+            except Exception as e:
+                log.error(f"Failed to stop {worker.__class__.__name__}: {e}")
+        if self._generate_proc is not None and self._generate_proc.is_running():
+            self._generate_proc.kill()
+        stopped = terminate_registered_processes(force=True)
+        if stopped:
+            log.info(f"App close killed {stopped} subprocess(es)")
 
     @staticmethod
     def _is_worker_running(worker) -> bool:
@@ -1394,7 +1426,9 @@ class MainWindow(QMainWindow):
             self._render_worker.deleteLater()
         self._render_worker = None
         self.btn_render.setEnabled(
-            self.project is not None and self.project.voice_mapping is not None
+            self.project is not None
+            and self.project.paths.voice_matching_timeline_json.exists()
+            and self.project.paths.master_voice_wav.exists()
         )
         self._refresh_stop_button()
 
