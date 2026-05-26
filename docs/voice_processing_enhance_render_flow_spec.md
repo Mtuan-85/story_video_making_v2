@@ -14,18 +14,20 @@ The final-process area should expose these controls in order:
 
 1. `Voice Processing`
    - Build or copy the source beat voice into a raw master file.
-   - Output: `voice/master_voice_raw.wav`.
+   - Output: `voice/raw/master_voice.wav`.
+   - Output word timing, after Whisper: `voice/raw/whisper_words.json`.
 
 2. `Auto Enhance Voice`
    - Analyze the raw voice word timing.
    - Insert missing natural pauses only where the voice is clearly too rushed.
-   - Output preview file: `voice/master_voice_enhanced.wav`.
-   - Output report: `voice/voice_enhance_report.json`.
+   - Output preview file: `voice/enhance/master_voice.wav`.
+   - Output operations: `voice/enhance/voice_pacing_operations.json`.
+   - Output report: `voice/enhance/voice_enhance_report.json`.
 
 3. `Whisper`
    - Dropdown source:
-     - `Raw`: `voice/master_voice_raw.wav`
-     - `Enhanced`: `voice/master_voice_enhanced.wav` when it exists
+     - `Raw`: `voice/raw/master_voice.wav`
+     - `Enhanced`: `voice/enhance/master_voice.wav` when it exists
    - The selected source becomes the active voice source for matching, karaoke, and render.
 
 4. `Render Scenes`
@@ -52,12 +54,18 @@ State should record:
 ```json
 {
   "voice_sources": {
-    "raw": "voice/master_voice_raw.wav",
-    "enhanced": "voice/master_voice_enhanced.wav"
+    "raw": {
+      "master_voice": "voice/raw/master_voice.wav",
+      "whisper_words": "voice/raw/whisper_words.json"
+    },
+    "enhance": {
+      "master_voice": "voice/enhance/master_voice.wav",
+      "whisper_words": "voice/enhance/whisper_words.json"
+    }
   },
   "active_whisper_source": "raw",
-  "active_master_voice": "voice/master_voice_raw.wav",
-  "active_whisper_words": "voice/whisper_words_raw.json"
+  "active_master_voice": "voice/raw/master_voice.wav",
+  "active_whisper_words": "voice/raw/whisper_words.json"
 }
 ```
 
@@ -65,9 +73,9 @@ When the user selects `Enhanced` and runs Whisper successfully:
 
 ```json
 {
-  "active_whisper_source": "enhanced",
-  "active_master_voice": "voice/master_voice_enhanced.wav",
-  "active_whisper_words": "voice/whisper_words_enhanced.json"
+  "active_whisper_source": "enhance",
+  "active_master_voice": "voice/enhance/master_voice.wav",
+  "active_whisper_words": "voice/enhance/whisper_words.json"
 }
 ```
 
@@ -77,7 +85,7 @@ The clean word timing file should be machine-readable and easy for diagnostics:
 
 ```json
 {
-  "source": "voice/master_voice_raw.wav",
+  "source": "voice/raw/master_voice.wav",
   "duration": 6.14,
   "words": [
     {
@@ -130,7 +138,8 @@ Operations:
 ```json
 {
   "version": "voice_pacing_operations.v1",
-  "source": "voice/master_voice_raw.wav",
+  "source": "voice/raw/master_voice.wav",
+  "output": "voice/enhance/master_voice.wav",
   "operations": [
     {
       "type": "insert_pause",
@@ -187,8 +196,9 @@ For `slow_down_range`:
 
 After processing:
 
-- Output `voice/master_voice_enhanced.wav`.
-- Write `voice/voice_enhance_report.json`.
+- Output `voice/enhance/master_voice.wav`.
+- Write `voice/enhance/voice_pacing_operations.json`.
+- Write `voice/enhance/voice_enhance_report.json`.
 - Do not change the active render source until Whisper is run on the enhanced file.
 
 ## Render Split
