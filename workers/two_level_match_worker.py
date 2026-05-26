@@ -41,6 +41,41 @@ def save_voice_mapping_from_timeline(project: Project, timeline_path: Path):
     return mapping
 
 
+def save_whisper_words_for_source(
+    project: Project,
+    source: str,
+    master_path: Path,
+    whisper_words: list[dict],
+) -> Path:
+    """Persist clean Whisper words for a voice source and mark it active."""
+    if source not in {"raw", "enhance"}:
+        raise ValueError(f"Unsupported voice source: {source}")
+    paths = project.paths
+    target = (
+        paths.whisper_words_enhanced_json
+        if source == "enhance"
+        else paths.whisper_words_raw_json
+    )
+    target.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        source_path = str(Path(master_path).relative_to(paths.root)).replace("\\", "/")
+    except ValueError:
+        source_path = str(master_path).replace("\\", "/")
+    target.write_text(
+        json.dumps(
+            {
+                "source": source_path,
+                "words": whisper_words,
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    project.set_active_whisper_source(source)
+    return target
+
+
 class TwoLevelMatchWorker(AsyncTaskWorker):
     """Build voice_matching_timeline.json from S5 beats + per-beat MP3s.
 
@@ -174,9 +209,18 @@ class TwoLevelMatchWorker(AsyncTaskWorker):
         if not whisper_words:
             self._fail("whisper", "Whisper produced no words")
             return
+        words_path = save_whisper_words_for_source(
+            self.project,
+            "raw",
+            master_path,
+            whisper_words,
+        )
         if self._cancel_if_stopped("whisper"):
             return
-        self.emit_log(f"  ✓ {len(whisper_words)} words on master timeline")
+        self.emit_log(
+            f"  ✓ {len(whisper_words)} words on master timeline → "
+            f"{words_path.relative_to(paths.root)}"
+        )
 
         # ---- Step 5: Two-level matcher ----
         self.emit_log(f"▶ Step 5/6: Per-beat scene matching (flexible fuzzy)")

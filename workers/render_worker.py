@@ -132,6 +132,14 @@ def load_latest_voice_mapping(project: Project, fallback: VoiceMapping | None) -
     return fallback
 
 
+def resolve_render_master_audio(project: Project) -> Path:
+    """Return the active master voice selected by the latest successful Whisper."""
+    active_path = getattr(project, "active_master_voice_path", None)
+    if active_path is not None:
+        return Path(active_path)
+    return project.paths.master_voice_wav
+
+
 def visual_cache_is_reusable(
     cache_path: Path,
     timeline_path: Path,
@@ -282,12 +290,14 @@ class RenderWorker(AsyncTaskWorker):
 
     async def _async_run(self) -> None:
         timeline_path = self.project.paths.voice_matching_timeline_json
-        master_audio = self.project.paths.master_voice_wav
+        master_audio = resolve_render_master_audio(self.project)
         if not timeline_path.exists():
             self.finished_fail.emit("Thiếu voice_matching_timeline.json — chạy Process Voice trước")
             return
         if not master_audio.exists():
-            self.finished_fail.emit("Thiếu voice/master_voice.wav — chạy Process Voice trước")
+            self.finished_fail.emit(
+                f"Thiếu master audio active: {master_audio} — chạy Process Voice/Whisper trước"
+            )
             return
 
         aspect = self.project.scenes_json.meta.aspect_ratio

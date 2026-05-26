@@ -74,8 +74,20 @@ class ProjectPaths:
 
     @property
     def master_voice_wav(self) -> Path:
-        """Concatenated beat audio + synthetic silence. Sprint 1 output."""
+        """Default raw master audio. Kept for existing callers."""
+        return self.master_voice_raw_wav
+
+    @property
+    def legacy_master_voice_wav(self) -> Path:
         return self.voice_dir / "master_voice.wav"
+
+    @property
+    def voice_raw_dir(self) -> Path:
+        return self.voice_dir / "raw"
+
+    @property
+    def voice_enhance_dir(self) -> Path:
+        return self.voice_dir / "enhance"
 
     @property
     def voice_source_dir(self) -> Path:
@@ -91,19 +103,27 @@ class ProjectPaths:
 
     @property
     def master_voice_raw_wav(self) -> Path:
-        return self.voice_dir / "master_voice_raw.wav"
+        return self.voice_raw_dir / "master_voice.wav"
 
     @property
     def master_voice_enhanced_wav(self) -> Path:
-        return self.voice_dir / "master_voice_enhanced.wav"
+        return self.voice_enhance_dir / "master_voice.wav"
 
     @property
     def whisper_words_raw_json(self) -> Path:
-        return self.voice_dir / "whisper_words_raw.json"
+        return self.voice_raw_dir / "whisper_words.json"
 
     @property
     def whisper_words_enhanced_json(self) -> Path:
-        return self.voice_dir / "whisper_words_enhanced.json"
+        return self.voice_enhance_dir / "whisper_words.json"
+
+    @property
+    def voice_pacing_operations_json(self) -> Path:
+        return self.voice_enhance_dir / "voice_pacing_operations.json"
+
+    @property
+    def voice_enhance_report_json(self) -> Path:
+        return self.voice_enhance_dir / "voice_enhance_report.json"
 
     @property
     def voice_matching_timeline_json(self) -> Path:

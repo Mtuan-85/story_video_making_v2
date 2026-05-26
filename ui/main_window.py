@@ -16,6 +16,7 @@ from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import (
     QFileDialog,
     QGroupBox,
+    QComboBox,
     QHBoxLayout,
     QLabel,
     QMainWindow,
@@ -49,6 +50,7 @@ from workers.export_worker import ExportKdenliveWorker
 from workers.render_worker import RenderWorker
 from workers.voice_align_worker import VoiceAlignWorker        # legacy
 from workers.two_level_match_worker import TwoLevelMatchWorker  # Sprint 1
+from workers.voice_processing_worker import VoiceEnhanceWorker, VoiceWhisperWorker
 from workers.process_launcher import GenerateProcess
 from workers.process_registry import terminate_registered_processes
 from workers.slideshow_worker import SlideshowWorker, is_slideshow_eligible
@@ -73,6 +75,8 @@ class MainWindow(QMainWindow):
         self._generate_active_scene_ids: set[str] = set()
         self._single_video_workers: dict[str, AsyncQThread] = {}
         self._voice_align_worker: TwoLevelMatchWorker | None = None  # Sprint 1
+        self._voice_enhance_worker: VoiceEnhanceWorker | None = None
+        self._voice_whisper_worker: VoiceWhisperWorker | None = None
         self._render_worker: RenderWorker | None = None
         self._export_worker: ExportKdenliveWorker | None = None
         self._active_workers: list = []
@@ -209,6 +213,25 @@ class MainWindow(QMainWindow):
         self.btn_process_voice.setEnabled(False)
         action_row.addWidget(self.btn_process_voice)
 
+        self.btn_enhance_voice = QPushButton("Enhance voice")
+        self.btn_enhance_voice.setToolTip("Create voice/enhance/master_voice.wav from raw Whisper timing")
+        self.btn_enhance_voice.clicked.connect(self._on_enhance_voice)
+        self.btn_enhance_voice.setEnabled(False)
+        action_row.addWidget(self.btn_enhance_voice)
+
+        self.voice_source_combo = QComboBox()
+        self.voice_source_combo.addItem("Raw", "raw")
+        self.voice_source_combo.addItem("Enhanced", "enhance")
+        self.voice_source_combo.setToolTip("Voice source to Whisper and use for final render")
+        self.voice_source_combo.setEnabled(False)
+        action_row.addWidget(self.voice_source_combo)
+
+        self.btn_whisper_voice = QPushButton("Whisper")
+        self.btn_whisper_voice.setToolTip("Run Whisper on selected voice source and make it active for render")
+        self.btn_whisper_voice.clicked.connect(self._on_whisper_voice_source)
+        self.btn_whisper_voice.setEnabled(False)
+        action_row.addWidget(self.btn_whisper_voice)
+
         self.btn_export_kdenlive = QPushButton("📤 Export Kdenlive XML")
         self.btn_export_kdenlive.clicked.connect(self._on_export_kdenlive)
         self.btn_export_kdenlive.setEnabled(False)
@@ -335,6 +358,10 @@ class MainWindow(QMainWindow):
         )
         self.btn_render.setEnabled(has_alignment)
         self.btn_process_voice.setEnabled(True)
+        self.btn_enhance_voice.setEnabled(self.project.paths.whisper_words_raw_json.exists())
+        self.voice_source_combo.setEnabled(True)
+        self.btn_whisper_voice.setEnabled(True)
+        self._refresh_voice_source_combo()
         self.btn_export_kdenlive.setEnabled(True)
 
         ref_mapping = load_or_create_ref_mapping(
@@ -1141,12 +1168,94 @@ class MainWindow(QMainWindow):
             files.extend(voice_dir.glob(f"*{ext}"))
         return sorted(files, key=lambda p: p.name.lower())
 
+    def _refresh_voice_source_combo(self) -> None:
+        if self.project is None or not hasattr(self, "voice_source_combo"):
+            return
+        active = self.project.get_active_voice_source()["source"]
+        for i in range(self.voice_source_combo.count()):
+            if self.voice_source_combo.itemData(i) == active:
+                self.voice_source_combo.setCurrentIndex(i)
+                break
+        self.btn_enhance_voice.setEnabled(self.project.paths.whisper_words_raw_json.exists())
+        self.btn_whisper_voice.setEnabled(True)
+
+    def _on_enhance_voice(self) -> None:
+        if self.project is None:
+            return
+        if self._voice_enhance_worker is not None and self._voice_enhance_worker.isRunning():
+            return
+        worker = VoiceEnhanceWorker(self.project)
+        worker.log_message.connect(self._append_log)
+        worker.failed.connect(lambda msg: self._append_log(f"❌ Enhance voice: {msg}"))
+        worker.done.connect(self._on_voice_enhance_done)
+        worker.finished.connect(self._cleanup_voice_enhance)
+        self._voice_enhance_worker = worker
+        self.btn_enhance_voice.setEnabled(False)
+        self.btn_stop.setEnabled(True)
+        worker.start()
+        self._register_worker(worker)
+
+    def _on_voice_enhance_done(self, enhanced_path: str, report_path: str) -> None:
+        self._append_log(f"✓ Enhance voice xong: {enhanced_path}")
+        if self.project is not None:
+            self.voice_source_combo.setCurrentIndex(1)
+            self.btn_whisper_voice.setEnabled(True)
+        QMessageBox.information(
+            self,
+            "Enhance voice xong",
+            f"Enhanced voice:\n{enhanced_path}\n\nChạy Whisper với source Enhanced để dùng bản này khi render.",
+        )
+
+    def _cleanup_voice_enhance(self) -> None:
+        if self._voice_enhance_worker is not None:
+            self._voice_enhance_worker.deleteLater()
+        self._voice_enhance_worker = None
+        if self.project is not None:
+            self._refresh_voice_source_combo()
+        self._refresh_stop_button()
+
+    def _on_whisper_voice_source(self) -> None:
+        if self.project is None:
+            return
+        if self._voice_whisper_worker is not None and self._voice_whisper_worker.isRunning():
+            return
+        source = self.voice_source_combo.currentData() or "raw"
+        worker = VoiceWhisperWorker(self.project, source=str(source), whisper_model="base")
+        worker.log_message.connect(self._append_log)
+        worker.failed.connect(lambda msg: self._append_log(f"❌ Whisper voice: {msg}"))
+        worker.done.connect(self._on_voice_source_whisper_done)
+        worker.finished.connect(self._cleanup_voice_whisper)
+        self._voice_whisper_worker = worker
+        self.btn_whisper_voice.setEnabled(False)
+        self.btn_stop.setEnabled(True)
+        worker.start()
+        self._register_worker(worker)
+
+    def _on_voice_source_whisper_done(self, source: str, words_path: str) -> None:
+        self._append_log(f"✓ Active voice source = {source}; words: {words_path}")
+        if self.project is not None:
+            self._refresh_voice_source_combo()
+            self.btn_render.setEnabled(self.project.paths.voice_matching_timeline_json.exists())
+        QMessageBox.information(
+            self,
+            "Whisper xong",
+            f"Active voice source: {source}\nWords:\n{words_path}",
+        )
+
+    def _cleanup_voice_whisper(self) -> None:
+        if self._voice_whisper_worker is not None:
+            self._voice_whisper_worker.deleteLater()
+        self._voice_whisper_worker = None
+        if self.project is not None:
+            self._refresh_voice_source_combo()
+        self._refresh_stop_button()
+
     def _on_process_voice(self) -> None:
         """Sprint 1 two-level voice matching.
 
         Replaces the legacy Plan-D global-cursor align. Requires:
           - {stem}_S5.json (beat narration + scenes[] + pause_after_sec)
-          - voice/beat-XX.mp3 (one per beat)
+          - voice/source/s6/beat-XX.mp3 (one per beat; legacy voice/beat-XX.mp3 accepted)
         Outputs voice_matching_timeline.json + diagnostics into voice/.
         """
         if self.project is None:
@@ -1168,13 +1277,15 @@ class MainWindow(QMainWindow):
             )
             return
 
-        beat_mp3s = sorted(paths.voice_dir.glob("beat-*.mp3"))
+        beat_mp3s = sorted(paths.voice_source_s6_dir.glob("beat-*.mp3"))
+        if not beat_mp3s:
+            beat_mp3s = sorted(paths.voice_dir.glob("beat-*.mp3"))
         if not beat_mp3s:
             QMessageBox.warning(
                 self,
                 "Thiếu beat MP3",
-                f"Folder voice/ không có file beat-XX.mp3 nào.\n"
-                f"Cần TTS từng beat thành {paths.voice_dir}/beat-NN.mp3",
+                f"Không có file beat-XX.mp3 nào trong voice/source/s6 hoặc voice/.\n"
+                f"Cần TTS từng beat thành {paths.voice_source_s6_dir}/beat-NN.mp3",
             )
             return
 
@@ -1328,6 +1439,8 @@ class MainWindow(QMainWindow):
 
         # Re-render path now unlocked
         self.btn_render.setEnabled(True)
+        self.btn_enhance_voice.setEnabled(self.project.paths.whisper_words_raw_json.exists())
+        self._refresh_voice_source_combo()
         if hasattr(self, "btn_export_kdenlive"):
             self.btn_export_kdenlive.setEnabled(True)
 
@@ -1363,6 +1476,7 @@ class MainWindow(QMainWindow):
         has_timeline = self.project.paths.voice_matching_timeline_json.exists()
         if has_timeline:
             self.btn_render.setEnabled(True)
+            self.btn_enhance_voice.setEnabled(self.project.paths.whisper_words_raw_json.exists())
             if hasattr(self, "btn_export_kdenlive"):
                 self.btn_export_kdenlive.setEnabled(True)
 
@@ -1380,10 +1494,11 @@ class MainWindow(QMainWindow):
                 "Bấm 'Process Voice' để tạo voice_matching_timeline.json trước.",
             )
             return
-        if not self.project.paths.master_voice_wav.exists():
+        active_master = self.project.active_master_voice_path
+        if not active_master.exists():
             QMessageBox.warning(
                 self, "Thiếu master audio",
-                "Bấm 'Process Voice' để tạo voice/master_voice.wav trước.",
+                f"Bấm 'Process Voice' để tạo master audio trước:\n{active_master}",
             )
             return
 
@@ -1428,7 +1543,7 @@ class MainWindow(QMainWindow):
         self.btn_render.setEnabled(
             self.project is not None
             and self.project.paths.voice_matching_timeline_json.exists()
-            and self.project.paths.master_voice_wav.exists()
+            and self.project.active_master_voice_path.exists()
         )
         self._refresh_stop_button()
 

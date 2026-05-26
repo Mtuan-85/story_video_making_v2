@@ -26,6 +26,7 @@ BACKUP_KEEP = 5
 StatusValue = Literal["pending", "generating", "ready", "failed"]
 StateKey = Literal["image", "video", "voice", "edit"]
 SelectedVisual = Literal["image", "video"]
+VoiceSourceKey = Literal["raw", "enhance"]
 
 
 def _now_iso() -> str:
@@ -64,6 +65,39 @@ def _initial_scene_state() -> dict[str, Any]:
         "selected_visual": None,
         "warnings": [],
     }
+
+
+def _voice_source_state(paths: ProjectPaths, source: VoiceSourceKey) -> dict[str, str]:
+    if source == "enhance":
+        return {
+            "source": "enhance",
+            "master_voice": _project_rel(paths.master_voice_enhanced_wav, paths.root),
+            "whisper_words": _project_rel(paths.whisper_words_enhanced_json, paths.root),
+        }
+    return {
+        "source": "raw",
+        "master_voice": _project_rel(paths.master_voice_raw_wav, paths.root),
+        "whisper_words": _project_rel(paths.whisper_words_raw_json, paths.root),
+    }
+
+
+def _initial_voice_processing_state(paths: ProjectPaths) -> dict[str, Any]:
+    return {
+        "voice_sources": {
+            "raw": _voice_source_state(paths, "raw"),
+            "enhance": _voice_source_state(paths, "enhance"),
+        },
+        "active_whisper_source": "raw",
+        "active_master_voice": _project_rel(paths.master_voice_raw_wav, paths.root),
+        "active_whisper_words": _project_rel(paths.whisper_words_raw_json, paths.root),
+    }
+
+
+def _project_rel(path: Path, root: Path) -> str:
+    try:
+        return str(path.relative_to(root)).replace("\\", "/")
+    except ValueError:
+        return str(path).replace("\\", "/")
 
 
 class Project:
@@ -120,7 +154,7 @@ class Project:
 
         if paths.state_json.exists():
             state = cls._load_state(paths.state_json)
-            state = cls._reconcile(state, scenes_json)
+            state = cls._reconcile(state, scenes_json, paths)
         elif paths.stem == "scenes" and paths.legacy_state_json.exists():
             # Legacy convention had a single state.json per folder. Only
             # migrate when this load is for the original ``scenes.json`` —
@@ -130,10 +164,10 @@ class Project:
                 "(legacy file kept as backup)"
             )
             state = cls._load_state(paths.legacy_state_json)
-            state = cls._reconcile(state, scenes_json)
+            state = cls._reconcile(state, scenes_json, paths)
         else:
             log.info(f"Chưa có {paths.state_json.name} — khởi tạo mới")
-            state = cls._build_initial_state(scenes_json)
+            state = cls._build_initial_state(scenes_json, paths)
 
         project = cls(paths, scenes_json, state)
         # Auto-fill effect for any scene whose raw JSON didn't declare one,
@@ -165,9 +199,9 @@ class Project:
             self.save_scenes_json()
 
         if self.paths.state_json.exists():
-            self.state = self._reconcile(self._load_state(self.paths.state_json), self.scenes_json)
+            self.state = self._reconcile(self._load_state(self.paths.state_json), self.scenes_json, self.paths)
         else:
-            self.state = self._build_initial_state(self.scenes_json)
+            self.state = self._build_initial_state(self.scenes_json, self.paths)
 
         scenes_count = len(self.scenes_json.scenes)
         images_found = 0
@@ -342,17 +376,27 @@ class Project:
             return json.load(f)
 
     @staticmethod
-    def _build_initial_state(scenes_json: ScenesJson) -> dict[str, Any]:
-        return {
+    def _build_initial_state(
+        scenes_json: ScenesJson,
+        paths: ProjectPaths | None = None,
+    ) -> dict[str, Any]:
+        state = {
             "version": STATE_VERSION,
             "updated_at": _now_iso(),
             "scenes": {scene.id: _initial_scene_state() for scene in scenes_json.scenes},
             "image_refs": [],
             "use_refs_for_image": False,
         }
+        if paths is not None:
+            state["voice_processing"] = _initial_voice_processing_state(paths)
+        return state
 
     @staticmethod
-    def _reconcile(state: dict[str, Any], scenes_json: ScenesJson) -> dict[str, Any]:
+    def _reconcile(
+        state: dict[str, Any],
+        scenes_json: ScenesJson,
+        paths: ProjectPaths | None = None,
+    ) -> dict[str, Any]:
         """Add missing scene entries (scenes.json grew) and drop orphans.
 
         Also fills in any newly-added top-level keys (e.g. 'edit' added later)
@@ -395,6 +439,22 @@ class Project:
         state.setdefault("version", STATE_VERSION)
         state.setdefault("image_refs", [])
         state.setdefault("use_refs_for_image", False)
+        if paths is not None:
+            voice_processing = state.setdefault(
+                "voice_processing",
+                _initial_voice_processing_state(paths),
+            )
+            defaults = _initial_voice_processing_state(paths)
+            voice_sources = voice_processing.setdefault("voice_sources", defaults["voice_sources"])
+            for source_key, source_value in defaults["voice_sources"].items():
+                voice_sources.setdefault(source_key, source_value)
+            active_source = voice_processing.get("active_whisper_source") or "raw"
+            if active_source not in {"raw", "enhance"}:
+                active_source = "raw"
+            active = defaults["voice_sources"][active_source]
+            voice_processing["active_whisper_source"] = active_source
+            voice_processing.setdefault("active_master_voice", active["master_voice"])
+            voice_processing.setdefault("active_whisper_words", active["whisper_words"])
         state["updated_at"] = _now_iso()
         return state
 
@@ -423,6 +483,51 @@ class Project:
         if scene_id not in self.state["scenes"]:
             raise KeyError(f"Scene chưa có trong state: {scene_id}")
         return self.state["scenes"][scene_id]
+
+    def get_active_voice_source(self) -> dict[str, str]:
+        voice_processing = self.state.setdefault(
+            "voice_processing",
+            _initial_voice_processing_state(self.paths),
+        )
+        source = voice_processing.get("active_whisper_source") or "raw"
+        if source not in {"raw", "enhance"}:
+            source = "raw"
+        defaults = _initial_voice_processing_state(self.paths)
+        active = dict(defaults["voice_sources"][source])
+        voice_processing["active_whisper_source"] = source
+        voice_processing["active_master_voice"] = active["master_voice"]
+        voice_processing["active_whisper_words"] = active["whisper_words"]
+        return active
+
+    def set_active_whisper_source(self, source: VoiceSourceKey) -> None:
+        if source not in {"raw", "enhance"}:
+            raise ValueError(f"Unknown voice source: {source}")
+        voice_processing = self.state.setdefault(
+            "voice_processing",
+            _initial_voice_processing_state(self.paths),
+        )
+        defaults = _initial_voice_processing_state(self.paths)
+        active = defaults["voice_sources"][source]
+        voice_processing["voice_sources"] = defaults["voice_sources"]
+        voice_processing["active_whisper_source"] = source
+        voice_processing["active_master_voice"] = active["master_voice"]
+        voice_processing["active_whisper_words"] = active["whisper_words"]
+        self._save_state_atomic()
+
+    @property
+    def active_master_voice_path(self) -> Path:
+        active = self.paths.root / self.get_active_voice_source()["master_voice"]
+        if (
+            self.get_active_voice_source()["source"] == "raw"
+            and not active.exists()
+            and self.paths.legacy_master_voice_wav.exists()
+        ):
+            return self.paths.legacy_master_voice_wav
+        return active
+
+    @property
+    def active_whisper_words_path(self) -> Path:
+        return self.paths.root / self.get_active_voice_source()["whisper_words"]
 
     # ------------------------------------------------------------------
     # Mutations (each one persists state.json atomically)

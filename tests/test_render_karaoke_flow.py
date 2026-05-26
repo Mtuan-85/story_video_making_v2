@@ -8,12 +8,16 @@ from workers.render_worker import (
     build_visual_cache_signature,
     count_subtitle_phrases,
     load_latest_voice_mapping,
+    resolve_render_master_audio,
     save_visual_cache_metadata,
     sync_mapping_pauses_from_timeline,
     synthesize_missing_subtitle_phrases,
     visual_cache_is_reusable,
 )
-from workers.two_level_match_worker import save_voice_mapping_from_timeline
+from workers.two_level_match_worker import (
+    save_voice_mapping_from_timeline,
+    save_whisper_words_for_source,
+)
 
 
 def _timeline_with_phrase(path: Path) -> Path:
@@ -111,6 +115,78 @@ def test_render_loads_latest_voice_mapping_from_disk_over_stale_mapping(tmp_path
     loaded = load_latest_voice_mapping(project, stale)
 
     assert count_subtitle_phrases(loaded) == 1
+
+
+def test_render_resolves_active_master_voice_from_project_state(tmp_path: Path):
+    raw = tmp_path / "voice" / "raw" / "master_voice.wav"
+    enhanced = tmp_path / "voice" / "enhance" / "master_voice.wav"
+    enhanced.parent.mkdir(parents=True)
+    enhanced.write_bytes(b"enhanced")
+    project = SimpleNamespace(
+        paths=SimpleNamespace(master_voice_wav=raw),
+        active_master_voice_path=enhanced,
+    )
+
+    assert resolve_render_master_audio(project) == enhanced
+
+
+def test_render_falls_back_to_legacy_master_voice_property(tmp_path: Path):
+    legacy = tmp_path / "voice" / "master_voice.wav"
+    legacy.parent.mkdir(parents=True)
+    legacy.write_bytes(b"legacy")
+    project = SimpleNamespace(paths=SimpleNamespace(master_voice_wav=legacy))
+
+    assert resolve_render_master_audio(project) == legacy
+
+
+def test_process_voice_persists_raw_whisper_words_and_marks_raw_active(tmp_path: Path):
+    master = tmp_path / "voice" / "raw" / "master_voice.wav"
+    words_path = tmp_path / "voice" / "raw" / "whisper_words.json"
+    master.parent.mkdir(parents=True)
+    master.write_bytes(b"audio")
+    calls = []
+    project = SimpleNamespace(
+        paths=SimpleNamespace(
+            root=tmp_path,
+            master_voice_raw_wav=master,
+            whisper_words_raw_json=words_path,
+        ),
+        set_active_whisper_source=lambda source: calls.append(source),
+    )
+    words = [{"word": "Hello", "start": 0.0, "end": 0.3}]
+
+    save_whisper_words_for_source(project, "raw", master, words)
+
+    data = json.loads(words_path.read_text(encoding="utf-8"))
+    assert data["source"] == "voice/raw/master_voice.wav"
+    assert data["words"] == words
+    assert calls == ["raw"]
+
+
+def test_whisper_helper_persists_enhance_words_and_marks_enhance_active(tmp_path: Path):
+    master = tmp_path / "voice" / "enhance" / "master_voice.wav"
+    words_path = tmp_path / "voice" / "enhance" / "whisper_words.json"
+    master.parent.mkdir(parents=True)
+    master.write_bytes(b"audio")
+    calls = []
+    project = SimpleNamespace(
+        paths=SimpleNamespace(
+            root=tmp_path,
+            master_voice_raw_wav=tmp_path / "voice" / "raw" / "master_voice.wav",
+            whisper_words_raw_json=tmp_path / "voice" / "raw" / "whisper_words.json",
+            master_voice_enhanced_wav=master,
+            whisper_words_enhanced_json=words_path,
+        ),
+        set_active_whisper_source=lambda source: calls.append(source),
+    )
+    words = [{"word": "Better", "start": 0.0, "end": 0.4}]
+
+    save_whisper_words_for_source(project, "enhance", master, words)
+
+    data = json.loads(words_path.read_text(encoding="utf-8"))
+    assert data["source"] == "voice/enhance/master_voice.wav"
+    assert data["words"] == words
+    assert calls == ["enhance"]
 
 
 def test_visual_cache_reusable_until_timeline_or_sources_change(tmp_path: Path):
